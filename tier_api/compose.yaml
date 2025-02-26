@@ -2,10 +2,34 @@ services:
   mongo:
     image: mongo:latest
     container_name: mongo
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: mongosh --eval "try { rs.status() } catch (err) { rs.initiate() }"
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  mongo-init:
+    image: mongo:latest
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: >
+      mongosh --host mongo:27017 --eval '
+      if (rs.status().ok === 0) {
+        rs.initiate({
+          _id: "rs0",
+          members: [{ _id: 0, host: "mongo:27017" }]
+        })
+      }
+      '
     networks:
       - app-network
 
@@ -41,6 +65,7 @@ services:
     depends_on:
       - backend
       - rocketchat
+      - frontend
     ports:
       - "80:80"
     volumes:
@@ -64,15 +89,18 @@ services:
       - app-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
     container_name: react-frontend
+    ports:
+      - "3001:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost/api
     networks:
       - app-network
 
@@ -81,4 +109,3 @@ volumes:
 
 networks:
   app-network:
-    driver: bridge

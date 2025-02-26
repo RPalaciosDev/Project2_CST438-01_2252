@@ -1,21 +1,24 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import LoginForm from './components/LoginForm';
-import SignupForm from './components/SignupForm';
-import Dashboard from './components/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute';
+import LoginForm from './components/auth/LoginForm';
+import SignupForm from './components/auth/SignupForm';
+// Import will be restored when the component is created
+// import OAuth2RedirectHandler from './components/auth/OAuth2RedirectHandler';
+import './App.css';
 
 function App() {
   return (
-    <Router>
-      <Switch>
-        <Route path="/login" component={LoginForm} />
-        <Route path="/signup" component={SignupForm} />
-        <ProtectedRoute path="/dashboard" component={Dashboard} />
-        <Route path="/" exact component={LoginForm} />
-        <Route path="/oauth2/redirect" component={OAuth2RedirectHandler} />
-      </Switch>
-    </Router>
+    <div className="App">
+      <Router>
+        <Switch>
+          <Route path="/" exact component={LoginForm} />
+          <Route path="/login" component={LoginForm} />
+          <Route path="/signup" component={SignupForm} />
+          {/* Route will be restored when the component is created */}
+          {/* <Route path="/oauth2/redirect" component={OAuth2RedirectHandler} /> */}
+        </Switch>
+      </Router>
+    </div>
   );
 }
 
