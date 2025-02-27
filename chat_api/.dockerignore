@@ -1,0 +1,34 @@
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE & Editor Configs
+.idea/
+.vscode/
+*.swp
+
+# Ignore Build & Compiled Files
+/build
+/target
+/out
+/bin
+.gradle
+*.iml
+
+# Ignore Logs & Temp Files
+*.log
+logs/
+*.pid
+
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore Local Environment & Secrets
+.env
+*.env
+application.properties
+application.yml
+
+# Ignore Docker-related files
+docker-compose.override.yml
