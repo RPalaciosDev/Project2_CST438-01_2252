@@ -1,11 +1,10 @@
 package group_3.tier_api.backend.controllers;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api") // API prefix for consistency
+@RequestMapping("/api")
 public class UserController {
 
     private final StringRedisTemplate redisTemplate;
