@@ -1,14 +1,20 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.3'
+    id 'org.springframework.boot' version '3.2.2'
     id 'io.spring.dependency-management' version '1.1.4'
 }
 
-group = 'com.tierlist'
+group = 'com.cst438'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17'
+    sourceCompatibility = '21'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
 }
 
 repositories {
@@ -16,30 +22,36 @@ repositories {
 }
 
 dependencies {
-    // Spring Boot Core
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
     // AWS SDK for S3
-    implementation platform('software.amazon.awssdk:bom:2.24.12')
+    implementation platform('software.amazon.awssdk:bom:2.24.0')
     implementation 'software.amazon.awssdk:s3'
     
     // Database
-    implementation 'org.postgresql:postgresql'
-    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.postgresql:postgresql'
     
-    // Utilities
-    implementation 'org.projectlombok:lombok'
+    // Lombok for reducing boilerplate
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     
-    // Security
-    implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Image Processing
+    implementation 'net.coobird:thumbnailator:0.4.20'  // For image resizing/processing
+    
+    // Utilities
+    implementation 'commons-io:commons-io:2.15.1'      // For file handling utilities
+    implementation 'org.apache.tika:tika-core:2.9.1'   // For MIME type detection
     
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'com.h2database:h2'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
 }
 
 tasks.named('test') {

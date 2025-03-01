@@ -162,8 +162,179 @@ The application follows a microservices architecture with:
 - Authentication Service (Spring Boot)
 - Tier List Service (Spring Boot)
 - Chat Service (Spring Boot)
+- Image Storage Service (Spring Boot)
 - Nginx as reverse proxy with SSL termination
 - PostgreSQL as the database
+
+### Image Storage Service
+
+The image storage service handles image uploads, processing, and storage using AWS S3. It provides a secure and scalable solution for managing images in the application.
+
+#### Directory Structure
+```
+image-storage-service/
+├── src/main/java/com/cst438/image/
+│   ├── config/          # Configuration classes
+│   │   └── S3Config.java
+│   ├── model/           # Entity classes
+│   │   └── ImageMetadata.java
+│   ├── repository/      # Data access layer
+│   ├── service/        # Business logic
+│   ├── controller/     # REST endpoints
+│   └── ImageStorageServiceApplication.java
+└── src/main/resources/
+    └── application.properties
+```
+
+#### Dependencies
+```gradle
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // AWS SDK for S3
+    implementation platform('software.amazon.awssdk:bom:2.24.0')
+    implementation 'software.amazon.awssdk:s3'
+    
+    // Image Processing
+    implementation 'net.coobird:thumbnailator:0.4.20'
+    
+    // Utilities
+    implementation 'commons-io:commons-io:2.15.1'
+    implementation 'org.apache.tika:tika-core:2.9.1'
+}
+```
+
+#### Configuration
+The service requires the following configuration in `application.properties`:
+
+```properties
+# Server Configuration
+server.port=8084
+spring.application.name=image-storage-service
+
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5432/image_storage_db
+spring.datasource.username=${POSTGRES_USER:postgres}
+spring.datasource.password=${POSTGRES_PASSWORD:postgres}
+
+# AWS S3 Configuration
+aws.s3.bucket-name=${AWS_S3_BUCKET:your-bucket-name}
+aws.s3.region=${AWS_REGION:us-west-1}
+aws.credentials.access-key=${AWS_ACCESS_KEY:your-access-key}
+aws.credentials.secret-key=${AWS_SECRET_KEY:your-secret-key}
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# Image Processing Configuration
+app.image.max-width=1920
+app.image.max-height=1080
+app.image.thumbnail.width=300
+app.image.thumbnail.height=300
+app.image.allowed-types=image/jpeg,image/png,image/gif
+```
+
+#### Features
+- **Image Upload**: Handles multipart file uploads
+- **Image Processing**:
+  - Automatic image resizing
+  - Thumbnail generation
+  - MIME type validation
+- **Storage**:
+  - AWS S3 integration for scalable storage
+  - Metadata storage in PostgreSQL
+  - URL generation for image access
+- **Security**:
+  - File type validation
+  - Size restrictions
+  - Secure URL generation
+
+#### Data Model
+The `ImageMetadata` entity stores information about uploaded images:
+```java
+@Entity
+@Table(name = "image_metadata")
+public class ImageMetadata {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String fileName;
+    private String contentType;
+    private String s3Key;
+    private String s3Url;
+    private String thumbnailS3Key;
+    private String thumbnailUrl;
+    private Long size;
+    private Integer width;
+    private Integer height;
+    private String uploadedBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+```
+
+#### AWS S3 Integration
+The service uses AWS SDK v2 for S3 integration:
+```java
+@Configuration
+public class S3Config {
+    @Value("${aws.credentials.access-key}")
+    private String accessKey;
+
+    @Value("${aws.credentials.secret-key}")
+    private String secretKey;
+
+    @Value("${aws.s3.region}")
+    private String region;
+
+    @Bean
+    public S3Client s3Client() {
+        return S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKey, secretKey)))
+                .build();
+    }
+}
+```
+
+#### Getting Started with Image Storage Service
+1. Set up AWS S3:
+   - Create an S3 bucket
+   - Configure CORS settings for your domain
+   - Create IAM user with S3 access
+   - Note down access and secret keys
+
+2. Configure Environment Variables:
+   ```bash
+   export AWS_S3_BUCKET=your-bucket-name
+   export AWS_REGION=your-region
+   export AWS_ACCESS_KEY=your-access-key
+   export AWS_SECRET_KEY=your-secret-key
+   ```
+
+3. Create the Database:
+   ```sql
+   CREATE DATABASE image_storage_db;
+   ```
+
+4. Run the Service:
+   ```bash
+   cd image-storage-service
+   ./gradlew bootRun
+   ```
+
+#### Next Steps for Development
+1. Implement the repository interface for image metadata
+2. Create service layer for handling image uploads
+3. Develop REST controllers for image operations
+4. Add security configurations
+5. Implement image processing utilities
 
 ### Security Features
 
