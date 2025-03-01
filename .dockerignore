@@ -1,0 +1,80 @@
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE & Editor Configs
+.idea/
+.vscode/
+*.swp
+*.swo
+.settings/
+.project
+.classpath
+.factorypath
+
+# Ignore Build & Compiled Files
+**/build/
+**/target/
+**/out/
+**/bin/
+**/.gradle/
+*.iml
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Ignore Logs & Temp Files
+*.log
+**/logs/
+*.pid
+*.hprof
+
+# Ignore Git files
+.git/
+**/.gitignore
+**/.gitattributes
+
+# Ignore Local Environment & Secrets
+**/.env
+**/*.env
+**/application-local.properties
+**/application-local.yml
+**/secrets/
+
+# Ignore Docker-related files
+**/docker-compose.override.yml
+**/.dockerignore
+
+# Ignore Node.js specific files (for frontend)
+**/node_modules/
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log
+**/.npm/
+**/.yarn/
+**/dist/
+**/.next/
+**/.nuxt/
+**/.cache/
+
+# Ignore Test files
+**/test/
+**/tests/
+**/__tests__/
+**/coverage/
+**/.nyc_output/
+
+# Ignore Documentation
+**/docs/
+**/README.md
+**/LICENSE
+**/*.md
+
+# Keep essential files
+!**/src/
+!**/package.json
+!**/package-lock.json
+!**/build.gradle
+!**/settings.gradle
+!**/gradlew
+!**/gradlew.bat 

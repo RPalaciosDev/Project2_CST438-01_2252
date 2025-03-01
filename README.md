@@ -20,8 +20,88 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 │   ├── nginx.conf      # Nginx server configuration
 │   └── ssl/           # SSL certificates directory
 ├── secrets/            # Secure storage for sensitive data
-└── compose.yaml        # Docker compose configuration
+├── compose.yaml        # Development environment configuration
+├── docker-compose.prod.yml # Production environment configuration
+├── .gitattributes     # Git attributes configuration
+└── .dockerignore      # Global Docker ignore rules
 ```
+
+## Configuration Files
+
+### Git Configuration
+The project uses a single root-level `.gitattributes` file that manages file attributes for all services:
+- Line ending normalization (`text=auto`)
+- Forced LF endings for shell scripts and Gradle wrapper
+- Forced CRLF endings for Windows batch files
+- Binary file handling for executables, images, and documents
+- Consistent text file handling across all platforms
+
+### Docker Configuration
+A unified `.dockerignore` file at the root level controls which files are excluded from Docker builds:
+- Build artifacts and dependencies
+- Development-specific files
+- IDE configurations
+- Local environment files
+- Test files and documentation
+- Version control files
+
+The global `.dockerignore` ensures:
+- Smaller, more efficient Docker builds
+- Consistent exclusion rules across all services
+- Prevention of sensitive data leakage
+- Proper handling of both frontend and backend files
+
+## Development vs Production Environments
+
+The project uses two different Docker Compose configurations for development and production environments:
+
+### Development Environment (`compose.yaml`)
+- **Purpose**: Local development with hot-reloading and debugging capabilities
+- **Features**:
+  - Development-specific ports (19000-19002) for Expo development server
+  - Volume mounts for live code updates
+  - Simple PostgreSQL setup with plain text passwords
+  - Development-specific environment variables (`NODE_ENV=development`)
+  - Basic nginx configuration without SSL
+  - Direct access to service ports for debugging
+
+### Production Environment (`docker-compose.prod.yml`)
+- **Purpose**: Secure, optimized deployment configuration
+- **Features**:
+  - Enhanced Security:
+    - Secret management for sensitive data
+    - SSL/HTTPS configuration for nginx
+    - MongoDB authentication
+    - Secure database password handling
+  - Production Optimizations:
+    - Specific JVM options for better performance
+    - Container restart policies
+    - Production-specific ports and configurations
+  - Additional Services:
+    - MongoDB for auth service
+    - SSL-enabled nginx reverse proxy
+  - Environment Configuration:
+    - Production environment variables
+    - Optimized build arguments
+    - Persistent volume configurations
+
+### Key Differences
+
+1. **Security**:
+   - Development: Basic security for local testing
+   - Production: Full security implementation with secrets, SSL, and secure databases
+
+2. **Database Configuration**:
+   - Development: Single PostgreSQL instance with simple setup
+   - Production: PostgreSQL + MongoDB with secure authentication
+
+3. **Performance**:
+   - Development: Default configurations for easy debugging
+   - Production: Optimized settings for better performance
+
+4. **Deployment**:
+   - Development: `docker-compose up`
+   - Production: `docker-compose -f docker-compose.prod.yml up -d`
 
 ## Prerequisites
 
