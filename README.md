@@ -1,107 +1,55 @@
-# TierList App
+# LoveTiers App
 
-A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication and SSL certificate implementation.
+A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication and OAuth2 authentication.
 
-## Project Structure
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Project Structure](#project-structure)
+- [Services Overview](#services-overview)
+  - [Frontend Service](#frontend-service)
+  - [Authentication Service](#authentication-service)
+  - [Tier List Service](#tier-list-service)
+  - [Chat Service](#chat-service)
+  - [Image Storage Service](#image-storage-service)
+- [Development Setup](#development-setup)
+- [Production Deployment](#production-deployment)
+- [Configuration Management](#configuration-management)
+- [Security](#security)
+- [Troubleshooting](#troubleshooting)
 
-```
-├── docker/                # Shared Docker configurations
-│   └── base.Dockerfile    # Base Dockerfile for Java services
-├── frontend/             # Expo React Native application
-│   ├── app/             # App directory (Expo Router)
-│   ├── components/      # Reusable components
-│   ├── services/        # API services
-│   ├── styles/         # Shared styles
-│   └── types/          # TypeScript types
-├── auth-user-service/   # Authentication microservice
-├── tier-list-service/   # Tier list management service
-├── chat_api/           # Chat functionality service
-├── nginx/              # Nginx configuration and SSL certificates
-│   ├── nginx.conf      # Nginx server configuration
-│   └── ssl/           # SSL certificates directory
-├── secrets/            # Secure storage for sensitive data
-├── compose.yaml        # Development environment configuration
-├── docker-compose.prod.yml # Production environment configuration
-├── .gitattributes     # Git attributes configuration
-└── .dockerignore      # Global Docker ignore rules
-```
+## Quick Start
 
-## Configuration Files
+1. **Clone and Install Dependencies**
+   ```bash
+   git clone https://github.com/yourusername/tierlist-app.git
+   cd tierlist-app
+   ```
 
-### Git Configuration
-The project uses a single root-level `.gitattributes` file that manages file attributes for all services:
-- Line ending normalization (`text=auto`)
-- Forced LF endings for shell scripts and Gradle wrapper
-- Forced CRLF endings for Windows batch files
-- Binary file handling for executables, images, and documents
-- Consistent text file handling across all platforms
+2. **Run Setup Script**
+   
+   Windows (PowerShell):
+   ```powershell
+   .\setup.ps1
+   ```
 
-### Docker Configuration
-A unified `.dockerignore` file at the root level controls which files are excluded from Docker builds:
-- Build artifacts and dependencies
-- Development-specific files
-- IDE configurations
-- Local environment files
-- Test files and documentation
-- Version control files
+   Unix-like systems (Linux/macOS):
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
+   ```
 
-The global `.dockerignore` ensures:
-- Smaller, more efficient Docker builds
-- Consistent exclusion rules across all services
-- Prevention of sensitive data leakage
-- Proper handling of both frontend and backend files
+3. **Start Services**
+   
+   Development:
+   ```bash
+   docker-compose up -d
+   ```
 
-## Development vs Production Environments
-
-The project uses two different Docker Compose configurations for development and production environments:
-
-### Development Environment (`compose.yaml`)
-- **Purpose**: Local development with hot-reloading and debugging capabilities
-- **Features**:
-  - Development-specific ports (19000-19002) for Expo development server
-  - Volume mounts for live code updates
-  - Simple PostgreSQL setup with plain text passwords
-  - Development-specific environment variables (`NODE_ENV=development`)
-  - Basic nginx configuration without SSL
-  - Direct access to service ports for debugging
-
-### Production Environment (`docker-compose.prod.yml`)
-- **Purpose**: Secure, optimized deployment configuration
-- **Features**:
-  - Enhanced Security:
-    - Secret management for sensitive data
-    - SSL/HTTPS configuration for nginx
-    - MongoDB authentication
-    - Secure database password handling
-  - Production Optimizations:
-    - Specific JVM options for better performance
-    - Container restart policies
-    - Production-specific ports and configurations
-  - Additional Services:
-    - MongoDB for auth service
-    - SSL-enabled nginx reverse proxy
-  - Environment Configuration:
-    - Production environment variables
-    - Optimized build arguments
-    - Persistent volume configurations
-
-### Key Differences
-
-1. **Security**:
-   - Development: Basic security for local testing
-   - Production: Full security implementation with secrets, SSL, and secure databases
-
-2. **Database Configuration**:
-   - Development: Single PostgreSQL instance with simple setup
-   - Production: PostgreSQL + MongoDB with secure authentication
-
-3. **Performance**:
-   - Development: Default configurations for easy debugging
-   - Production: Optimized settings for better performance
-
-4. **Deployment**:
-   - Development: `docker-compose up`
-   - Production: `docker-compose -f docker-compose.prod.yml up -d`
+   Production:
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
 ## Prerequisites
 
@@ -110,307 +58,213 @@ The project uses two different Docker Compose configurations for development and
 - Expo CLI (`npm install -g expo-cli`)
 - Java 17 (for backend services)
 - Git
-- OpenSSL (for SSL certificate generation)
+- OpenSSL (for SSL certificates)
 
-## Getting Started
+## Project Structure
 
-1. Clone the repository:
+```
+├── frontend/             # Expo React Native application
+│   ├── app/             # App directory (Expo Router)
+│   ├── components/      # Reusable components
+│   ├── services/        # API services
+│   ├── styles/         # Shared styles
+│   └── types/          # TypeScript types
+├── auth-user-service/   # Authentication microservice
+├── tier-list-service/  # Tier list management service
+├── chat-service/       # Real-time chat functionality
+├── image-storage-service/ # Image handling and storage
+├── nginx/              # Reverse proxy and SSL
+├── secrets/           # Secure credential storage
+└── docker/            # Shared Docker configurations
+```
+
+## Services Overview
+
+### Frontend Service
+- **Technology**: Expo/React Native
+- **Port**: 19006
+- **Features**:
+  - Mobile-first design
+  - Offline support
+  - Real-time updates
+  - Drag-and-drop interface
+- **Development**:
+  ```bash
+  cd frontend
+  npm install
+  npx expo start
+  ```
+
+### Authentication Service
+- **Technology**: Spring Boot
+- **Port**: 8081
+- **Features**:
+  - OAuth2 with Google
+  - JWT token management
+  - User management
+- **Database**: MongoDB
+- **Environment Variables**:
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `JWT_SECRET`
+  - `MONGO_ROOT_PASSWORD`
+
+### Tier List Service
+- **Technology**: Spring Boot
+- **Port**: 8082
+- **Features**:
+  - Tier list CRUD operations
+  - Category management
+  - Voting system
+- **Database**: PostgreSQL
+- **Environment Variables**:
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `POSTGRES_TIER_DB`
+
+### Chat Service
+- **Technology**: Spring Boot
+- **Port**: 8083
+- **Features**:
+  - Real-time messaging
+  - WebSocket support
+  - Chat history
+- **Database**: PostgreSQL
+- **Environment Variables**:
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `POSTGRES_CHAT_DB`
+
+### Image Storage Service
+- **Technology**: Spring Boot
+- **Port**: 8084
+- **Features**:
+  - Image upload/download
+  - Automatic resizing
+  - Thumbnail generation
+- **Storage**: AWS S3
+- **Environment Variables**:
+  - `AWS_ACCESS_KEY`
+  - `AWS_SECRET_KEY`
+  - `AWS_S3_BUCKET`
+  - `AWS_REGION`
+
+## Development Setup
+
+1. **Environment Configuration**
+   - Run the setup script (`setup.ps1` or `setup.sh`)
+   - Review generated `credentials.txt`
+   - Configure Google OAuth2 (see below)
+
+2. **Google OAuth2 Setup**
+   a. Visit [Google Cloud Console](https://console.cloud.google.com)
+   b. Create/select a project
+   c. Enable Google+ API
+   d. Create OAuth 2.0 credentials
+   e. Add redirect URIs:
+      - Development: `http://localhost:8081/login/oauth2/code/google`
+      - Production: `https://your-domain.com/login/oauth2/code/google`
+
+3. **SSL Certificates**
    ```bash
-   git clone https://github.com/yourusername/tierlist-app.git
-   cd tierlist-app
-   ```
-
-2. Install frontend dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. Generate SSL certificates (if not already present):
-   ```bash
-   # Navigate to the nginx/ssl directory
    cd nginx/ssl
-   
-   # Generate self-signed certificates
    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
      -keyout privkey.pem -out fullchain.pem \
      -subj "/CN=localhost"
    ```
 
-4. Start all services using Docker Compose:
+## Production Deployment
+
+1. **Environment Setup**
    ```bash
-   docker-compose up -d
+   # Copy production configuration
+   cp .env.example .env.production
+   
+   # Generate production certificates
+   # (Use Let's Encrypt or similar for production)
    ```
 
-5. For local development of the frontend:
-   ```bash
-   cd frontend
-   npx expo start
-   ```
-
-## Environment Setup
-
-1. Create a `.env` file in each service directory using the provided `.env.example` templates.
-2. Ensure SSL certificate paths are correctly configured in the nginx configuration.
-
-## Development
-
-### Service Architecture
-
-The application follows a microservices architecture with:
-- Frontend (Expo/React Native)
-- Authentication Service (Spring Boot)
-- Tier List Service (Spring Boot)
-- Chat Service (Spring Boot)
-- Image Storage Service (Spring Boot)
-- Nginx as reverse proxy with SSL termination
-- PostgreSQL as the database
-
-### Image Storage Service
-
-The image storage service handles image uploads, processing, and storage using AWS S3. It provides a secure and scalable solution for managing images in the application.
-
-#### Directory Structure
-```
-image-storage-service/
-├── src/main/java/com/cst438/image/
-│   ├── config/          # Configuration classes
-│   │   └── S3Config.java
-│   ├── model/           # Entity classes
-│   │   └── ImageMetadata.java
-│   ├── repository/      # Data access layer
-│   ├── service/        # Business logic
-│   ├── controller/     # REST endpoints
-│   └── ImageStorageServiceApplication.java
-└── src/main/resources/
-    └── application.properties
-```
-
-#### Dependencies
-```gradle
-dependencies {
-    // Spring Boot Starters
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // AWS SDK for S3
-    implementation platform('software.amazon.awssdk:bom:2.24.0')
-    implementation 'software.amazon.awssdk:s3'
-    
-    // Image Processing
-    implementation 'net.coobird:thumbnailator:0.4.20'
-    
-    // Utilities
-    implementation 'commons-io:commons-io:2.15.1'
-    implementation 'org.apache.tika:tika-core:2.9.1'
-}
-```
-
-#### Configuration
-The service requires the following configuration in `application.properties`:
-
-```properties
-# Server Configuration
-server.port=8084
-spring.application.name=image-storage-service
-
-# Database Configuration
-spring.datasource.url=jdbc:postgresql://localhost:5432/image_storage_db
-spring.datasource.username=${POSTGRES_USER:postgres}
-spring.datasource.password=${POSTGRES_PASSWORD:postgres}
-
-# AWS S3 Configuration
-aws.s3.bucket-name=${AWS_S3_BUCKET:your-bucket-name}
-aws.s3.region=${AWS_REGION:us-west-1}
-aws.credentials.access-key=${AWS_ACCESS_KEY:your-access-key}
-aws.credentials.secret-key=${AWS_SECRET_KEY:your-secret-key}
-
-# File Upload Configuration
-spring.servlet.multipart.max-file-size=10MB
-spring.servlet.multipart.max-request-size=10MB
-
-# Image Processing Configuration
-app.image.max-width=1920
-app.image.max-height=1080
-app.image.thumbnail.width=300
-app.image.thumbnail.height=300
-app.image.allowed-types=image/jpeg,image/png,image/gif
-```
-
-#### Features
-- **Image Upload**: Handles multipart file uploads
-- **Image Processing**:
-  - Automatic image resizing
-  - Thumbnail generation
-  - MIME type validation
-- **Storage**:
-  - AWS S3 integration for scalable storage
-  - Metadata storage in PostgreSQL
-  - URL generation for image access
-- **Security**:
-  - File type validation
-  - Size restrictions
-  - Secure URL generation
-
-#### Data Model
-The `ImageMetadata` entity stores information about uploaded images:
-```java
-@Entity
-@Table(name = "image_metadata")
-public class ImageMetadata {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String fileName;
-    private String contentType;
-    private String s3Key;
-    private String s3Url;
-    private String thumbnailS3Key;
-    private String thumbnailUrl;
-    private Long size;
-    private Integer width;
-    private Integer height;
-    private String uploadedBy;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-}
-```
-
-#### AWS S3 Integration
-The service uses AWS SDK v2 for S3 integration:
-```java
-@Configuration
-public class S3Config {
-    @Value("${aws.credentials.access-key}")
-    private String accessKey;
-
-    @Value("${aws.credentials.secret-key}")
-    private String secretKey;
-
-    @Value("${aws.s3.region}")
-    private String region;
-
-    @Bean
-    public S3Client s3Client() {
-        return S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(accessKey, secretKey)))
-                .build();
-    }
-}
-```
-
-#### Getting Started with Image Storage Service
-1. Set up AWS S3:
-   - Create an S3 bucket
-   - Configure CORS settings for your domain
-   - Create IAM user with S3 access
-   - Note down access and secret keys
-
-2. Configure Environment Variables:
-   ```bash
-   export AWS_S3_BUCKET=your-bucket-name
-   export AWS_REGION=your-region
-   export AWS_ACCESS_KEY=your-access-key
-   export AWS_SECRET_KEY=your-secret-key
-   ```
-
-3. Create the Database:
-   ```sql
-   CREATE DATABASE image_storage_db;
-   ```
-
-4. Run the Service:
-   ```bash
-   cd image-storage-service
-   ./gradlew bootRun
-   ```
-
-#### Next Steps for Development
-1. Implement the repository interface for image metadata
-2. Create service layer for handling image uploads
-3. Develop REST controllers for image operations
-4. Add security configurations
-5. Implement image processing utilities
-
-### Security Features
-
-- HTTPS encryption for all communications
-- Self-signed SSL certificates for development
-- Secure proxy configuration
-- HTTP/2 support for improved performance
-
-### Running Services
-
-- All services: `docker-compose up`
-- Individual service: `docker-compose up <service-name>`
-- Frontend development: `cd frontend && npx expo start`
-- Access the application securely at: `https://localhost`
-
-## Features
-
-- User authentication and authorization
-- Create and manage tier lists
-- Drag-and-drop interface
-- Real-time updates
-- Mobile-first design
-- Cross-platform support (iOS, Android)
-- Secure HTTPS communication
-
-## Testing
-
-Run tests for each service:
-
-```bash
-# Frontend tests
-cd frontend && npm test
-
-# Backend services tests (from service directories)
-./gradlew test
-```
-
-## Deployment
-
-1. Build and deploy all services:
+2. **Start Services**
    ```bash
    docker-compose -f docker-compose.prod.yml up -d
    ```
 
-2. For frontend (Expo) standalone builds:
-   ```bash
-   cd frontend
-   eas build
-   ```
+3. **Production Checklist**
+   - [ ] Replace self-signed certificates with valid SSL
+   - [ ] Update OAuth2 redirect URIs
+   - [ ] Configure production database credentials
+   - [ ] Set up monitoring and logging
+   - [ ] Configure backup strategy
 
-### Production SSL Setup
-For production deployment:
-1. Replace the self-signed certificates with valid SSL certificates from a trusted CA
-2. Update the nginx configuration with the new certificate paths
-3. Ensure proper SSL renewal process is in place
+## Configuration Management
 
-## Contributing
+### Development vs Production
+- Development: Uses `compose.yaml`
+  - Hot-reloading enabled
+  - Debug logging
+  - Local database instances
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Production: Uses `docker-compose.prod.yml`
+  - SSL enabled
+  - Optimized for performance
+  - Secure credential management
+  - MongoDB for auth service
+
+### Environment Files
+- `.env`: Development environment variables
+- `.env.production`: Production settings
+- `application.yml`: Service-specific configuration
+- `secrets/`: Secure credentials storage
+
+## Security
+
+### Best Practices
+- Use secure password manager for team credentials
+- Regularly rotate secrets
+- Never commit sensitive data to Git
+- Use SSL/TLS in production
+- Implement rate limiting
+- Enable security headers
+
+### SSL Configuration
+- Development: Self-signed certificates
+- Production: Use Let's Encrypt or commercial SSL
+- Configure HTTPS redirect
+- Enable HTTP/2
 
 ## Troubleshooting
 
 ### Common Issues
-1. SSL Certificate Issues
-   - Ensure certificates are properly generated and placed in the `nginx/ssl` directory
-   - Check nginx logs for certificate-related errors
-   - Verify certificate permissions
 
-2. 502 Bad Gateway
-   - Check if all services are running (`docker-compose ps`)
-   - Verify nginx configuration
-   - Check service logs for potential issues
+1. **SSL Certificate Issues**
+   - Check certificate paths in nginx config
+   - Verify certificate permissions
+   - Ensure certificates are valid
+
+2. **Database Connection Issues**
+   - Verify credentials in `.env`
+   - Check database service is running
+   - Confirm port availability
+
+3. **OAuth2 Authentication Failures**
+   - Verify Google credentials
+   - Check redirect URI configuration
+   - Confirm SSL certificate validity
+
+4. **Container Startup Issues**
+   ```bash
+   # View service logs
+   docker-compose logs [service-name]
+   
+   # Restart specific service
+   docker-compose restart [service-name]
+   ```
+
+### Getting Help
+- Check service logs: `docker-compose logs`
+- Review error messages in browser console
+- Check application logs in `logs/` directory
+- Contact team lead for credential issues
 
 ## License
 
@@ -418,8 +272,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Expo Team for the amazing framework
-- React Native community
+- Expo Team for the mobile framework
+- Spring Boot Team for the backend framework
 - All contributors to this project
 
 

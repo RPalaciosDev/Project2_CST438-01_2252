@@ -252,7 +252,6 @@ web_modules/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -517,8 +516,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.iml
-*.iws
-*.ipr
 
 # Gradle
 .gradle/
@@ -583,3 +580,63 @@ coverage/
 *.swo
 .temp
 .cache
+
+# Environment variables
+.env
+!.env.example
+
+# Application properties
+**/application.yml
+**/application.properties
+!**/application.yml.example
+!**/application.properties.example
+
+# Secrets and credentials
+secrets/*
+!secrets/*.example
+credentials.txt
+
+# SSL certificates
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+
+# Setup scripts should be tracked
+!setup.ps1
+!setup.sh
+
+# Dependencies
+node_modules/
+.gradle/
+build/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+target/
+out/
+
+# Mobile
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.swp
+*.swo
+*~
