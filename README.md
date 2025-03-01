@@ -1,6 +1,6 @@
 # TierList App
 
-A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture.
+A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication and SSL certificate implementation.
 
 ## Project Structure
 
@@ -16,7 +16,10 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 ├── auth-user-service/   # Authentication microservice
 ├── tier-list-service/   # Tier list management service
 ├── chat_api/           # Chat functionality service
-├── nginx/              # Nginx configuration
+├── nginx/              # Nginx configuration and SSL certificates
+│   ├── nginx.conf      # Nginx server configuration
+│   └── ssl/           # SSL certificates directory
+├── secrets/            # Secure storage for sensitive data
 └── compose.yaml        # Docker compose configuration
 ```
 
@@ -27,6 +30,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - Expo CLI (`npm install -g expo-cli`)
 - Java 17 (for backend services)
 - Git
+- OpenSSL (for SSL certificate generation)
 
 ## Getting Started
 
@@ -42,12 +46,23 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    npm install
    ```
 
-3. Start all services using Docker Compose:
+3. Generate SSL certificates (if not already present):
+   ```bash
+   # Navigate to the nginx/ssl directory
+   cd nginx/ssl
+   
+   # Generate self-signed certificates
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout privkey.pem -out fullchain.pem \
+     -subj "/CN=localhost"
+   ```
+
+4. Start all services using Docker Compose:
    ```bash
    docker-compose up -d
    ```
 
-4. For local development of the frontend:
+5. For local development of the frontend:
    ```bash
    cd frontend
    npx expo start
@@ -55,7 +70,8 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 
 ## Environment Setup
 
-Create a `.env` file in each service directory using the provided `.env.example` templates.
+1. Create a `.env` file in each service directory using the provided `.env.example` templates.
+2. Ensure SSL certificate paths are correctly configured in the nginx configuration.
 
 ## Development
 
@@ -66,14 +82,22 @@ The application follows a microservices architecture with:
 - Authentication Service (Spring Boot)
 - Tier List Service (Spring Boot)
 - Chat Service (Spring Boot)
-- Nginx as reverse proxy
+- Nginx as reverse proxy with SSL termination
 - PostgreSQL as the database
+
+### Security Features
+
+- HTTPS encryption for all communications
+- Self-signed SSL certificates for development
+- Secure proxy configuration
+- HTTP/2 support for improved performance
 
 ### Running Services
 
 - All services: `docker-compose up`
 - Individual service: `docker-compose up <service-name>`
 - Frontend development: `cd frontend && npx expo start`
+- Access the application securely at: `https://localhost`
 
 ## Features
 
@@ -83,6 +107,7 @@ The application follows a microservices architecture with:
 - Real-time updates
 - Mobile-first design
 - Cross-platform support (iOS, Android)
+- Secure HTTPS communication
 
 ## Testing
 
@@ -109,6 +134,12 @@ cd frontend && npm test
    eas build
    ```
 
+### Production SSL Setup
+For production deployment:
+1. Replace the self-signed certificates with valid SSL certificates from a trusted CA
+2. Update the nginx configuration with the new certificate paths
+3. Ensure proper SSL renewal process is in place
+
 ## Contributing
 
 1. Fork the repository
@@ -116,6 +147,19 @@ cd frontend && npm test
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Troubleshooting
+
+### Common Issues
+1. SSL Certificate Issues
+   - Ensure certificates are properly generated and placed in the `nginx/ssl` directory
+   - Check nginx logs for certificate-related errors
+   - Verify certificate permissions
+
+2. 502 Bad Gateway
+   - Check if all services are running (`docker-compose ps`)
+   - Verify nginx configuration
+   - Check service logs for potential issues
 
 ## License
 
