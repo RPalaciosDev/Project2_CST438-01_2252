@@ -1,0 +1,44 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://mongodb:27017/auth_db
+      auto-index-creation: true
+      connection-pool:
+        max-wait-time: 5000
+        max-connection-life-time: 0
+        max-connection-idle-time: 0
+        maintenance-frequency: 0
+        maintenance-initial-delay: 0
+      retry-writes: true
+      retry-reads: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+            scope:
+              - email
+              - profile
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.data.mongodb: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker 

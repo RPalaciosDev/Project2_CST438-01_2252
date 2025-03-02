@@ -252,7 +252,6 @@ web_modules/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -411,5 +410,233 @@ docker-compose.override.yml
 .vscode/
 *.swp
 
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+yarn.lock
+package-lock.json
+
+# Testing
+coverage/
+.nyc_output/
+
+# Production
+build/
+dist/
+out/
+target/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Java
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Spring Boot
+spring-boot-*.pid
+application-*.yml
+application-*.properties
+!application.yml
+!application.properties
+
+# MongoDB
+data/db/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Misc
+.cache/
+.temp/
+.tmp/
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # End of https://www.toptal.com/developers/gitignore/api/java,windows,macos,intellij,gradle,react,node
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Expo
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Java
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Testing
+coverage/
+.nyc_output/
+
+# Production
+/build
+/dist
+
+# Misc
+*.swp
+*.swo
+.temp
+.cache
+
+# Environment variables
+.env
+!.env.example
+
+# Application properties
+**/application.yml
+**/application.properties
+!**/application.yml.example
+!**/application.properties.example
+
+# Secrets and credentials
+secrets/*
+!secrets/*.example
+credentials.txt
+
+# SSL certificates
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+
+# Setup scripts should be tracked
+!setup.ps1
+!setup.sh
+
+# Dependencies
+node_modules/
+.gradle/
+build/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+dist/
+target/
+out/
+
+# Mobile
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.swp
+*.swo
+*~

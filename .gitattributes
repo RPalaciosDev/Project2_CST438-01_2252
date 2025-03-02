@@ -1,0 +1,32 @@
+# Handle line endings automatically for files detected as text
+* text=auto
+
+# These files should always use LF line endings
+/gradlew text eol=lf
+*.sh text eol=lf
+
+# These files should always use CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# These files are binary and should be left untouched
+*.jar binary
+*.war binary
+*.ear binary
+*.class binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+
+# Image files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.svg text
+
+# Documents
+*.md text
+*.txt text
+*.pdf binary 

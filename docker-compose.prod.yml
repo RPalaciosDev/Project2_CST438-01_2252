@@ -1,0 +1,107 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    ports:
+      - "19006:19006"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ./auth-user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:your_mongodb_password@mongodb:27017/auth_db
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+
+  tier-list-service:
+    build:
+      context: ./tier-list-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
+      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  chat-service:
+    build:
+      context: ./chat_api
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/chat_db
+      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_USER=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    secrets:
+      - db_password
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - auth-service
+      - tier-list-service
+      - chat-service
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=auth_db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt 
