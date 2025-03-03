@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../../types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081';
+// Using a direct import or Constants from expo-constants would be better
+const API_URL = 'http://localhost:8081'; // Default fallback
 
 export const useAuthStore = create<AuthState>((set) => ({
     token: null,

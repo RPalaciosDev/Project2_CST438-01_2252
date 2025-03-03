@@ -31,7 +31,8 @@
     },
     "types": [
       "jest",
-      "react-native"
+      "react-native",
+      "node"
     ],
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
@@ -50,7 +51,7 @@
     "**/*.ts",
     "**/*.tsx",
     "src/**/*"
-  ],
+, "app/(auth)/ProtectedRoute.jsx", "app/(auth)/0Auth2RedirectHandler.jsx", "app/services/auth-service.js", "app/App.js"  ],
   "exclude": [
     "node_modules",
     "babel.config.js",
