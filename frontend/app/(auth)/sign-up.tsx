@@ -9,7 +9,7 @@ import {
     Platform,
 } from 'react-native';
 import { Link } from 'expo-router';
-import { useAuthStore } from '../../services/auth';
+import { useAuthStore } from '../services/auth';
 
 export default function SignUp() {
     const [username, setUsername] = useState('');

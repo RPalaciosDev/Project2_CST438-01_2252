@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator, Text } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from './services/auth';
 
 // Simple auth check - move to protected routes
 export default function RootLayout() {
-  const { isAuthenticated, isLoading, error } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(true);

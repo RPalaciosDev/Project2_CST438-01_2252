@@ -39,7 +39,14 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    ./setup.sh
    ```
 
-3. **Start Services**
+3. **Setup and Start Frontend Expo App**
+   ```bash
+   chmod +x frontend.sh
+   ./frontend.sh
+   ```
+   This script updates Expo packages to their required versions and launches the development server.
+
+4. **Start Backend Services**
    
    Development:
    ```bash
@@ -156,7 +163,13 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    - Review generated `credentials.txt`
    - Configure Google OAuth2 (see below)
 
-2. **Google OAuth2 Setup**
+2. **Frontend Setup**
+   - Run the frontend script (`frontend.sh`)
+   - This updates required Expo packages to compatible versions
+   - Launches the Expo development server
+   - See the frontend README for more details
+
+3. **Google OAuth2 Setup**
    a. Visit [Google Cloud Console](https://console.cloud.google.com)
    b. Create/select a project
    c. Enable Google+ API
@@ -164,14 +177,6 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    e. Add redirect URIs:
       - Development: `http://localhost:8081/login/oauth2/code/google`
       - Production: `https://your-domain.com/login/oauth2/code/google`
-
-3. **SSL Certificates**
-   ```bash
-   cd nginx/ssl
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-     -keyout privkey.pem -out fullchain.pem \
-     -subj "/CN=localhost"
-   ```
 
 ## Production Deployment
 

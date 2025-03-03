@@ -74,6 +74,39 @@ rm .env.bak
 # Update database password file
 echo "$DB_PASSWORD" > secrets/db_password.txt
 
+# Setup frontend environment
+echo -e "\n${CYAN}🌐 Setting up frontend environment...${NC}"
+if [ -d "frontend" ]; then
+    echo -e "${GREEN}Installing required TypeScript dependencies...${NC}"
+    cd frontend
+    
+    # Create or update .env file for the frontend
+    FRONTEND_ENV="frontend/.env"
+    echo "EXPO_PUBLIC_API_URL=http://localhost:8081" > $FRONTEND_ENV
+    echo "EXPO_PUBLIC_OAUTH_REDIRECT_URI=http://localhost:8081/auth/callback" >> $FRONTEND_ENV
+    echo "EXPO_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> $FRONTEND_ENV
+    
+    # Install required TypeScript dependencies if package.json exists
+    if [ -f "package.json" ]; then
+        echo -e "${GREEN}Installing TypeScript types for Node.js...${NC}"
+        npm install --save-dev @types/node --legacy-peer-deps
+        
+        # Check if we need to install Tailwind dependencies
+        if grep -q "@tailwind" "src/index.css" 2>/dev/null || grep -q "@tailwind" "app/index.css" 2>/dev/null; then
+            echo -e "${GREEN}Installing Tailwind CSS dependencies...${NC}"
+            npm install -D tailwindcss postcss autoprefixer --legacy-peer-deps
+            npx tailwindcss init -p
+        fi
+    else
+        echo -e "${YELLOW}No package.json found in frontend directory, skipping npm installs${NC}"
+    fi
+    
+    cd ..
+    echo -e "${GREEN}Frontend environment setup completed${NC}"
+else
+    echo -e "${YELLOW}Frontend directory not found, skipping frontend setup${NC}"
+fi
+
 # Generate SSL certificates if they don't exist
 echo -e "\n${CYAN}🔒 Checking SSL certificates...${NC}"
 if [ ! -f "nginx/ssl/privkey.pem" ] || [ ! -f "nginx/ssl/fullchain.pem" ]; then
