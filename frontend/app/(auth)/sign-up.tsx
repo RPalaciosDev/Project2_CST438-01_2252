@@ -42,13 +42,15 @@ export default function SignUp() {
             style={styles.container}
         >
             <View style={styles.form}>
-                <Text style={styles.title}>Create Account</Text>
+                <Text style={styles.title}>Love Tiers</Text>
+                <Text style={styles.subtitle}>Sign up</Text>
                 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 <TextInput
                     style={styles.input}
                     placeholder="Username"
+                    placeholderTextColor="#999"
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
@@ -57,6 +59,7 @@ export default function SignUp() {
                 <TextInput
                     style={styles.input}
                     placeholder="Email"
+                    placeholderTextColor="#999"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -66,6 +69,7 @@ export default function SignUp() {
                 <TextInput
                     style={styles.input}
                     placeholder="Password"
+                    placeholderTextColor="#999"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -74,6 +78,7 @@ export default function SignUp() {
                 <TextInput
                     style={styles.input}
                     placeholder="Confirm Password"
+                    placeholderTextColor="#999"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
@@ -87,7 +92,7 @@ export default function SignUp() {
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
-                    <Text>Already have an account? </Text>
+                    <Text style={styles.footerText}>Already have an account? </Text>
                     <Link href="/sign-in" style={styles.link}>
                         Sign In
                     </Link>
@@ -100,50 +105,95 @@ export default function SignUp() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#FFF5F5',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     form: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
-        backgroundColor: '#fff',
+        width: '100%',
+        maxWidth: 400,
+        padding: 25,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        shadowColor: '#FFE4E8',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+        marginHorizontal: 20,
     },
     title: {
-        fontSize: 24,
+        fontSize: 32,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: 8,
         textAlign: 'center',
+        color: '#FF4B6E',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 30,
     },
     input: {
+        backgroundColor: '#FFFFFF',
         borderWidth: 1,
-        borderColor: '#ddd',
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
+        borderColor: '#FFE4E8',
+        padding: 16,
+        borderRadius: 15,
+        marginBottom: 16,
         fontSize: 16,
+        shadowColor: '#FFE4E8',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 3.84,
+        elevation: 2,
     },
     button: {
-        backgroundColor: '#007AFF',
-        padding: 15,
-        borderRadius: 10,
+        backgroundColor: '#FF4B6E',
+        padding: 16,
+        borderRadius: 15,
         alignItems: 'center',
+        marginTop: 10,
+        shadowColor: '#FF4B6E',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     buttonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 20,
+        marginTop: 25,
+        alignItems: 'center',
+    },
+    footerText: {
+        color: '#666',
+        fontSize: 15,
     },
     link: {
-        color: '#007AFF',
+        color: '#FF4B6E',
+        fontWeight: 'bold',
+        fontSize: 15,
     },
     error: {
-        color: 'red',
-        marginBottom: 10,
+        color: '#FF4B6E',
+        marginBottom: 15,
         textAlign: 'center',
+        fontSize: 14,
     },
 }); 

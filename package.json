@@ -5,5 +5,15 @@
     "react-refresh": "^0.16.0",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.25.9",
+    "react-dom": "^19.0.0",
+    "react-native-gesture-handler": "^2.24.0",
+    "react-native-web": "^0.19.13"
+  },
+  "scripts": {
+    "web": "webpack serve --mode=development",
+    "build-web": "webpack --mode=production"
   }
 }
