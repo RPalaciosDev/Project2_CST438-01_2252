@@ -26,8 +26,11 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/auth_db
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     depends_on:
       - db
+
 
   # Tier list service
   tier-list-service:
@@ -55,7 +58,28 @@ services:
     depends_on:
       - db
 
-  # Database
+  # Image Storage Service
+  image-storage-service:
+    build:
+      context: ./image-storage-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb://root:${MONGO_ROOT_PASSWORD}@mongodb:27017/image_storage_db?authSource=admin
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+    depends_on:
+      - mongodb
+
+
+
+  # Database for user data (PostgreSQL)
   db:
     image: postgres:15-alpine
     environment:
@@ -65,6 +89,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  # MongoDB (for Image Storage)
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   # Nginx reverse proxy
   nginx:
@@ -78,6 +115,8 @@ services:
       - auth-service
       - tier-list-service
       - chat-service
+      - image-storage-service
 
 volumes:
   postgres_data:
+  mongodb_data:
