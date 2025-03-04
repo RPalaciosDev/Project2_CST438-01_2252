@@ -1,0 +1,40 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: proj2_redis
+    hostname: proj2_redis
+    ports:
+      - "9379:6379"
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    volumes:
+      - ./redis.conf:/etc/redis/redis.conf
+      - redis-node-1:/redis/data
+    restart:
+      on-failure
+
+  cassandra:
+    image: cassandra:latest
+    container_name: proj2_cassandra
+    hostname: proj2_cassandra
+    ports:
+      - "9005:7000"
+      - "9044:9042"
+    environment:
+      - CASSANDRA_CLUSER_NAME=PROJ2_CLUSER
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RACK1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    volumes:
+      - cassandra-node-1:/var/lib/cassandra:rw
+    restart:
+      on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status"]
+      interval: 2m
+      start_period: 2m
+      timeout: 10s
+      retries: 3
+
+volumes:
+  cassandra-node-1:
+  redis-node-1:

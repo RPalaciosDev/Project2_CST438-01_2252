@@ -136,11 +136,12 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - Real-time messaging
   - WebSocket support
   - Chat history
-- **Database**: PostgreSQL
+- **Database**: Cassandra 
 - **Environment Variables**:
-  - `POSTGRES_USER`
-  - `POSTGRES_PASSWORD`
-  - `POSTGRES_CHAT_DB`
+  - `CASSANDRA_CLUSTER_NAME`
+  - `CASSANDRA_DC`
+  - `CASSANDRA_RACK`
+  - `CASSANDRA_ENDPOINT_SNITCH`
 
 ### Image Storage Service
 - **Technology**: Spring Boot
