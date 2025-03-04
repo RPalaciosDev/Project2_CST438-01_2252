@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
     ActivityIndicator,
 } from 'react-native';
 import { Link } from 'expo-router';
-import { useAuthStore } from '../services/auth';
-import axios from 'axios';
 
 export default function SignIn() {
     const [email, setEmail] = useState('');
@@ -19,38 +15,6 @@ export default function SignIn() {
     const [error, setError] = useState('');
     const [apiStatus, setApiStatus] = useState('');
     const [isCheckingApi, setIsCheckingApi] = useState(false);
-    const login = useAuthStore((state) => state.login);
-
-    // Check API connectivity
-    const checkApiStatus = async () => {
-        setIsCheckingApi(true);
-        setApiStatus('Checking API connection...');
-        try {
-            const apiUrl = Platform.OS === 'web' 
-                ? 'http://localhost:8081/health' 
-                : 'http://10.0.2.2:8081/health';
-                
-            await axios.get(apiUrl, { timeout: 5000 });
-            setApiStatus('API connection successful!');
-        } catch (error: any) {
-            setApiStatus(`API connection failed: ${error.message || 'Unknown error'}`);
-        } finally {
-            setIsCheckingApi(false);
-        }
-    };
-
-    // Check API status on component mount
-    useEffect(() => {
-        checkApiStatus();
-    }, []);
-
-    const handleSubmit = async () => {
-        try {
-            await login(email, password);
-        } catch (err) {
-            setError('Invalid email or password');
-        }
-    };
 
     return (
         <View style={styles.container}>
@@ -62,9 +26,6 @@ export default function SignIn() {
 
                 {apiStatus ? <Text style={styles.apiStatus}>{apiStatus}</Text> : null}
                 {isCheckingApi && <ActivityIndicator size="small" color="#FF4B6E" />}
-                <TouchableOpacity onPress={checkApiStatus} style={styles.apiCheckButton}>
-                    <Text style={styles.apiCheckButtonText}>Check API Connection</Text>
-                </TouchableOpacity>
 
                 <TextInput
                     style={styles.input}
@@ -84,13 +45,6 @@ export default function SignIn() {
                     onChangeText={setPassword}
                     secureTextEntry
                 />
-
-                <TouchableOpacity 
-                    style={styles.button}
-                    onPress={handleSubmit}
-                >
-                    <Text style={styles.buttonText}>Sign In</Text>
-                </TouchableOpacity>
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Don't have an account? </Text>

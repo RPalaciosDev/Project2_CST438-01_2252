@@ -9,7 +9,6 @@ import {
     Platform,
 } from 'react-native';
 import { Link } from 'expo-router';
-import { useAuthStore } from '../services/auth';
 
 export default function SignUp() {
     const [username, setUsername] = useState('');
@@ -17,7 +16,6 @@ export default function SignUp() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
-    const register = useAuthStore((state) => state.register);
 
     const handleSubmit = async () => {
         try {
@@ -30,7 +28,6 @@ export default function SignUp() {
                 setError('Username is required');
                 return;
             }
-            await register(username, email, password);
         } catch (err) {
             setError('Registration failed. Please try again.');
         }
