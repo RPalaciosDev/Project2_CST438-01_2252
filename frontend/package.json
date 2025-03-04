@@ -16,7 +16,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-navigation/native": "^6.1.9",
+    "@react-navigation/native": "^6.1.18",
     "axios": "^1.6.7",
     "expo": "^52.0.37",
     "expo-constants": "~17.0.7",
@@ -45,7 +45,7 @@
     "@testing-library/react-native": "^12.4.3",
     "@tsconfig/react-native": "^3.0.5",
     "@types/jest": "^29.5.12",
-    "@types/node": "^22.13.8",
+    "@types/node": "^22.13.9",
     "@types/react": "~18.3.12",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",

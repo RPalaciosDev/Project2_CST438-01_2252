@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, Pressable, Platform, ScrollView } from 'react-native';
 import { Tier, TierItem, TierListProps } from '../../types';
 import { colors } from '../../styles';
 
@@ -23,35 +21,19 @@ const defaultItems: TierItem[] = [
     { id: '5', name: 'Item 5', tier: 'D' },
 ];
 
-export default function TierList({ items: initialItems = defaultItems, onItemsChange, readOnly = false }: TierListProps) {
+export default function TierList({ 
+    items: initialItems = defaultItems, 
+    onItemsChange, 
+    readOnly = false 
+}: TierListProps) {
     const [items, setItems] = useState<TierItem[]>(initialItems);
-
-    const handleDragEnd = (tier: string, updatedItems: TierItem[]) => {
-        const otherItems = items.filter(item => item.tier !== tier);
-        const newItems = [
-            ...otherItems,
-            ...updatedItems.map(item => ({ ...item, tier }))
-        ];
-        setItems(newItems);
-        onItemsChange?.(newItems);
-    };
+    
+    useEffect(() => {
+        setItems(initialItems);
+    }, [initialItems]);
 
     const renderTierRow = ({ label, color }: Tier) => {
         const tierItems = items.filter(item => item.tier === label);
-
-        const renderItem = ({ item, drag, isActive }: { item: TierItem; drag: () => void; isActive: boolean }) => (
-            <ScaleDecorator>
-                <View 
-                    style={[
-                        styles.item, 
-                        { backgroundColor: isActive ? '#333' : '#222' }
-                    ]}
-                    onLongPress={readOnly ? undefined : drag}
-                >
-                    <Text style={styles.itemText}>{item.name}</Text>
-                </View>
-            </ScaleDecorator>
-        );
 
         return (
             <View key={label} style={styles.tierRow}>
@@ -59,27 +41,31 @@ export default function TierList({ items: initialItems = defaultItems, onItemsCh
                     <Text style={styles.tierLabelText}>{label}</Text>
                 </View>
                 <View style={styles.tierContent}>
-                    <DraggableFlatList
-                        horizontal
-                        data={tierItems}
-                        renderItem={renderItem}
-                        keyExtractor={(item: TierItem) => item.id}
-                        onDragEnd={({ data }) => !readOnly && handleDragEnd(label, data)}
-                        containerStyle={styles.dragContainer}
-                    />
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {tierItems.map((item) => (
+                            <Pressable 
+                                key={item.id}
+                                style={[styles.item]}
+                                disabled={readOnly}
+                            >
+                                <Text style={styles.itemText}>{item.name}</Text>
+                            </Pressable>
+                        ))}
+                    </ScrollView>
                 </View>
             </View>
         );
     };
 
     return (
-        <GestureHandlerRootView style={styles.container}>
+        <View style={[styles.container, { flex: 1 }]}>
             {TIERS.map(renderTierRow)}
-        </GestureHandlerRootView>
+        </View>
     );
 }
 
 const { width } = Dimensions.get('window');
+const itemWidth = Platform.OS === 'web' ? 150 : width * 0.25;
 
 const styles = StyleSheet.create({
     container: {
@@ -99,6 +85,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 5,
         marginRight: 10,
+        alignSelf: 'center',
     },
     tierLabelText: {
         fontSize: 20,
@@ -111,11 +98,8 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         padding: 5,
     },
-    dragContainer: {
-        flex: 1,
-    },
     item: {
-        width: width * 0.25,
+        width: itemWidth,
         height: 60,
         marginHorizontal: 5,
         backgroundColor: '#222',
@@ -128,3 +112,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 }); 
+
+

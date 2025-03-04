@@ -1,23 +1,27 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import SignIn from './(auth)/sign-in';
-import SignUp from './(auth)/sign-up';
-// import Dashboard from './(auth)/dashboard';
-// import ProtectedRoute from './(auth)/ProtectedRoute';
-// import OAuth2RedirectHandler from './app/(auth)/OAuth2RedirectHandler.jsx';
+import { useEffect } from 'react';
+import { SplashScreen } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { Slot } from 'expo-router';
 
-function App() {
-  return (
-    <Router>
-      <Switch>
-        <Route path="/login" component={SignIn} />
-        <Route path="/signup" component={SignUp} />
-        {/* <ProtectedRoute path="/dashboard" component={Dashboard} /> */}
-        <Route path="/" exact component={SignIn} />
-        {/* <Route path="/oauth2/redirect" component={OAuth2RedirectHandler} /> */}
-      </Switch>
-    </Router>
-  );
-}
+SplashScreen.preventAutoHideAsync();
 
-export default App;
+export default function App() {
+  const [loaded, error] = useFonts({
+  });
+
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
+
+  return <Slot />;
+} 
