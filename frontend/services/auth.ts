@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import axios from 'axios';
-import { User, AuthState } from '../../types';
+import { User, AuthState } from '../types';
 
 const API_URL = Platform.OS === 'web' 
     ? 'http://localhost:8081' 
@@ -135,8 +135,18 @@ export const useAuthStore = create<AuthState>((set) => ({
             ]);
 
             if (token && userJson) {
-                const user = JSON.parse(userJson) as User;
-                set({ token, user, isAuthenticated: true, isLoading: false });
+                try {
+                    const user = JSON.parse(userJson) as User;
+                    set({ token, user, isAuthenticated: true, isLoading: false });
+                } catch (parseError) {
+                    console.error('Failed to parse stored user data:', parseError);
+                    // Clear invalid storage data
+                    await Promise.all([
+                        storage.removeItem('token'),
+                        storage.removeItem('user')
+                    ]);
+                    set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+                }
             } else {
                 set({ isLoading: false });
             }

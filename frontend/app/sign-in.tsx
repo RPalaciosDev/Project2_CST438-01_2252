@@ -1,31 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
     ActivityIndicator,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import axios from 'axios';
+import { useAuthStore } from '../services/auth';
 
 export default function SignIn() {
+    const router = useRouter();
+    const { login, isAuthenticated, isLoading, error: authError } = useAuthStore();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [apiStatus, setApiStatus] = useState('');
     const [isCheckingApi, setIsCheckingApi] = useState(false);
 
+    // Check API connectivity
+    const checkApiStatus = async () => {
+        setIsCheckingApi(true);
+        setApiStatus('Checking API connection...');
+        try {
+            const apiUrl = Platform.OS === 'web' 
+                ? 'http://localhost:8081/health' 
+                : 'http://10.0.2.2:8081/health';
+                
+            await axios.get(apiUrl, { timeout: 5000 });
+            setApiStatus('API connection successful!');
+        } catch (error: any) {
+            setApiStatus(`API connection failed: ${error.message || 'Unknown error'}`);
+        } finally {
+            setIsCheckingApi(false);
+        }
+    };
+
+    // Redirect to home if authenticated
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.replace('/home');
+        }
+    }, [isAuthenticated, router]);
+
+    // Display auth error if it exists
+    useEffect(() => {
+        if (authError) {
+            setError(authError);
+        }
+    }, [authError]);
+
+    const handleSubmit = async () => {
+        if (!email || !password) {
+            setError('Please enter both email and password');
+            return;
+        }
+        
+        setError('');
+        try {
+            await login(email, password);
+            // If successful, the isAuthenticated effect will handle redirection
+        } catch (err: any) {
+            // Error handling is done via the authError effect
+            console.error('Sign in error:', err);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.form}>
-                <Text style={styles.title}>Love Tiers</Text>
-                <Text style={styles.subtitle}>Sign in</Text>
+                <Text style={styles.title}>Love Tiers 💧 </Text>
+                <Text style={styles.subtitle}>Welcome back!</Text>
                 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 {apiStatus ? <Text style={styles.apiStatus}>{apiStatus}</Text> : null}
                 {isCheckingApi && <ActivityIndicator size="small" color="#FF4B6E" />}
+                <TouchableOpacity onPress={checkApiStatus} style={styles.apiCheckButton}>
+                    <Text style={styles.apiCheckButtonText}>Check API Connection</Text>
+                </TouchableOpacity>
 
                 <TextInput
                     style={styles.input}
@@ -45,6 +102,18 @@ export default function SignIn() {
                     onChangeText={setPassword}
                     secureTextEntry
                 />
+
+                <TouchableOpacity 
+                    style={styles.button}
+                    onPress={handleSubmit}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.buttonText}>Sign In</Text>
+                    )}
+                </TouchableOpacity>
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Don't have an account? </Text>
