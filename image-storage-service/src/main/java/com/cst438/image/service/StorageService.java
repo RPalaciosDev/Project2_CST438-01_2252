@@ -42,17 +42,17 @@ public class StorageService {
      * If an image exists in S3 but not in MongoDB, it will be added.
      */
     public void syncS3ToMongo() {
-        System.out.println("📢 syncS3ToMongo() method called!");
+        System.out.println("syncS3ToMongo() method called!");
 
         ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
         ListObjectsV2Response result = s3Client.listObjectsV2(request);
 
         if (result.contents().isEmpty()) {
-            System.out.println("⚠️ No files found in S3 bucket: " + bucketName);
+            System.out.println("No files found in S3 bucket: " + bucketName);
         }
 
         for (S3Object s3Object : result.contents()) {
-            System.out.println("🔍 Checking: " + s3Object.key());
+            System.out.println("Checking: " + s3Object.key());
 
             String fileKey = s3Object.key();
             String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;

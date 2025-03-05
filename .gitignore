@@ -640,3 +640,26 @@ web-build/
 *.swp
 *.swo
 *~
+
+# Project specific
+.env
+.env.*
+!.env.example
+credentials.txt
+*.pem
+*.key
+*.crt
+/secrets/*
+!secrets/.gitkeep
+
+# MongoDB data
+/data/mongodb/*
+!data/mongodb/.gitkeep
+
+# Logs
+/logs/*
+!logs/.gitkeep
+
+# Generated thumbnails
+/thumbnails/*
+!thumbnails/.gitkeep

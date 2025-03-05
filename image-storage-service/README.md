@@ -118,33 +118,78 @@ server.port=9090
 If you see `Unauthorized: Command listDatabases requires authentication`, try connecting with:
 ```sh
 docker exec -it mongodb mongosh -u root -p $MONGO_ROOT_PASSWORD --authenticationDatabase admin
-Enter password: eH
 ```
 
-Then, switch to the correct database:
+### S3 Synchronization Issues
+If images are not appearing in the application:
+
+1. Check S3 bucket permissions:
 ```sh
-use image_storage_db
-```
-If you need help finding it use:
-```
-show dbs
+aws s3 ls s3://strawhat-tierlist-images --profile your-profile
 ```
 
-To see what collections are available:
-```
-show collections
-```
-
-To pull everything in the image folder:
-```
-db.images.find().pretty()
+2. Verify MongoDB connection:
+```sh
+# Inside the container
+curl http://localhost:8084/api/health
 ```
 
+3. Check service logs:
+```sh
+docker logs -f project2_cst438-01_2252-image-storage-service-1
+```
 
+4. Manual sync trigger:
+```sh
+curl -X POST http://localhost:8084/api/sync-s3
+```
 
+### Common Error Messages
+
+1. "Failed to connect to MongoDB":
+   - Check if MongoDB container is running
+   - Verify MongoDB credentials in .env file
+   - Ensure MongoDB port is accessible
+
+2. "AWS credentials not found":
+   - Check AWS credentials in .env file
+   - Verify AWS region setting
+   - Ensure S3 bucket exists and is accessible
+
+3. "Image upload failed":
+   - Check file size (max 10MB)
+   - Verify file format (supported: jpg, png, gif)
+   - Check available storage space
+
+## Recent Updates
+- Added automatic S3 to MongoDB synchronization on startup
+- Improved error handling for file uploads
+- Added health check endpoint
+- Enhanced logging for better debugging
+- Added support for multiple image formats
+- Implemented retry mechanism for failed operations
+
+## API Endpoints
+
+### Health Check
+```
+GET /api/health
+```
+
+### Image Operations
+```
+POST /api/images/upload
+GET /api/images/{id}
+GET /api/images/user/{userId}
+POST /api/sync-s3
+```
 
 ## Future Improvements
-- Add **image deletion** functionality.
-- Implement **role-based access control** for different users.
-- Enable **image processing features** such as resizing or watermarking before uploading.
-- Improve **logging and monitoring** with tools like Prometheus and Grafana.
+- Add image deletion functionality
+- Implement role-based access control
+- Enable image processing features (resizing, watermarking)
+- Improve logging and monitoring
+- Add batch upload support
+- Implement caching for frequently accessed images
+- Add image compression options
+- Support for additional storage providers
