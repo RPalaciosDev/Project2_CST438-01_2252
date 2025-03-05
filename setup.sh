@@ -62,6 +62,31 @@ if [ -z "$GOOGLE_CLIENT_SECRET" ]; then
     echo -e "${YELLOW}Using placeholder for Google Client Secret${NC}"
 fi
 
+# Prompt for AWS S3 credentials
+echo -e "\n${CYAN}☁️ AWS S3 Setup${NC}"
+echo "Please enter your AWS S3 credentials (or press Enter to use placeholders):"
+read -p "AWS Access Key ID: " AWS_ACCESS_KEY_ID
+read -p "AWS Secret Access Key: " AWS_SECRET_ACCESS_KEY
+read -p "AWS S3 Region: " AWS_S3_REGION
+read -p "AWS S3 Bucket Name: " AWS_S3_BUCKET
+
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    AWS_ACCESS_KEY_ID="your_aws_access_key_id_here"
+    echo -e "${YELLOW}Using placeholder for AWS Access Key ID${NC}"
+fi
+if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+    AWS_SECRET_ACCESS_KEY="your_aws_secret_access_key_here"
+    echo -e "${YELLOW}Using placeholder for AWS Secret Access Key${NC}"
+fi
+if [ -z "$AWS_S3_REGION" ]; then
+    AWS_S3_REGION="your_aws_region_here"
+    echo -e "${YELLOW}Using placeholder for AWS S3 Region${NC}"
+fi
+if [ -z "$AWS_S3_BUCKET" ]; then
+    AWS_S3_BUCKET="your_aws_bucket_name_here"
+    echo -e "${YELLOW}Using placeholder for AWS S3 Bucket Name${NC}"
+fi
+
 # Update .env file
 echo -e "\n${CYAN}📝 Updating configuration files...${NC}"
 sed -i.bak "s/MONGO_ROOT_PASSWORD=.*/MONGO_ROOT_PASSWORD=$MONGO_PASSWORD/" .env
@@ -69,6 +94,10 @@ sed -i.bak "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
 sed -i.bak "s/GOOGLE_CLIENT_ID=.*/GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID/" .env
 sed -i.bak "s/GOOGLE_CLIENT_SECRET=.*/GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET/" .env
 sed -i.bak "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$DB_PASSWORD/" .env
+sed -i.bak "s/AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID/" .env
+sed -i.bak "s/AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY/" .env
+sed -i.bak "s/AWS_S3_REGION=.*/AWS_S3_REGION=$AWS_S3_REGION/" .env
+sed -i.bak "s/AWS_S3_BUCKET=.*/AWS_S3_BUCKET=$AWS_S3_BUCKET/" .env
 rm .env.bak
 
 # Update database password file
@@ -81,7 +110,7 @@ if [ -d "frontend" ]; then
     cd frontend
     
     # Create or update .env file for the frontend
-    FRONTEND_ENV="frontend/.env"
+    FRONTEND_ENV=".env"
     echo "EXPO_PUBLIC_API_URL=http://localhost:8081" > $FRONTEND_ENV
     echo "EXPO_PUBLIC_OAUTH_REDIRECT_URI=http://localhost:8081/auth/callback" >> $FRONTEND_ENV
     echo "EXPO_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> $FRONTEND_ENV
@@ -134,6 +163,10 @@ JWT Secret: $JWT_SECRET
 Database Password: $DB_PASSWORD
 Google Client ID: $GOOGLE_CLIENT_ID
 Google Client Secret: $GOOGLE_CLIENT_SECRET
+AWS Access Key ID: $AWS_ACCESS_KEY_ID
+AWS Secret Access Key: $AWS_SECRET_ACCESS_KEY
+AWS S3 Region: $AWS_S3_REGION
+AWS S3 Bucket: $AWS_S3_BUCKET
 
 ⚠️ IMPORTANT:
 1. Keep this file secure and never commit it to version control
