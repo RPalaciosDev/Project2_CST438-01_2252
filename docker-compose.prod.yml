@@ -11,6 +11,25 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
 
+  image-storage-service:
+    build:
+      context: ./image-storage-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/image_storage_db?authSource=admin
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+
   auth-service:
     build:
       context: ./auth-user-service
@@ -22,7 +41,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
-      - SPRING_DATA_MONGODB_URI=mongodb://admin:your_mongodb_password@mongodb:27017/auth_db
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db
     restart: unless-stopped
     depends_on:
       - mongodb
