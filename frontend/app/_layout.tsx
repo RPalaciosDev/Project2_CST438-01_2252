@@ -1,16 +1,14 @@
-import { Platform, View } from 'react-native';
-import { Stack, Redirect } from 'expo-router';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect } from 'react';
-import { useAuthStore } from './services/auth';
+import { Stack } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useAuthStore } from '../services/auth';
 
 export default function RootLayout() {
-  const loadStoredAuth = useAuthStore(state => state.loadStoredAuth);
-  
+  const { loadStoredAuth } = useAuthStore();
+
+  // Initialize auth state on app startup
   useEffect(() => {
-    loadStoredAuth().catch(error => {
-      console.error('Failed to load authentication:', error);
-    });
+    loadStoredAuth();
   }, [loadStoredAuth]);
 
   return (
@@ -19,7 +17,26 @@ export default function RootLayout() {
         <Stack.Screen
           name="index"
           options={{ headerShown: false }}
-          redirect={true}
+        />
+        <Stack.Screen
+          name="sign-in"
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false // Prevent going back with gesture
+          }}
+        />
+        <Stack.Screen
+          name="sign-up"
+          options={{ 
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="home"
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false // Prevent going back to login
+          }}
         />
       </Stack>
     </GestureHandlerRootView>

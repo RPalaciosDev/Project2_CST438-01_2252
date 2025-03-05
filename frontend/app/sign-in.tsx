@@ -9,17 +9,18 @@ import {
     Platform,
     ActivityIndicator,
 } from 'react-native';
-import { Link } from 'expo-router';
-import { useAuthStore } from '../services/auth';
+import { Link, useRouter } from 'expo-router';
 import axios from 'axios';
+import { useAuthStore } from '../services/auth';
 
 export default function SignIn() {
+    const router = useRouter();
+    const { login, isAuthenticated, isLoading, error: authError } = useAuthStore();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [apiStatus, setApiStatus] = useState('');
     const [isCheckingApi, setIsCheckingApi] = useState(false);
-    const login = useAuthStore((state) => state.login);
 
     // Check API connectivity
     const checkApiStatus = async () => {
@@ -39,24 +40,41 @@ export default function SignIn() {
         }
     };
 
-    // Check API status on component mount
+    // Redirect to home if authenticated
     useEffect(() => {
-        checkApiStatus();
-    }, []);
+        if (isAuthenticated) {
+            router.replace('/home');
+        }
+    }, [isAuthenticated, router]);
+
+    // Display auth error if it exists
+    useEffect(() => {
+        if (authError) {
+            setError(authError);
+        }
+    }, [authError]);
 
     const handleSubmit = async () => {
+        if (!email || !password) {
+            setError('Please enter both email and password');
+            return;
+        }
+        
+        setError('');
         try {
             await login(email, password);
-        } catch (err) {
-            setError('Invalid email or password');
+            // If successful, the isAuthenticated effect will handle redirection
+        } catch (err: any) {
+            // Error handling is done via the authError effect
+            console.error('Sign in error:', err);
         }
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.form}>
-                <Text style={styles.title}>Love Tiers</Text>
-                <Text style={styles.subtitle}>Sign in</Text>
+                <Text style={styles.title}>Love Tiers 💧 </Text>
+                <Text style={styles.subtitle}>Welcome back!</Text>
                 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -88,8 +106,13 @@ export default function SignIn() {
                 <TouchableOpacity 
                     style={styles.button}
                     onPress={handleSubmit}
+                    disabled={isLoading}
                 >
-                    <Text style={styles.buttonText}>Sign In</Text>
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.buttonText}>Sign In</Text>
+                    )}
                 </TouchableOpacity>
 
                 <View style={styles.footer}>

@@ -1,32 +1,45 @@
-import { Redirect } from 'expo-router';
-import { useAuthStore } from './services/auth';
 import { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '../services/auth';
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
-  
+
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (isLoading) {
-        setError('App is taking longer than expected to load. Please check your network connection.');
+    // Load stored authentication on component mount
+    const loadAuth = async () => {
+      try {
+        await loadStoredAuth();
+      } catch (err) {
+        setError('Failed to load authentication');
       }
-    }, 10000); // 10 seconds
+    };
     
-    return () => clearTimeout(timeout);
-  }, [isLoading]);
-  
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#FF4B6E" />
-        {error && <Text style={styles.errorText}>{error}</Text>}
-      </View>
-    );
-  }
-  
-  return <Redirect href={isAuthenticated ? "/tier-list" : "/sign-in"} />;
+    loadAuth();
+  }, [loadStoredAuth]);
+
+  useEffect(() => {
+    // Redirect based on authentication status
+    if (!isLoading) {
+      if (isAuthenticated) {
+        router.replace('/home');
+      } else {
+        router.replace('/sign-in');
+      }
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+  // Show loading screen while checking auth
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#FF4B6E" />
+      <Text>Loading...</Text>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
