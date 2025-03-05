@@ -1,4 +1,3 @@
-
 services:
   # Frontend service
   frontend:
@@ -25,12 +24,12 @@ services:
       - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/auth_db
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db?authSource=admin
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
     depends_on:
-      - db
-
+      - mongodb
 
   # Tier list service
   tier-list-service:
@@ -76,8 +75,6 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
     depends_on:
       - mongodb
-
-
 
   # Database for user data (PostgreSQL)
   db:
