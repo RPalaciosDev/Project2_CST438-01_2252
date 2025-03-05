@@ -148,14 +148,21 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - **Port**: 8084
 - **Features**:
   - Image upload/download
-  - Automatic resizing
-  - Thumbnail generation
-- **Storage**: AWS S3
+  - Automatic S3 to MongoDB synchronization
+  - Metadata management
+  - Secure file storage
+  - Support for multiple image formats
+  - Automatic error handling and retry mechanisms
+- **Storage**: 
+  - AWS S3 (for image files)
+  - MongoDB (for metadata)
 - **Environment Variables**:
-  - `AWS_ACCESS_KEY`
-  - `AWS_SECRET_KEY`
-  - `AWS_S3_BUCKET`
-  - `AWS_REGION`
+  - `AWS_ACCESS_KEY`: AWS access key for S3 bucket access
+  - `AWS_SECRET_KEY`: AWS secret key for S3 bucket access
+  - `AWS_S3_BUCKET`: Name of the S3 bucket (default: strawhat-tierlist-images)
+  - `AWS_REGION`: AWS region (default: us-east-2)
+  - `MONGO_ROOT_PASSWORD`: MongoDB root password
+  - `MONGO_URI`: MongoDB connection string
 
 ## Development Setup
 
