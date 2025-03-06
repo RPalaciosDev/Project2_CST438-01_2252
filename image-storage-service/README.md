@@ -117,7 +117,7 @@ server.port=9090
 ### MongoDB Authentication Issues
 If you see `Unauthorized: Command listDatabases requires authentication`, try connecting with:
 ```sh
-docker exec -it mongodb mongosh -u root -p $MONGO_ROOT_PASSWORD --authenticationDatabase admin
+docker exec -it mongodb mongosh -u admin -p $MONGO_ROOT_PASSWORD --authenticationDatabase admin
 ```
 
 ### S3 Synchronization Issues
