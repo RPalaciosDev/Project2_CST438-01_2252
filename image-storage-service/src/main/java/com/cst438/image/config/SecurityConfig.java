@@ -17,12 +17,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         logger.info("SecurityConfig is being loaded!");
         http
-            .csrf(csrf -> csrf.disable())  // Updated to work with Spring Security 6
-            .authorizeRequests(auth -> auth
-                .requestMatchers("/api/images/**").permitAll()  // Allow public access to image endpoints
-                .anyRequest().authenticated()
-            )
-            .httpBasic();  // HTTP Authentication
+                .csrf(csrf -> csrf.disable()) // Updated to work with Spring Security 6
+                .authorizeRequests(auth -> auth
+                        .requestMatchers("/api/images/**").permitAll() // Allow public access to image endpoints
+                        .anyRequest().authenticated())
+                .httpBasic(); // HTTP Authentication
 
         return http.build();
     }

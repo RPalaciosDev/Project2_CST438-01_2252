@@ -5,8 +5,9 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.cassandra.core.mapping.PrimaryKey;
+import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
+import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -18,11 +19,17 @@ import java.util.UUID;
 @Getter
 @Setter
 public class Chat {
-    @PrimaryKey private UUID chatId;
-    @PrimaryKey private UUID conversationId;
+    @PrimaryKeyColumn(name = "chat_id", ordinal = 2, type = PrimaryKeyType.CLUSTERED)
+    private UUID chatId;
+
+    @PrimaryKeyColumn(name = "conversation_id", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
+    private UUID conversationId;
+
     private UUID senderId;
     private String message;
-    @PrimaryKey  private LocalDateTime sendAt;
+
+    @PrimaryKeyColumn(name = "send_at", ordinal = 1, type = PrimaryKeyType.CLUSTERED)
+    private LocalDateTime sendAt;
 
     @Override
     public String toString() {

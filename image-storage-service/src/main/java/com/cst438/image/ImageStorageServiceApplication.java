@@ -5,10 +5,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 @SpringBootApplication(scanBasePackages = "com.cst438.image")
-@EnableMongoRepositories(basePackages = "com.cst438.image.repository") // Ensure MongoDB repositories are enabled
 public class ImageStorageServiceApplication {
 
     private final StorageService storageService;

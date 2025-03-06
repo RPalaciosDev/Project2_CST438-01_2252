@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -20,7 +21,7 @@ public class ConversationService {
     public Conversation createConversation(Conversation conversation) {
         conversation.setCreatedAt(LocalDateTime.now());
 
-       // Chat expires one week from creation
+        // Chat expires one week from creation
         LocalDateTime dt = LocalDateTime.now();
         conversation.setExpiresAt(dt.plusDays(7));
 
@@ -36,6 +37,6 @@ public class ConversationService {
     }
 
     public Conversation getConversation(String conversation_id) {
-       return conversationRepository.findByConversationId(conversation_id);
+        return conversationRepository.findByConversationId(UUID.fromString(conversation_id));
     }
 }

@@ -47,7 +47,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
-      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db?authSource=admin
     restart: unless-stopped
     depends_on:
       - mongodb
@@ -74,11 +74,19 @@ services:
       - "8083:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/chat_db
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - SPRING_DATA_CASSANDRA_KEYSPACE_NAME=chat_keyspace
+      - SPRING_DATA_CASSANDRA_CONTACT_POINTS=cassandra
+      - SPRING_DATA_CASSANDRA_PORT=9042
+      - SPRING_DATA_CASSANDRA_DATACENTER=DC1
+      - SPRING_DATA_CASSANDRA_SCHEMA_ACTION=CREATE_IF_NOT_EXISTS
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=project2redispass
     restart: unless-stopped
     depends_on:
-      - db
+      - cassandra
+      - redis
 
   db:
     image: postgres:15-alpine
@@ -119,6 +127,36 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
       - MONGO_INITDB_DATABASE=auth_db
+    command: ["mongod", "--bind_ip_all"]
+    restart: unless-stopped
+
+  cassandra:
+    image: cassandra:latest
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=PROJ2_CLUSTER
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RACK1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+      - ./chat_api/init.cql:/docker-entrypoint-initdb.d/init.cql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status"]
+      interval: 2m
+      start_period: 2m
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    command: redis-server --requirepass project2redispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
 
 volumes:
@@ -134,6 +172,18 @@ volumes:
       type: none
       o: bind
       device: ./data/mongodb
+  cassandra_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/cassandra
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
   node_modules:
     driver: local
 
