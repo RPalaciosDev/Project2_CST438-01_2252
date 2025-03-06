@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://mongodb:27017/auth_db
+      uri: mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db?authSource=admin
       auto-index-creation: true
       connection-pool:
         max-wait-time: 5000

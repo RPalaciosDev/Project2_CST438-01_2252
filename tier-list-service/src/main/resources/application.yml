@@ -24,13 +24,15 @@ management:
       exposure:
         include: health,info,metrics
 
-# RabbitMQ Queue Names
+# RabbitMQ Configuration
 rabbitmq:
   queues:
-    tier-list-updates: tier-list-updates
-    user-updates: user-updates
+    template-updates: template-updates
+    item-updates: item-updates
   exchanges:
-    tier-list: tier-list-exchange
+    tierlist: tierlist-exchange
   routingKeys:
-    create-tier-list: create.tier.list
-    update-tier-list: update.tier.list 
+    create-template: create.template
+    update-template: update.template
+    create-item: create.item
+    update-item: update.item 
