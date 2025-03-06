@@ -8,12 +8,28 @@ services:
       - "19000:19000"
       - "19001:19001"
       - "19002:19002"
+      - "19006:19006"
     environment:
       - NODE_ENV=development
       - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - WATCHPACK_POLLING=true
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - type: bind
+        source: ./frontend
+        target: /app
+        consistency: cached
+      - type: volume
+        source: node_modules
+        target: /app/node_modules
+    # Add healthcheck for better orchestration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19006"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Ensure consistent line endings in container regardless of host OS
+    command: ["/bin/sh", "-c", "find /app -type f -not -path '*/node_modules/*' -not -path '*/build/*' -not -path '*/.git/*' -exec dos2unix {} \\; && npm start"]
 
   # Authentication service
   auth-service:
@@ -80,12 +96,22 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
       - POSTGRES_USER=postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
     ports:
       - "5432:5432"
+    secrets:
+      - db_password
+    # Add healthcheck for better orchestration
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # MongoDB (for Image Storage)
   mongodb:
@@ -93,12 +119,26 @@ services:
     container_name: mongodb
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongo_password
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - type: volume
+        source: mongodb_data
+        target: /data/db
+      - type: bind
+        source: ./mongo-init.js
+        target: /docker-entrypoint-initdb.d/mongo-init.js
+        read_only: true
+    secrets:
+      - mongo_password
+    # Add healthcheck for better orchestration
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   # Nginx reverse proxy
   nginx:
@@ -116,4 +156,14 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
   mongodb_data:
+    driver: local
+  node_modules:
+    driver: local
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  mongo_password:
+    file: ./secrets/mongo_password.txt

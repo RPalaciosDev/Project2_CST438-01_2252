@@ -2,8 +2,8 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache git
+# Install system dependencies including dos2unix for line ending normalization
+RUN apk add --no-cache git dos2unix
 
 # Copy package files
 COPY package*.json ./
@@ -19,6 +19,9 @@ RUN npm install react-native-web@0.19.6 react-dom@18.2.0
 
 # Copy the rest of the application
 COPY . .
+
+# Normalize line endings in all files
+RUN find . -type f -not -path "*/node_modules/*" -not -path "*/build/*" -not -path "*/.git/*" -exec dos2unix {} \;
 
 # Install expo-cli globally
 RUN npm install -g expo-cli@6.3.10

@@ -7,8 +7,11 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY src src
 
-RUN chmod +x ./gradlew
-RUN ./gradlew build -x test
+# Fix line endings in gradlew shell script (in case built on Windows)
+RUN apt-get update && apt-get install -y dos2unix \
+    && dos2unix ./gradlew \
+    && chmod +x ./gradlew \
+    && ./gradlew build -x test
 
 FROM eclipse-temurin:21-jre-alpine
 

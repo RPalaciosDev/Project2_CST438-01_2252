@@ -10,6 +10,12 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ./frontend
+        target: /app
+        consistency: cached
+    command: ["/bin/sh", "-c", "find /app -type f -name '*.sh' -exec dos2unix {} \\; && npx expo start --web --port 19006"]
 
   image-storage-service:
     build:
@@ -118,7 +124,17 @@ services:
 volumes:
   postgres_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
   mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mongodb
+  node_modules:
     driver: local
 
 secrets:

@@ -17,6 +17,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - [Configuration Management](#configuration-management)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
+- [Cross-Platform Development](#cross-platform-development)
 
 ## Quick Start
 
@@ -288,5 +289,27 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Expo Team for the mobile framework
 - Spring Boot Team for the backend framework
 - All contributors to this project
+
+## Cross-Platform Development
+
+This project supports development on both Windows and macOS/Linux environments. We've included platform-specific scripts and utilities to make cross-platform development easier.
+
+### Platform-Specific Setup
+
+- **Windows Users**: Use PowerShell scripts with `.ps1` extension
+  ```powershell
+  .\setup.ps1
+  .\frontend.ps1
+  ```
+
+- **macOS/Linux Users**: Use Bash scripts with `.sh` extension
+  ```bash
+  ./setup.sh
+  ./frontend.sh
+  ```
+
+### Common Cross-Platform Issues
+
+For detailed information about handling cross-platform issues like line endings, file paths, and case sensitivity, please refer to our [Cross-Platform Development Guide](./CROSS_PLATFORM.md).
 
 

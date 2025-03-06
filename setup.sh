@@ -180,4 +180,12 @@ echo -e "\n${MAGENTA}📋 Next steps:${NC}"
 echo "1. Review the generated credentials in $CREDENTIALS_FILE"
 echo "2. Share the credentials securely with your team members"
 echo "3. For production deployment, use different credentials and a secure password manager"
-echo "4. Start the services with: docker-compose up -d" 
+echo "4. Start the services with: docker-compose up -d"
+
+# Create a new cross-platform script (setup.js) using Node.js
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+# Use path.join for cross-platform paths
+const configPath = path.join(__dirname, 'config'); 
