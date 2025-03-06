@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
       args:
         - NODE_ENV=production
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "19006:19006"
     environment:
@@ -21,6 +24,10 @@ services:
     build:
       context: ./image-storage-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8084:8080"
     environment:
@@ -30,7 +37,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_S3_REGION=${AWS_S3_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
       - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/image_storage_db?authSource=admin
     restart: unless-stopped
     depends_on:
@@ -40,13 +47,17 @@ services:
     build:
       context: ./auth-user-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
       - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db?authSource=admin
     restart: unless-stopped
     depends_on:
@@ -56,12 +67,16 @@ services:
     build:
       context: ./tier-list-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
-      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     restart: unless-stopped
     depends_on:
       - db
@@ -70,11 +85,15 @@ services:
     build:
       context: ./chat_api
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8083:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
       - SPRING_DATA_CASSANDRA_KEYSPACE_NAME=chat_keyspace
       - SPRING_DATA_CASSANDRA_CONTACT_POINTS=cassandra
       - SPRING_DATA_CASSANDRA_PORT=9042
@@ -90,6 +109,7 @@ services:
 
   db:
     image: postgres:15-alpine
+    platform: ${TARGETPLATFORM:-linux/amd64}
     environment:
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
       - POSTGRES_USER=postgres
@@ -103,6 +123,7 @@ services:
 
   nginx:
     image: nginx:alpine
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "80:80"
       - "443:443"
@@ -118,6 +139,7 @@ services:
 
   mongodb:
     image: mongo:latest
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "27017:27017"
     volumes:
@@ -132,6 +154,7 @@ services:
 
   cassandra:
     image: cassandra:latest
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "9042:9042"
     environment:
@@ -152,6 +175,7 @@ services:
 
   redis:
     image: redis:latest
+    platform: ${TARGETPLATFORM:-linux/amd64}
     command: redis-server --requirepass project2redispass
     ports:
       - "6379:6379"

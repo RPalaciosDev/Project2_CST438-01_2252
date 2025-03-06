@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk as builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} eclipse-temurin:21-jdk as builder
 
 WORKDIR /app
 COPY gradlew .
@@ -13,14 +13,14 @@ RUN apt-get update && apt-get install -y dos2unix \
     && chmod +x ./gradlew \
     && ./gradlew build -x test
 
-FROM eclipse-temurin:21-jre-alpine
+FROM --platform=${TARGETPLATFORM:-linux/amd64} eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 
 ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
-    JAVA_OPTS="-Xmx512m -Xms256m"
+    JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]

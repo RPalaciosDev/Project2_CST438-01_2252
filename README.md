@@ -18,6 +18,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
 - [Cross-Platform Development](#cross-platform-development)
+- [Cross-Platform Support](#cross-platform-support)
 
 ## Quick Start
 
@@ -324,6 +325,32 @@ This project is designed to work seamlessly across Windows, macOS, and Linux pla
    - Cross-platform IDE configurations
    - Shared linting and formatting rules
    - Path utilities for JavaScript and Java codebases
+
+6. **Multi-Architecture Support**
+   - Docker images can be built for multiple CPU architectures (AMD64, ARM64)
+   - Use `build-multiarch.sh` (Unix) or `build-multiarch.ps1` (Windows) to build multi-arch images
+   - Compatible with Intel/AMD processors and Apple Silicon (M1/M2)
+   - Optimized JVM settings for all architectures
+
+## Cross-Platform Support
+
+This project has been enhanced to work seamlessly across different architectures (ARM64 and AMD64) and operating systems (Windows, macOS, Linux).
+
+### Quick Start with Architecture Auto-Detection
+
+To get started with automatic architecture detection:
+
+```bash
+# For macOS/Linux
+./set-arch.sh          # Detect and set architecture variables
+./cross-platform-run.sh up  # Start all services
+
+# For Windows PowerShell
+.\set-arch.ps1         # Detect and set architecture variables
+.\cross-platform-run.sh up  # Start all services
+```
+
+For more details about cross-platform development, see [CROSS_PLATFORM.md](CROSS_PLATFORM.md).
 
 ## License
 

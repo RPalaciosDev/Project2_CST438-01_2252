@@ -4,6 +4,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
     ports:
       - "19000:19000"
       - "19001:19001"
@@ -36,6 +38,9 @@ services:
     build:
       context: ./auth-user-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8081:8080"
     environment:
@@ -44,6 +49,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       - mongodb
 
@@ -52,11 +58,15 @@ services:
     build:
       context: ./tier-list-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       - db
 
@@ -65,19 +75,34 @@ services:
     build:
       context: ./chat_api
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8083:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/chat_db
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+      - SPRING_DATA_CASSANDRA_KEYSPACE_NAME=chat_keyspace
+      - SPRING_DATA_CASSANDRA_CONTACT_POINTS=cassandra
+      - SPRING_DATA_CASSANDRA_PORT=9042
+      - SPRING_DATA_CASSANDRA_DATACENTER=DC1
+      - SPRING_DATA_CASSANDRA_SCHEMA_ACTION=CREATE_IF_NOT_EXISTS
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=project2redispass
     depends_on:
-      - db
+      - cassandra
+      - redis
 
   # Image Storage Service
   image-storage-service:
     build:
       context: ./image-storage-service
       dockerfile: Dockerfile
+      args:
+        - BUILDPLATFORM=${BUILDPLATFORM:-linux/amd64}
+        - TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
     ports:
       - "8084:8080"
     env_file:
@@ -89,12 +114,14 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_S3_REGION=${AWS_S3_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     depends_on:
       - mongodb
 
   # Database for user data (PostgreSQL)
   db:
     image: postgres:15-alpine
+    platform: ${TARGETPLATFORM:-linux/amd64}
     environment:
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
       - POSTGRES_USER=postgres
@@ -116,10 +143,11 @@ services:
   # MongoDB (for Image Storage)
   mongodb:
     image: mongo:latest
-    container_name: mongodb
+    platform: ${TARGETPLATFORM:-linux/amd64}
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD_FILE=/run/secrets/mongo_password
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=auth_db
     ports:
       - "27017:27017"
     volumes:
@@ -130,8 +158,7 @@ services:
         source: ./mongo-init.js
         target: /docker-entrypoint-initdb.d/mongo-init.js
         read_only: true
-    secrets:
-      - mongo_password
+    command: ["mongod", "--bind_ip_all"]
     # Add healthcheck for better orchestration
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
@@ -140,9 +167,48 @@ services:
       retries: 5
       start_period: 40s
 
+  # Cassandra for chat service
+  cassandra:
+    image: cassandra:latest
+    platform: ${TARGETPLATFORM:-linux/amd64}
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=PROJ2_CLUSTER
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RACK1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    volumes:
+      - type: volume
+        source: cassandra_data
+        target: /var/lib/cassandra
+      - type: bind
+        source: ./chat_api/init.cql
+        target: /docker-entrypoint-initdb.d/init.cql
+        read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status"]
+      interval: 2m
+      start_period: 2m
+      timeout: 10s
+      retries: 3
+
+  # Redis for chat service caching
+  redis:
+    image: redis:latest
+    platform: ${TARGETPLATFORM:-linux/amd64}
+    command: redis-server --requirepass project2redispass
+    ports:
+      - "6379:6379"
+    volumes:
+      - type: volume
+        source: redis_data
+        target: /data
+
   # Nginx reverse proxy
   nginx:
     image: nginx:alpine
+    platform: ${TARGETPLATFORM:-linux/amd64}
     ports:
       - "80:80"
     volumes:
@@ -159,11 +225,13 @@ volumes:
     driver: local
   mongodb_data:
     driver: local
+  cassandra_data:
+    driver: local
+  redis_data:
+    driver: local
   node_modules:
     driver: local
 
 secrets:
   db_password:
     file: ./secrets/db_password.txt
-  mongo_password:
-    file: ./secrets/mongo_password.txt

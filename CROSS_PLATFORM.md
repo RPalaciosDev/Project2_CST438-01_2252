@@ -69,16 +69,92 @@ macOS/Linux file systems are case-sensitive by default, while Windows is not. Th
    import MyComponent from './mycomponent';
    ```
 
-## Docker Development
+## Cross-Architecture Compatibility
+
+Different CPU architectures (like x86_64/AMD64 and ARM64) require special consideration, especially when using Docker containers or compiling native code.
+
+### Multi-Architecture Docker Builds
+
+Our project now includes enhanced support for building Docker images that work across different CPU architectures:
+
+1. Use the provided multi-architecture build scripts:
+   ```bash
+   # On macOS/Linux
+   ./build-multiarch.sh
+   
+   # On Windows
+   .\build-multiarch.ps1
+   ```
+
+2. These scripts use Docker Buildx to create images that work on:
+   - x86_64/AMD64 (Intel/AMD processors)
+   - ARM64 (Apple M1/M2, AWS Graviton, Raspberry Pi 4)
+
+3. NEW: Automatic architecture detection and configuration:
+   ```bash
+   # On macOS/Linux
+   ./set-arch.sh
+   
+   # On Windows
+   .\set-arch.ps1
+   ```
+   
+4. NEW: Cross-platform Docker helper scripts:
+   ```bash
+   # Start services (auto-detecting architecture)
+   ./cross-platform-run.sh up
+   
+   # Start production services
+   ./cross-platform-run.sh up prod
+   
+   # Build with architecture optimization
+   ./cross-platform-run.sh build
+   ```
+
+### Java Considerations
+
+Java runs on a virtual machine, which helps with cross-architecture compatibility. Our Dockerfiles have been enhanced to include:
+
+- Platform-specific build stages using `--platform=${BUILDPLATFORM}` 
+- Runtime stages optimized for target architecture with `--platform=${TARGETPLATFORM}`
+- Dynamic JVM settings that adapt to available container resources using `-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0`
+- Architecture-aware health checks and configuration
+
+### JavaScript/Node.js Considerations
+
+For Node.js applications with native dependencies:
+
+1. Use architecture-specific installations when needed:
+   ```bash
+   # For native modules on M1/M2 Macs
+   npm install --arch=arm64
+   
+   # For native modules on Intel/AMD machines
+   npm install --arch=x64
+   ```
+
+2. Consider using pure JavaScript alternatives to native modules when possible
+
+### Testing on Different Architectures
+
+Always test your changes on different architectures when possible:
+- Run the application on both Intel/AMD and ARM-based machines
+- Use emulation for testing (e.g., Docker with QEMU)
+- Consider CI/CD testing on multiple architectures
+
+## Docker Development with Architecture Support
 
 Using Docker for development provides a consistent environment regardless of the host OS:
 
 ```bash
-# Start all services
-docker-compose up
+# Start all services with architecture detection
+./cross-platform-run.sh up
 
-# Start specific services
-docker-compose up frontend auth-service
+# Build services optimized for your architecture
+./cross-platform-run.sh build
+
+# View logs
+./cross-platform-run.sh logs frontend
 ```
 
 ### Docker on Windows
@@ -135,32 +211,48 @@ volumes:
     target: /app/data
 ```
 
-## Environment Variables
+## Environment Variables for Cross-Architecture Support
 
-Environment variables work differently across platforms.
+The project now uses environment variables to detect and configure services for different architectures:
 
-### Best Practices
+```
+BUILDPLATFORM=linux/amd64    # or linux/arm64 for ARM-based machines
+TARGETPLATFORM=linux/amd64   # or linux/arm64 for ARM-based machines
+```
 
-1. Always use `.env` files for environment variables
-2. For cross-platform scripts, use a library like `dotenv` to load variables
+These variables are automatically set by the `set-arch.sh` or `set-arch.ps1` scripts.
 
-## Node.js Dependencies with Native Code
+### Troubleshooting Architecture Issues
 
-Some npm packages include native code that must be compiled for the host OS.
+If you encounter architecture-related errors:
 
-### Troubleshooting
-
-If you encounter errors related to native modules:
-
-1. Ensure you have appropriate build tools installed:
-   - Windows: Visual Studio Build Tools with C++ development tools
-   - macOS: Xcode Command Line Tools (`xcode-select --install`)
-   - Linux: `build-essential` package
-   
-2. Try reinstalling node modules:
+1. Check which architecture your images are using:
    ```bash
-   rm -rf node_modules
-   npm install
+   docker inspect --format '{{.Architecture}}' project2_cst438-01_2252-frontend:latest
+   ```
+
+2. Verify your host architecture:
+   ```bash
+   # On Linux/macOS
+   uname -m
+   
+   # On Windows PowerShell
+   [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+   ```
+
+3. Reset architecture detection:
+   ```bash
+   # On Linux/macOS
+   source ./set-arch.sh
+   
+   # On Windows
+   . .\set-arch.ps1
+   ```
+
+4. Try building with specific platform targeting:
+   ```bash
+   # Force AMD64 build
+   TARGETPLATFORM=linux/amd64 ./cross-platform-run.sh rebuild
    ```
 
 ## Recommended Tools
@@ -168,4 +260,6 @@ If you encounter errors related to native modules:
 - **Git Clients with EOL Handling**: GitHub Desktop, SourceTree
 - **Code Editors with EOL Support**: VSCode with "EOL Sequence" indicator
 - **Path Management**: Always use Node.js `path` module for server code
-- **Docker Desktop**: Works on both Windows and macOS 
+- **Docker Desktop**: Works on both Windows and macOS
+- **Docker Buildx**: For multi-architecture container builds
+- **Architecture Detection**: Use the provided `set-arch.sh` and `cross-platform-run.sh` scripts 
