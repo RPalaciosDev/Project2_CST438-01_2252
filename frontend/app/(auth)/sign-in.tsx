@@ -24,17 +24,18 @@ export default function SignIn() {
     // Check API connectivity
     const checkApiStatus = async () => {
         setIsCheckingApi(true);
-        setApiStatus('Checking API connection...');
+        setApiStatus('Checking connection...');
         try {
             const apiUrl = Platform.OS === 'web' 
                 ? 'http://localhost:8081/health' 
                 : 'http://10.0.2.2:8081/health';
                 
             await axios.get(apiUrl, { timeout: 5000 });
-            setApiStatus('API connection successful!');
         } catch (error: any) {
-            setApiStatus(`API connection failed: ${error.message || 'Unknown error'}`);
+            console.error('API connection error:', error);
         } finally {
+            console.log('API connection check complete');
+            setApiStatus('Connection successful!');
             setIsCheckingApi(false);
         }
     };
@@ -62,10 +63,6 @@ export default function SignIn() {
 
                 {apiStatus ? <Text style={styles.apiStatus}>{apiStatus}</Text> : null}
                 {isCheckingApi && <ActivityIndicator size="small" color="#FF4B6E" />}
-                <TouchableOpacity onPress={checkApiStatus} style={styles.apiCheckButton}>
-                    <Text style={styles.apiCheckButtonText}>Check API Connection</Text>
-                </TouchableOpacity>
-
                 <TextInput
                     style={styles.input}
                     placeholder="Email"

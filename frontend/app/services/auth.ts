@@ -4,9 +4,9 @@ import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../../types';
 
-const API_URL = Platform.OS === 'web' 
-    ? 'http://localhost:8081' 
-    : 'http://10.0.2.2:8081'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
+const API_URL = Platform.OS === 'web'
+    ? 'http://localhost:8081'
+    : 'exp://10.11.158.97:8081'; // Android device URL
 
 const storage = {
     setItem: async (key: string, value: string) => {
