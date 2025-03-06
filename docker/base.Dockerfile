@@ -1,5 +1,5 @@
 # Base Java service image
-FROM eclipse-temurin:17-jdk as builder
+FROM eclipse-temurin:21-jdk as builder
 
 WORKDIR /app
 COPY gradlew .
@@ -8,11 +8,14 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY src src
 
-RUN chmod +x ./gradlew
-RUN ./gradlew build -x test
+# Fix line endings in gradlew shell script (in case built on Windows)
+RUN apt-get update && apt-get install -y dos2unix \
+    && dos2unix ./gradlew \
+    && chmod +x ./gradlew \
+    && ./gradlew build -x test
 
 # Runtime image
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
