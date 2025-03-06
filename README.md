@@ -41,11 +41,18 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    ```
 
 3. **Setup and Start Frontend Expo App**
+   
+   Windows (PowerShell):
+   ```powershell
+   .\frontend.ps1
+   ```
+
+   Unix-like systems (Linux/macOS):
    ```bash
    chmod +x frontend.sh
    ./frontend.sh
    ```
-   This script updates Expo packages to their required versions and launches the development server.
+   These scripts update Expo packages to their required versions and launch the development server.
 
 4. **Start Backend Services**
    
@@ -64,7 +71,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - Node.js (v18 or later)
 - Docker and Docker Compose
 - Expo CLI (`npm install -g expo-cli`)
-- Java 17 (for backend services)
+- Java 21 (for backend services)
 - Git
 - OpenSSL (for SSL certificates)
 
@@ -79,11 +86,17 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 │   └── types/          # TypeScript types
 ├── auth-user-service/   # Authentication microservice
 ├── tier-list-service/  # Tier list management service
-├── chat-service/       # Real-time chat functionality
+├── chat_api/           # Real-time chat functionality
 ├── image-storage-service/ # Image handling and storage
 ├── nginx/              # Reverse proxy and SSL
 ├── secrets/           # Secure credential storage
-└── docker/            # Shared Docker configurations
+├── data/              # Directory for all service data volumes
+│   ├── postgres/      # PostgreSQL data
+│   ├── mongodb/       # MongoDB data
+│   ├── cassandra/     # Cassandra data
+│   └── redis/         # Redis data
+├── docker/            # Shared Docker configurations
+└── utils/             # Utility scripts for cross-platform development
 ```
 
 ## Services Overview
@@ -137,12 +150,18 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - Real-time messaging
   - WebSocket support
   - Chat history
-- **Database**: Cassandra 
+  - Conversation management
+- **Databases**: 
+  - Cassandra (for message storage)
+  - Redis (for caching and pub/sub)
 - **Environment Variables**:
-  - `CASSANDRA_CLUSTER_NAME`
-  - `CASSANDRA_DC`
-  - `CASSANDRA_RACK`
-  - `CASSANDRA_ENDPOINT_SNITCH`
+  - `SPRING_DATA_CASSANDRA_KEYSPACE_NAME`: Cassandra keyspace name (default: chat_keyspace)
+  - `SPRING_DATA_CASSANDRA_CONTACT_POINTS`: Cassandra contact points (default: cassandra)
+  - `SPRING_DATA_CASSANDRA_PORT`: Cassandra port (default: 9042)
+  - `SPRING_DATA_CASSANDRA_DATACENTER`: Cassandra datacenter (default: DC1)
+  - `SPRING_DATA_REDIS_HOST`: Redis host (default: redis)
+  - `SPRING_DATA_REDIS_PORT`: Redis port (default: 6379)
+  - `SPRING_DATA_REDIS_PASSWORD`: Redis password
 
 ### Image Storage Service
 - **Technology**: Spring Boot
@@ -158,12 +177,11 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - AWS S3 (for image files)
   - MongoDB (for metadata)
 - **Environment Variables**:
-  - `AWS_ACCESS_KEY`: AWS access key for S3 bucket access
-  - `AWS_SECRET_KEY`: AWS secret key for S3 bucket access
+  - `AWS_ACCESS_KEY_ID`: AWS access key for S3 bucket access
+  - `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3 bucket access
   - `AWS_S3_BUCKET`: Name of the S3 bucket (default: strawhat-tierlist-images)
-  - `AWS_REGION`: AWS region (default: us-east-2)
+  - `AWS_S3_REGION`: AWS region (default: us-east-2)
   - `MONGO_ROOT_PASSWORD`: MongoDB root password
-  - `MONGO_URI`: MongoDB connection string
 
 ## Development Setup
 
@@ -173,7 +191,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    - Configure Google OAuth2 (see below)
 
 2. **Frontend Setup**
-   - Run the frontend script (`frontend.sh`)
+   - Run the frontend script (`frontend.ps1` or `frontend.sh`)
    - This updates required Expo packages to compatible versions
    - Launches the Expo development server
    - See the frontend README for more details
@@ -209,6 +227,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    - [ ] Configure production database credentials
    - [ ] Set up monitoring and logging
    - [ ] Configure backup strategy
+   - [ ] Verify Cassandra and Redis configuration for chat service
 
 ## Configuration Management
 
@@ -223,12 +242,13 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - Optimized for performance
   - Secure credential management
   - MongoDB for auth service
+  - Cassandra and Redis for chat service
 
 ### Environment Files
 - `.env`: Development environment variables
 - `.env.production`: Production settings
 - `application.yml`: Service-specific configuration
-- `secrets/`: Secure credentials storage
+- `secrets/`: Secure credentials storage (db_password.txt, mongo_password.txt, redis_password.txt)
 
 ## Security
 
@@ -250,35 +270,60 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 
 ### Common Issues
 
-1. **SSL Certificate Issues**
-   - Check certificate paths in nginx config
-   - Verify certificate permissions
-   - Ensure certificates are valid
+#### Line Ending Issues
+If you encounter issues with shell scripts not executing properly, it may be due to incorrect line endings:
 
-2. **Database Connection Issues**
-   - Verify credentials in `.env`
-   - Check database service is running
-   - Confirm port availability
+**On Windows:**
+```powershell
+# Fix line endings with PowerShell
+(Get-Content path\to\file.ext) | Set-Content -Encoding UTF8 path\to\file.ext
+```
 
-3. **OAuth2 Authentication Failures**
-   - Verify Google credentials
-   - Check redirect URI configuration
-   - Confirm SSL certificate validity
+**On macOS/Linux:**
+```bash
+# Fix line endings with dos2unix
+dos2unix path/to/file.ext
+```
 
-4. **Container Startup Issues**
-   ```bash
-   # View service logs
-   docker-compose logs [service-name]
-   
-   # Restart specific service
-   docker-compose restart [service-name]
-   ```
+#### Service Connection Issues
+- Check if all required services are running: `docker-compose ps`
+- View service logs: `docker-compose logs [service-name]`
+- Ensure environment variables are set correctly
+- Verify network connectivity between services
 
-### Getting Help
-- Check service logs: `docker-compose logs`
-- Review error messages in browser console
-- Check application logs in `logs/` directory
-- Contact team lead for credential issues
+#### Database Issues
+- Verify data volumes are properly mounted
+- Check database logs for errors
+- Ensure credentials are correct
+- For Cassandra: verify keyspace creation script executed successfully
+
+## Cross-Platform Development
+
+This project is designed to work seamlessly across Windows, macOS, and Linux platforms. See [CROSS_PLATFORM.md](CROSS_PLATFORM.md) for detailed guidelines on cross-platform development.
+
+### Key Cross-Platform Features
+
+1. **Platform-Specific Setup Scripts**
+   - `setup.sh` for macOS/Linux
+   - `setup.ps1` for Windows
+
+2. **Consistent Line Endings**
+   - .gitattributes configuration for automatic line ending normalization
+   - Docker containers with automatic line ending conversion
+
+3. **Path Management**
+   - Utils provided for handling path separators across platforms
+   - All Dockerfiles use forward slashes for paths
+
+4. **Docker Compatibility**
+   - Container configuration works on all platforms
+   - Volume mounts use cross-platform paths
+   - Services include dos2unix for script normalization
+
+5. **Development Tools**
+   - Cross-platform IDE configurations
+   - Shared linting and formatting rules
+   - Path utilities for JavaScript and Java codebases
 
 ## License
 
@@ -289,27 +334,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Expo Team for the mobile framework
 - Spring Boot Team for the backend framework
 - All contributors to this project
-
-## Cross-Platform Development
-
-This project supports development on both Windows and macOS/Linux environments. We've included platform-specific scripts and utilities to make cross-platform development easier.
-
-### Platform-Specific Setup
-
-- **Windows Users**: Use PowerShell scripts with `.ps1` extension
-  ```powershell
-  .\setup.ps1
-  .\frontend.ps1
-  ```
-
-- **macOS/Linux Users**: Use Bash scripts with `.sh` extension
-  ```bash
-  ./setup.sh
-  ./frontend.sh
-  ```
-
-### Common Cross-Platform Issues
-
-For detailed information about handling cross-platform issues like line endings, file paths, and case sensitivity, please refer to our [Cross-Platform Development Guide](./CROSS_PLATFORM.md).
 
 

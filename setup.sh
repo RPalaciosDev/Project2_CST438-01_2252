@@ -31,6 +31,10 @@ copy_template_if_not_exists() {
 # Create necessary directories
 ensure_directory_exists "secrets"
 ensure_directory_exists "nginx/ssl"
+ensure_directory_exists "data/postgres"
+ensure_directory_exists "data/mongodb"
+ensure_directory_exists "data/cassandra"
+ensure_directory_exists "data/redis"
 
 # Copy template files
 echo -e "\n${CYAN}📝 Copying template files...${NC}"
@@ -46,6 +50,7 @@ generate_password() {
 MONGO_PASSWORD=$(generate_password 16)
 JWT_SECRET=$(generate_password 32)
 DB_PASSWORD=$(generate_password 16)
+REDIS_PASSWORD=$(generate_password 16)
 
 # Prompt for Google OAuth credentials
 echo -e "\n${CYAN}🔑 Google OAuth2 Setup${NC}"
@@ -98,10 +103,36 @@ sed -i.bak "s/AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID/" .env
 sed -i.bak "s/AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY/" .env
 sed -i.bak "s/AWS_S3_REGION=.*/AWS_S3_REGION=$AWS_S3_REGION/" .env
 sed -i.bak "s/AWS_S3_BUCKET=.*/AWS_S3_BUCKET=$AWS_S3_BUCKET/" .env
+
+# Add Redis password to .env if it doesn't exist
+if ! grep -q "REDIS_PASSWORD" .env; then
+    echo -e "\n# Redis Configuration" >> .env
+    echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> .env
+    echo -e "${GREEN}Added Redis password to .env${NC}"
+else
+    sed -i.bak "s/REDIS_PASSWORD=.*/REDIS_PASSWORD=$REDIS_PASSWORD/" .env
+fi
+
+# Add Cassandra configuration to .env if it doesn't exist
+if ! grep -q "CASSANDRA_KEYSPACE" .env; then
+    echo -e "\n# Cassandra Configuration" >> .env
+    echo "CASSANDRA_KEYSPACE=chat_keyspace" >> .env
+    echo "CASSANDRA_DATACENTER=DC1" >> .env
+    echo -e "${GREEN}Added Cassandra configuration to .env${NC}"
+fi
+
 rm .env.bak
 
 # Update database password file
 echo "$DB_PASSWORD" > secrets/db_password.txt
+
+# Create MongoDB password file if it doesn't exist
+echo "$MONGO_PASSWORD" > secrets/mongo_password.txt
+echo -e "${GREEN}Created MongoDB password file${NC}"
+
+# Create Redis password file if it doesn't exist
+echo "$REDIS_PASSWORD" > secrets/redis_password.txt
+echo -e "${GREEN}Created Redis password file${NC}"
 
 # Setup frontend environment
 echo -e "\n${CYAN}🌐 Setting up frontend environment...${NC}"
@@ -161,6 +192,7 @@ Generated on: $(date)
 MongoDB Root Password: $MONGO_PASSWORD
 JWT Secret: $JWT_SECRET
 Database Password: $DB_PASSWORD
+Redis Password: $REDIS_PASSWORD
 Google Client ID: $GOOGLE_CLIENT_ID
 Google Client Secret: $GOOGLE_CLIENT_SECRET
 AWS Access Key ID: $AWS_ACCESS_KEY_ID

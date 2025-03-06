@@ -31,6 +31,10 @@ function Copy-TemplateIfNotExists {
 # Create necessary directories
 Ensure-DirectoryExists "secrets"
 Ensure-DirectoryExists "nginx/ssl"
+Ensure-DirectoryExists "data/postgres"
+Ensure-DirectoryExists "data/mongodb"
+Ensure-DirectoryExists "data/cassandra"
+Ensure-DirectoryExists "data/redis"
 
 # Copy template files
 Write-Host "${CYAN}Copying template files...${NC}"
@@ -47,6 +51,7 @@ function Generate-Password {
 $MONGO_PASSWORD = Generate-Password 16
 $JWT_SECRET = Generate-Password 32
 $DB_PASSWORD = Generate-Password 16
+$REDIS_PASSWORD = Generate-Password 16
 
 # Prompt for Google OAuth credentials
 Write-Host "${CYAN}Google OAuth2 Setup${NC}"
@@ -88,19 +93,46 @@ if (-not $AWS_S3_BUCKET) {
 
 # Update .env file
 Write-Host "${CYAN}Updating configuration files...${NC}"
-(Get-Content .env) -replace "MONGO_ROOT_PASSWORD=.*", "MONGO_ROOT_PASSWORD=$MONGO_PASSWORD" |
-                      -replace "JWT_SECRET=.*", "JWT_SECRET=$JWT_SECRET" |
-                      -replace "GOOGLE_CLIENT_ID=.*", "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" |
-                      -replace "GOOGLE_CLIENT_SECRET=.*", "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" |
-                      -replace "POSTGRES_PASSWORD=.*", "POSTGRES_PASSWORD=$DB_PASSWORD" |
-                      -replace "AWS_ACCESS_KEY_ID=.*", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" |
-                      -replace "AWS_SECRET_ACCESS_KEY=.*", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" |
-                      -replace "AWS_S3_REGION=.*", "AWS_S3_REGION=$AWS_S3_REGION" |
-                      -replace "AWS_S3_BUCKET=.*", "AWS_S3_BUCKET=$AWS_S3_BUCKET" |
-    Set-Content .env
+$envContent = Get-Content .env
+$envContent = $envContent -replace "MONGO_ROOT_PASSWORD=.*", "MONGO_ROOT_PASSWORD=$MONGO_PASSWORD"
+$envContent = $envContent -replace "JWT_SECRET=.*", "JWT_SECRET=$JWT_SECRET"
+$envContent = $envContent -replace "GOOGLE_CLIENT_ID=.*", "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
+$envContent = $envContent -replace "GOOGLE_CLIENT_SECRET=.*", "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
+$envContent = $envContent -replace "POSTGRES_PASSWORD=.*", "POSTGRES_PASSWORD=$DB_PASSWORD"
+$envContent = $envContent -replace "AWS_ACCESS_KEY_ID=.*", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
+$envContent = $envContent -replace "AWS_SECRET_ACCESS_KEY=.*", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
+$envContent = $envContent -replace "AWS_S3_REGION=.*", "AWS_S3_REGION=$AWS_S3_REGION"
+$envContent = $envContent -replace "AWS_S3_BUCKET=.*", "AWS_S3_BUCKET=$AWS_S3_BUCKET"
+
+# Add Redis password to .env if it doesn't exist
+if (-not ($envContent -match "REDIS_PASSWORD=")) {
+    $envContent += "`n`n# Redis Configuration"
+    $envContent += "`nREDIS_PASSWORD=$REDIS_PASSWORD"
+    Write-Host "${GREEN}Added Redis password to .env${NC}"
+} else {
+    $envContent = $envContent -replace "REDIS_PASSWORD=.*", "REDIS_PASSWORD=$REDIS_PASSWORD"
+}
+
+# Add Cassandra configuration to .env if it doesn't exist
+if (-not ($envContent -match "CASSANDRA_KEYSPACE=")) {
+    $envContent += "`n`n# Cassandra Configuration"
+    $envContent += "`nCASSANDRA_KEYSPACE=chat_keyspace"
+    $envContent += "`nCASSANDRA_DATACENTER=DC1"
+    Write-Host "${GREEN}Added Cassandra configuration to .env${NC}"
+}
+
+$envContent | Set-Content .env
 
 # Update database password file
 $DB_PASSWORD | Set-Content "secrets/db_password.txt"
+
+# Create MongoDB password file if it doesn't exist
+$MONGO_PASSWORD | Set-Content "secrets/mongo_password.txt"
+Write-Host "${GREEN}Created MongoDB password file${NC}"
+
+# Create Redis password file if it doesn't exist
+$REDIS_PASSWORD | Set-Content "secrets/redis_password.txt" 
+Write-Host "${GREEN}Created Redis password file${NC}"
 
 # Setup frontend environment
 Write-Host "${CYAN}Setting up frontend environment...${NC}"
@@ -162,6 +194,7 @@ Generated on: $(Get-Date)
 MongoDB Root Password: $MONGO_PASSWORD
 JWT Secret: $JWT_SECRET
 Database Password: $DB_PASSWORD
+Redis Password: $REDIS_PASSWORD
 Google Client ID: $GOOGLE_CLIENT_ID
 Google Client Secret: $GOOGLE_CLIENT_SECRET
 AWS Access Key ID: $AWS_ACCESS_KEY_ID
@@ -177,3 +210,8 @@ IMPORTANT:
 
 Write-Host "${GREEN}✅ Setup completed successfully!${NC}"
 Write-Host "${CYAN}Generated credentials have been saved to: $CREDENTIALS_FILE${NC}"
+Write-Host "${MAGENTA}📋 Next steps:${NC}"
+Write-Host "1. Review the generated credentials in $CREDENTIALS_FILE"
+Write-Host "2. Share the credentials securely with your team members"
+Write-Host "3. For production deployment, use different credentials and a secure password manager"
+Write-Host "4. Start the services with: docker-compose up -d"
