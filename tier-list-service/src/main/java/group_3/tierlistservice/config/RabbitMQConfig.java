@@ -8,49 +8,55 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    @Value("${rabbitmq.queues.tier-list-updates}")
-    private String tierListUpdatesQueue;
+    @Value("${rabbitmq.queues.template-updates}")
+    private String templateUpdatesQueue;
 
-    @Value("${rabbitmq.queues.user-updates}")
-    private String userUpdatesQueue;
+    @Value("${rabbitmq.queues.item-updates}")
+    private String itemUpdatesQueue;
 
-    @Value("${rabbitmq.exchanges.tier-list}")
-    private String tierListExchange;
+    @Value("${rabbitmq.exchanges.tierlist}")
+    private String tierlistExchange;
 
-    @Value("${rabbitmq.routingKeys.create-tier-list}")
-    private String createTierListKey;
+    @Value("${rabbitmq.routingKeys.create-template}")
+    private String createTemplateKey;
 
-    @Value("${rabbitmq.routingKeys.update-tier-list}")
-    private String updateTierListKey;
+    @Value("${rabbitmq.routingKeys.update-template}")
+    private String updateTemplateKey;
+
+    @Value("${rabbitmq.routingKeys.create-item}")
+    private String createItemKey;
+
+    @Value("${rabbitmq.routingKeys.update-item}")
+    private String updateItemKey;
 
     @Bean
-    public Queue tierListUpdatesQueue() {
-        return new Queue(tierListUpdatesQueue, true);
+    public Queue templateUpdatesQueue() {
+        return new Queue(templateUpdatesQueue, true);
     }
 
     @Bean
-    public Queue userUpdatesQueue() {
-        return new Queue(userUpdatesQueue, true);
+    public Queue itemUpdatesQueue() {
+        return new Queue(itemUpdatesQueue, true);
     }
 
     @Bean
-    public TopicExchange tierListExchange() {
-        return new TopicExchange(tierListExchange);
+    public TopicExchange tierlistExchange() {
+        return new TopicExchange(tierlistExchange);
     }
 
     @Bean
-    public Binding tierListUpdatesBinding(Queue tierListUpdatesQueue, TopicExchange tierListExchange) {
+    public Binding templateUpdatesBinding(Queue templateUpdatesQueue, TopicExchange tierlistExchange) {
         return BindingBuilder
-                .bind(tierListUpdatesQueue)
-                .to(tierListExchange)
-                .with("tierlist.*");
+                .bind(templateUpdatesQueue)
+                .to(tierlistExchange)
+                .with("template.*");
     }
 
     @Bean
-    public Binding userUpdatesBinding(Queue userUpdatesQueue, TopicExchange tierListExchange) {
+    public Binding itemUpdatesBinding(Queue itemUpdatesQueue, TopicExchange tierlistExchange) {
         return BindingBuilder
-                .bind(userUpdatesQueue)
-                .to(tierListExchange)
-                .with("user.*");
+                .bind(itemUpdatesQueue)
+                .to(tierlistExchange)
+                .with("item.*");
     }
 }
