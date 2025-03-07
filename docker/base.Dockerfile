@@ -1,5 +1,5 @@
-# Base Java service image
-FROM eclipse-temurin:17-jdk as builder
+# Base Java service image (Supports multi-arch for ARM/Mac)
+FROM --platform=linux/amd64 eclipse-temurin:17-jdk as builder
 
 WORKDIR /app
 COPY gradlew .
@@ -8,11 +8,11 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY src src
 
-RUN chmod +x ./gradlew
-RUN ./gradlew build -x test
+# Ensure Gradle wrapper has execution permission
+RUN chmod +x ./gradlew && ./gradlew build -x test
 
-# Runtime image
-FROM eclipse-temurin:17-jre-alpine
+# Use Debian-based image for better compatibility
+FROM --platform=linux/amd64 eclipse-temurin:17-jre
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
@@ -23,4 +23,4 @@ ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"] 
+ENTRYPOINT ["java", "-jar", "app.jar"]

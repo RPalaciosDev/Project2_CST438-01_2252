@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db?authSource=admin
+      uri: mongodb://admin:A@mongodb:27017/auth_db?authSource=admin
       auto-index-creation: true
       connection-pool:
         max-wait-time: 5000
@@ -18,7 +18,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
-            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+            redirect-uri: "http://localhost:8081/login/oauth2/code/google"
             scope:
               - email
               - profile
@@ -30,7 +30,9 @@ spring:
             user-name-attribute: sub
 
 server:
-  port: 8080
+  address: 0.0.0.0  # ✅ This makes it accessible outside the container
+  port: 8085
+
 
 logging:
   level:
@@ -41,4 +43,4 @@ logging:
 spring:
   config:
     activate:
-      on-profile: docker 
+      on-profile: docker

@@ -1,9 +1,10 @@
-FROM node:18-alpine
+# Use a multi-platform compatible Node.js image
+FROM --platform=linux/amd64 node:18-bullseye as builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache git
+# Install system dependencies (git is already included in bullseye)
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
