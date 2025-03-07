@@ -100,6 +100,11 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully!");
     }
     
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUserAlias(@RequestBody SignupRequest signUpRequest) {
+        return registerUser(signUpRequest); // Calls the existing /signup method
+    }
+    
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
