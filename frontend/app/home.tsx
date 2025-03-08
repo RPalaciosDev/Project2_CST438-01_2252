@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../services/auth';
+import { useStyle } from './context/StyleContext';
 
 export default function Home() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { selectedStyle, setSelectedStyle } = useStyle();
+
+  // local state to force re render when selected style updates
+  const [pickerValue, setPickerValue] = useState(selectedStyle);
+
+  useEffect(() => {
+    setPickerValue(selectedStyle);
+  }, [selectedStyle]);
+
+  const handleSelection = (itemValue: string) => {
+    if (itemValue) {
+      console.log("Selected Style:", itemValue);
+      setSelectedStyle(itemValue);
+      setPickerValue(itemValue);  // Ensure Picker reflects the change
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -21,7 +39,7 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome to Love Tiers</Text>
-          <Text style={styles.subtitle}>Your tierlist app</Text>
+          <Text style={styles.subtitle}>Your tier list app</Text>
         </View>
 
         <View style={styles.card}>
@@ -36,25 +54,37 @@ export default function Home() {
           </View>
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tier List Style</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={pickerValue}  // Use local state
+              onValueChange={handleSelection}
+              style={styles.picker}
+              dropdownIconColor="#fff"
+              mode="dropdown"
+            >
+              <Picker.Item label="Style Options" value="" style={styles.pickerItem} />
+              <Picker.Item label="Default (White Tiers)" value="default" style={styles.pickerItem} />
+              <Picker.Item label="Vibrant (Colorful Tiers)" value="vibrant" style={styles.pickerItem} />
+              <Picker.Item label="PinkLove (Shades of Pink)" value="pinklove" style={styles.pickerItem} />
+            </Picker>
+          </View>
+          <Text style={styles.selectedStyle}>
+            Selected Style: {selectedStyle}
+          </Text>
+        </View>
+
         <View style={styles.actionContainer}>
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => router.push('/tierlists')}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/tierlists')}>
             <Text style={styles.buttonText}>View My Tier Lists</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={() => router.push('/create-tierlist')}
-          >
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/create-tierlist')}>
             <Text style={styles.buttonText}>Create New Tier List</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={[styles.button, styles.logoutButton]} 
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
             <Text style={styles.buttonText}>Logout</Text>
           </TouchableOpacity>
         </View>
@@ -121,6 +151,30 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  pickerContainer: {
+    backgroundColor: '#222',
+    borderRadius: 5,
+    overflow: 'hidden',
+    width: '80%',
+    borderWidth: 1,
+    borderColor: '#888',
+    alignSelf: 'center',
+    padding: 5,
+  },
+  picker: {
+    color: '#fff',
+    backgroundColor: '#333',
+  },
+  pickerItem: {
+    color: '#fff',
+    backgroundColor: '#333',
+  },
+  selectedStyle: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
   actionContainer: {
     marginTop: 10,
   },
@@ -148,4 +202,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+});
+
