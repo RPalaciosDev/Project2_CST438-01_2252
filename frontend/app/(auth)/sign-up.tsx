@@ -17,22 +17,45 @@ export default function SignUp() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const register = useAuthStore((state) => state.register);
 
     const handleSubmit = async () => {
         try {
             setError('');
+            setIsSubmitting(true);
+            
             if (password !== confirmPassword) {
                 setError('Passwords do not match');
+                setIsSubmitting(false);
                 return;
             }
             if (!username.trim()) {
                 setError('Username is required');
+                setIsSubmitting(false);
                 return;
             }
+            if (!email.trim()) {
+                setError('Email is required');
+                setIsSubmitting(false);
+                return;
+            }
+            
+            console.log('Submitting sign-up form...');
             await register(username, email, password);
-        } catch (err) {
-            setError('Registration failed. Please try again.');
+            console.log('Registration successful');
+            
+        } catch (err: any) {
+            console.error('Registration error details:', err);
+            if (err.response && err.response.data) {
+                setError(`Registration failed: ${err.response.data}`);
+            } else if (err.message) {
+                setError(`Registration failed: ${err.message}`);
+            } else {
+                setError('Registration failed. Please check your connection and try again.');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -85,10 +108,13 @@ export default function SignUp() {
                 />
 
                 <TouchableOpacity 
-                    style={styles.button}
+                    style={[styles.button, isSubmitting ? styles.buttonDisabled : null]}
                     onPress={handleSubmit}
+                    disabled={isSubmitting}
                 >
-                    <Text style={styles.buttonText}>Sign Up</Text>
+                    <Text style={styles.buttonText}>
+                        {isSubmitting ? 'Signing Up...' : 'Sign Up'}
+                    </Text>
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
@@ -115,13 +141,7 @@ const styles = StyleSheet.create({
         padding: 25,
         backgroundColor: '#FFFFFF',
         borderRadius: 20,
-        shadowColor: '#FFE4E8',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        boxShadow: '0px 4px 8px rgba(255, 228, 232, 0.3)',
         elevation: 8,
         marginHorizontal: 20,
     },
@@ -146,13 +166,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         marginBottom: 16,
         fontSize: 16,
-        shadowColor: '#FFE4E8',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 3.84,
+        boxShadow: '0px 2px 3.84px rgba(255, 228, 232, 0.15)',
         elevation: 2,
     },
     button: {
@@ -161,13 +175,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         alignItems: 'center',
         marginTop: 10,
-        shadowColor: '#FF4B6E',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        boxShadow: '0px 2px 3.84px rgba(255, 75, 110, 0.25)',
         elevation: 5,
     },
     buttonText: {
@@ -195,5 +203,9 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         textAlign: 'center',
         fontSize: 14,
+    },
+    buttonDisabled: {
+        backgroundColor: '#FFB6C1',
+        opacity: 0.7,
     },
 }); 

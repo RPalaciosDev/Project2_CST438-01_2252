@@ -1,5 +1,5 @@
 # Base Java service image
-FROM eclipse-temurin:17-jdk as builder
+FROM --platform=$BUILDPLATFORM eclipse-temurin:17-jdk as builder
 
 WORKDIR /app
 COPY gradlew .
@@ -12,7 +12,7 @@ RUN chmod +x ./gradlew
 RUN ./gradlew build -x test
 
 # Runtime image
-FROM eclipse-temurin:17-jre-alpine
+FROM --platform=$BUILDPLATFORM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar

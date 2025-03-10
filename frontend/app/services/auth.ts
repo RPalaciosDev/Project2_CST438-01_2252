@@ -3,10 +3,47 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../../types';
+import { API_URL, AUTH_ENDPOINTS } from '../config';
 
-const API_URL = Platform.OS === 'web' 
-    ? 'http://localhost:8081' 
-    : 'http://10.0.2.2:8081'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
+// Create axios instance with default config
+const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    },
+    timeout: 15000
+});
+
+// Interceptor for debugging
+api.interceptors.request.use(request => {
+    console.log('Request:', request.method, request.url);
+    return request;
+});
+
+api.interceptors.response.use(
+    response => {
+        console.log('Response:', response.status, response.config.url);
+        return response;
+    },
+    error => {
+        if (error.response) {
+            console.error('API Error:', {
+                status: error.response.status,
+                data: error.response.data,
+                url: error.config.url
+            });
+        } else if (error.request) {
+            console.error('No response received:', {
+                request: error.request._currentUrl || error.request.responseURL,
+                message: error.message
+            });
+        } else {
+            console.error('Request setup error:', error.message);
+        }
+        return Promise.reject(error);
+    }
+);
 
 const storage = {
     setItem: async (key: string, value: string) => {
@@ -31,7 +68,22 @@ const storage = {
     }
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+// Enhanced logging middleware
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const log = (config: any) => (set: any, get: any, api: any) => config(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (...args: any[]) => {
+    console.log('  applying', args);
+    set(...args);
+    console.log('  new state', get());
+  },
+  get,
+  api
+);
+
+export const useAuthStore = create(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  log((set: any) => ({
     token: null,
     user: null,
     isAuthenticated: false,
@@ -46,16 +98,11 @@ export const useAuthStore = create<AuthState>((set) => ({
                 throw new Error('Email and password are required');
             }
 
-            console.log(`Attempting to login to ${API_URL}/sign-in`);
+            console.log(`Attempting to login to ${API_URL}${AUTH_ENDPOINTS.SIGNIN}`);
             
-            const response = await axios.post(`${API_URL}/sign-in`, {
+            const response = await api.post(AUTH_ENDPOINTS.SIGNIN, {
                 email: email.trim(),
                 password,
-            }, {
-                timeout: 15000,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
             });
 
             console.log('Login response received:', JSON.stringify(response.status));
@@ -96,20 +143,40 @@ export const useAuthStore = create<AuthState>((set) => ({
     register: async (username: string, email: string, password: string) => {
         try {
             set({ isLoading: true, error: null });
-            const response = await axios.post(`${API_URL}/auth/register`, {
+            console.log(`Attempting to register at ${API_URL}${AUTH_ENDPOINTS.SIGNUP}`);
+            
+            const response = await api.post(AUTH_ENDPOINTS.SIGNUP, {
                 username,
                 email,
                 password,
             });
 
             const { token, user } = response.data;
-
-            await storage.setItem('token', token);
-            await storage.setItem('user', JSON.stringify(user));
+            
+            await Promise.all([
+                storage.setItem('token', token),
+                storage.setItem('user', JSON.stringify(user))
+            ]);
 
             set({ token, user, isAuthenticated: true, isLoading: false });
         } catch (error) {
-            set({ error: 'Registration failed', isLoading: false });
+            const errorMessage = error instanceof Error 
+                ? error.message 
+                : 'Registration failed. Please try again.';
+            
+            if (axios.isAxiosError(error)) {
+                console.error('Registration network error:', {
+                    message: error.message,
+                    status: error.response?.status,
+                    data: error.response?.data,
+                    url: API_URL,
+                    platform: Platform.OS
+                });
+            } else {
+                console.error('Registration error:', errorMessage);
+            }
+            
+            set({ error: errorMessage, isLoading: false });
             throw error;
         }
     },
@@ -145,6 +212,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             set({ error: 'Failed to load authentication', isLoading: false });
         }
     },
-}));
+  }))
+);
 
 export default useAuthStore; 

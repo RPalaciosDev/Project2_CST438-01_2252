@@ -1,5 +1,5 @@
 # Use Eclipse Temurin JDK 21 for building the application
-FROM eclipse-temurin:21-jdk as builder
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk as builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN chmod +x ./gradlew
 RUN ./gradlew build -x test
 
 # Use a smaller JRE base image for running the application
-FROM eclipse-temurin:21-jre-alpine
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
