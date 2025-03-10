@@ -8,9 +8,14 @@ services:
       - "19000:19000"
       - "19001:19001"
       - "19002:19002"
+      - "19006:19006"
     environment:
       - NODE_ENV=development
       - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - AUTH_API_URL=http://localhost:8081
+      - TIERLIST_API_URL=http://localhost:8082
+      - CHAT_API_URL=http://localhost:8083
+      - IMAGE_API_URL=http://localhost:8084
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -21,13 +26,14 @@ services:
       context: ./auth-user-service
       dockerfile: Dockerfile
     ports:
-      - "8085:8080"
+      - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb://admin:A@mongodb:27017/auth_db?authSource=admin
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - ALLOWED_ORIGINS=http://localhost:19000,http://localhost:19006
     depends_on:
       - mongodb
 
@@ -40,9 +46,10 @@ services:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/tierlist_db?authSource=admin
+      - ALLOWED_ORIGINS=http://localhost:19000,http://localhost:19006
     depends_on:
-      - db
+      - mongodb
 
   # Chat service
   chat-service:
@@ -54,8 +61,35 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/chat_db
+      - ALLOWED_ORIGINS=http://localhost:19000,http://localhost:19006
+      - SPRING_DATA_CASSANDRA_KEYSPACE-NAME=chat_keyspace
+      - SPRING_DATA_CASSANDRA_CONTACT-POINTS=localhost
+      - SPRING_DATA_CASSANDRA_PORT=9042
+      - SPRING_DATA_CASSANDRA_DATACENTER=datacenter1
     depends_on:
-      - db
+      - cassandra
+
+  # Cassandra service for chat
+  cassandra:
+    image: cassandra:latest
+    container_name: proj2_cassandra
+    hostname: proj2_cassandra
+    ports:
+      - "9005:7000"
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSER_NAME=PROJ2_CLUSER
+      - CASSANDRA_DC=DC1
+      - CASSANDRA_RACK=RACK1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    volumes:
+      - cassandra-node-1:/var/lib/cassandra:rw
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status"]
+      interval: 2m
+      start_period: 2m
+      timeout: 10s
+      retries: 3
 
   # Image Storage Service
   image-storage-service:
@@ -73,19 +107,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_S3_REGION=${AWS_S3_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - ALLOWED_ORIGINS=http://localhost:19000,http://localhost:19006,http://localhost:8082
     depends_on:
       - mongodb
-
-  # Database for user data (PostgreSQL)
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
 
   # MongoDB (for Image Storage)
   mongodb:
@@ -100,20 +124,7 @@ services:
       - mongodb_data:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
-  # Nginx reverse proxy
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - frontend
-      - auth-service
-      - tier-list-service
-      - chat-service
-      - image-storage-service
-
 volumes:
   postgres_data:
   mongodb_data:
+  cassandra-node-1:

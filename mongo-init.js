@@ -19,3 +19,16 @@ db.images.createIndex({ "fileName": 1 });
 db.images.createIndex({ "uploadDate": 1 });
 db.images.createIndex({ "userId": 1 });
 db.thumbnails.createIndex({ "originalImageId": 1 });
+
+// Initialize `tierlist_db` database
+db = db.getSiblingDB('tierlist_db');
+
+// Create collections for tierlist data
+db.createCollection('tierlist_templates');
+db.createCollection('tierlist_items');
+
+// Create indexes for optimized queries
+db.tierlist_templates.createIndex({ "userId": 1 });
+db.tierlist_templates.createIndex({ "title": "text" });
+db.tierlist_templates.createIndex({ "tags": 1 });
+db.tierlist_items.createIndex({ "templateId": 1 });

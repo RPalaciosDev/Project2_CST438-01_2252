@@ -7,6 +7,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -14,16 +20,56 @@ public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Read allowed origins from environment variable
+        String allowedOriginsEnv = System.getenv("ALLOWED_ORIGINS");
+        List<String> allowedOrigins;
+
+        if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
+            allowedOrigins = Arrays.asList(allowedOriginsEnv.split(","));
+            logger.info("Using CORS allowed origins from environment: {}", allowedOrigins);
+        } else {
+            // Default allowed origins
+            allowedOrigins = List.of(
+                    "http://localhost:19006",
+                    "http://localhost:19000",
+                    "https://imageapi-production-af11.up.railway.app",
+                    "https://app.yourdomain.com");
+            logger.info("Using default CORS allowed origins");
+        }
+
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-auth-token"));
+        configuration.setExposedHeaders(List.of("x-auth-token"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         logger.info("SecurityConfig is being loaded!");
-        http
-            .csrf(csrf -> csrf.disable())  // Updated to work with Spring Security 6
-            .authorizeRequests(auth -> auth
-                .requestMatchers("/api/images/**").permitAll()  // Allow public access to image endpoints
-                .anyRequest().authenticated()
-            )
-            .httpBasic();  // HTTP Authentication
 
-        return http.build();
+        return http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/api/images/**").permitAll()
+                        .requestMatchers("/api/info").permitAll()
+                        .requestMatchers("/service-info").permitAll()
+                        .requestMatchers("/service-info/**").permitAll()
+                        .anyRequest().authenticated())
+                .httpBasic(basic -> {
+                })
+                .formLogin(form -> form.disable())
+                .anonymous(anonymous -> {
+                })
+                .build();
     }
 }

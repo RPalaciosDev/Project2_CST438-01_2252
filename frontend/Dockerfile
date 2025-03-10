@@ -9,8 +9,11 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
+# Clean install to ensure all dependencies are properly installed
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+# Explicitly install the problematic package
+RUN npm install @react-native-picker/picker@2.11.0
 
 # Install ajv and ajv-keywords explicitly with their dependencies
 RUN npm install ajv@8.12.0 ajv-keywords@5.1.0 json-schema-traverse@1.0.0 fast-deep-equal@3.1.3 json-schema-typed@7.0.3 uri-js@4.4.1

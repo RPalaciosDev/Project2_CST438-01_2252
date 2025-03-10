@@ -1,0 +1,103 @@
+[project]
+name = "lovetiers-app"
+
+[[services]]
+name = "frontend"
+directory = "frontend"
+dockerfile = "Dockerfile"
+domains = ["app.${RAILWAY_PUBLIC_DOMAIN}"]
+ports = [19006]
+healthcheck_path = "/"
+healthcheck_timeout_seconds = 10
+resources = { cpu = 1, memory = 512 }
+env = [
+  { name = "NODE_ENV", value = "production" },
+  { name = "AUTH_API_URL", value = "https://auth.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "TIERLIST_API_URL", value = "https://tierlist.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "CHAT_API_URL", value = "https://chat.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "IMAGE_API_URL", value = "https://image.${RAILWAY_PUBLIC_DOMAIN}" }
+]
+
+[[services]]
+name = "auth-service"
+directory = "auth-user-service"
+dockerfile = "Dockerfile"
+domains = ["auth.${RAILWAY_PUBLIC_DOMAIN}"]
+ports = [8080]
+healthcheck_path = "/actuator/health"
+healthcheck_timeout_seconds = 10
+resources = { cpu = 0.5, memory = 512 }
+env = [
+  { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+  { name = "ALLOWED_ORIGINS", value = "https://app.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "GOOGLE_CLIENT_ID", fromVariable = "GOOGLE_CLIENT_ID" },
+  { name = "GOOGLE_CLIENT_SECRET", fromVariable = "GOOGLE_CLIENT_SECRET" },
+  { name = "MONGO_ROOT_PASSWORD", fromVariable = "MONGO_ROOT_PASSWORD" },
+  { name = "SPRING_DATA_MONGODB_URI", value = "${{MONGODB_URL}}" },
+  { name = "OAUTH2_REDIRECT_URI", value = "https://app.${RAILWAY_PUBLIC_DOMAIN}/oauth2/redirect" },
+  { name = "MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE", value = "health,info" }
+]
+
+[[services]]
+name = "tier-list-service"
+directory = "tier-list-service"
+dockerfile = "Dockerfile"
+domains = ["tierlist.${RAILWAY_PUBLIC_DOMAIN}"]
+ports = [8080]
+healthcheck_path = "/actuator/health"
+healthcheck_timeout_seconds = 10
+resources = { cpu = 0.5, memory = 512 }
+env = [
+  { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+  { name = "ALLOWED_ORIGINS", value = "https://app.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "SPRING_DATASOURCE_URL", value = "${{DATABASE_URL}}" },
+  { name = "SPRING_DATASOURCE_USERNAME", value = "${{PGUSER}}" },
+  { name = "SPRING_DATASOURCE_PASSWORD", value = "${{PGPASSWORD}}" },
+  { name = "MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE", value = "health,info" }
+]
+
+[[services]]
+name = "chat-service"
+directory = "chat_api"
+dockerfile = "Dockerfile"
+domains = ["chat.${RAILWAY_PUBLIC_DOMAIN}"]
+ports = [8080]
+healthcheck_path = "/actuator/health"
+healthcheck_timeout_seconds = 10
+resources = { cpu = 0.5, memory = 512 }
+env = [
+  { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+  { name = "ALLOWED_ORIGINS", value = "https://app.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "SPRING_DATASOURCE_URL", value = "${{DATABASE_URL}}" },
+  { name = "SPRING_DATASOURCE_USERNAME", value = "${{PGUSER}}" },
+  { name = "SPRING_DATASOURCE_PASSWORD", value = "${{PGPASSWORD}}" },
+  { name = "MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE", value = "health,info" }
+]
+
+[[services]]
+name = "image-storage-service"
+directory = "image-storage-service"
+dockerfile = "Dockerfile"
+domains = ["image.${RAILWAY_PUBLIC_DOMAIN}"]
+ports = [8080]
+healthcheck_path = "/actuator/health"
+healthcheck_timeout_seconds = 10
+resources = { cpu = 0.5, memory = 512 }
+env = [
+  { name = "SPRING_PROFILES_ACTIVE", value = "prod" },
+  { name = "ALLOWED_ORIGINS", value = "https://app.${RAILWAY_PUBLIC_DOMAIN},https://tierlist.${RAILWAY_PUBLIC_DOMAIN}" },
+  { name = "AWS_ACCESS_KEY_ID", fromVariable = "AWS_ACCESS_KEY_ID" },
+  { name = "AWS_SECRET_ACCESS_KEY", fromVariable = "AWS_SECRET_ACCESS_KEY" },
+  { name = "AWS_S3_REGION", fromVariable = "AWS_S3_REGION" },
+  { name = "AWS_S3_BUCKET", fromVariable = "AWS_S3_BUCKET" },
+  { name = "SPRING_DATA_MONGODB_URI", value = "${{MONGODB_URL}}" },
+  { name = "MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE", value = "health,info" }
+]
+
+[[databases]]
+name = "postgres"
+engine = "postgres"
+
+[[databases]]
+name = "mongodb"
+engine = "mongodb" 

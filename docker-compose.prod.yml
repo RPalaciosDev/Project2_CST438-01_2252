@@ -9,6 +9,11 @@ services:
       - "19006:19006"
     environment:
       - NODE_ENV=production
+      # Direct API URLs
+      - AUTH_API_URL=http://auth-service:8080
+      - TIERLIST_API_URL=http://tier-list-service:8080
+      - CHAT_API_URL=http://chat-service:8080
+      - IMAGE_API_URL=http://image-storage-service:8080
     restart: unless-stopped
 
   image-storage-service:
@@ -26,6 +31,8 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
       - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/image_storage_db?authSource=admin
+      # CORS Configuration
+      - ALLOWED_ORIGINS=http://localhost:19006,http://frontend:19006
     restart: unless-stopped
     depends_on:
       - mongodb
@@ -42,6 +49,9 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
       - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/auth_db
+      # CORS Configuration
+      - ALLOWED_ORIGINS=http://localhost:19006,http://frontend:19006
+      - OAUTH2_REDIRECT_URI=http://localhost:19006/oauth2/redirect
     restart: unless-stopped
     depends_on:
       - mongodb
@@ -56,6 +66,8 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      # CORS Configuration
+      - ALLOWED_ORIGINS=http://localhost:19006,http://frontend:19006
     restart: unless-stopped
     depends_on:
       - db
@@ -70,6 +82,8 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/chat_db
       - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
+      # CORS Configuration
+      - ALLOWED_ORIGINS=http://localhost:19006,http://frontend:19006
     restart: unless-stopped
     depends_on:
       - db
@@ -86,21 +100,6 @@ services:
     restart: unless-stopped
     secrets:
       - db_password
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - frontend
-      - auth-service
-      - tier-list-service
-      - chat-service
-    restart: unless-stopped
 
   mongodb:
     image: mongo:latest
