@@ -8,7 +8,7 @@ interface PointerEventsWrapperProps extends ViewProps {
 
 /**
  * Wrapper component to handle the deprecated pointerEvents prop
- * Use this component instead of directly applying pointerEvents as a prop
+ * !NOTE: Use this component instead of directly applying pointerEvents as a prop so build runs smoothly
  */
 export const PointerEventsWrapper: React.FC<PointerEventsWrapperProps> = ({
   pointerEvents,
@@ -20,7 +20,6 @@ export const PointerEventsWrapper: React.FC<PointerEventsWrapperProps> = ({
     <View
       style={[
         style,
-        // Apply pointerEvents as a style property instead of a direct prop
         pointerEvents ? { pointerEvents } : undefined,
       ]}
       {...props}

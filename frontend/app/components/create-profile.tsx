@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
