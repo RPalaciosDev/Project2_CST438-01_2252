@@ -4,9 +4,31 @@ import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../types';
 
-const API_URL = Platform.OS === 'web' 
-    ? 'http://localhost:8081' 
-    : 'http://10.0.2.2:8081'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
+// Updated to support different environments - development, production, and Railway
+const API_URL = (() => {
+    // For Railway deployment
+    if (process.env.NODE_ENV === 'production') {
+        return process.env.AUTH_API_URL || 'https://auth.yourdomain.com';
+    }
+    
+    // For local development
+    return Platform.OS === 'web' 
+        ? 'http://localhost:8081' 
+        : 'http://10.0.2.2:8081'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
+})();
+
+// Services URLs for other microservices
+export const TIERLIST_API_URL = process.env.NODE_ENV === 'production' 
+    ? (process.env.TIERLIST_API_URL || 'https://tierlist.yourdomain.com')
+    : 'http://localhost:8082';
+
+export const CHAT_API_URL = process.env.NODE_ENV === 'production'
+    ? (process.env.CHAT_API_URL || 'https://chat.yourdomain.com')
+    : 'http://localhost:8083';
+    
+export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
+    ? (process.env.IMAGE_API_URL || 'https://image.yourdomain.com')
+    : 'http://localhost:8084';
 
 const storage = {
     setItem: async (key: string, value: string) => {

@@ -80,7 +80,6 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 ├── tier-list-service/  # Tier list management service
 ├── chat-service/       # Real-time chat functionality
 ├── image-storage-service/ # Image handling and storage
-├── nginx/              # Reverse proxy and SSL
 ├── secrets/           # Secure credential storage
 └── docker/            # Shared Docker configurations
 ```
@@ -250,9 +249,9 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 ### Common Issues
 
 1. **SSL Certificate Issues**
-   - Check certificate paths in nginx config
-   - Verify certificate permissions
-   - Ensure certificates are valid
+   - Ensure your Railway custom domains have valid SSL certificates
+   - For local development, modern browsers accept localhost connections without HTTPS
+   - When deploying to other platforms, use platform-specific SSL certificate setup
 
 2. **Database Connection Issues**
    - Verify credentials in `.env`
