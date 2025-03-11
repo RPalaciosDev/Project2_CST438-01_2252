@@ -20,7 +20,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
             client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
-            redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
+            redirect-uri: ${OAUTH_REDIRECT_URI:https://auth-user-service-production.up.railway.app/login/oauth2/code/google}
             scope:
               - email
               - profile
@@ -47,11 +47,11 @@ jwt:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:19006,http://localhost:3000}
+  allowed-origins: ${ALLOWED_ORIGINS:https://frontend-production-c2bc.up.railway.app,http://localhost:19006,http://localhost:3000}
 
 # OAuth2 Configuration
 oauth2:
-  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
+  redirect-uri: ${OAUTH2_REDIRECT_URI:https://frontend-production-c2bc.up.railway.app/oauth2/redirect}
 
 ---
 spring:

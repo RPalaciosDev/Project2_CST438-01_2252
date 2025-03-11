@@ -10,71 +10,131 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import axios from 'axios';
 import { useAuthStore } from '../services/auth';
+import axios, { AxiosError } from 'axios';
+
+// Create axios instance with better timeout and retry configuration for health checks
+const healthCheckAxios = axios.create({
+    timeout: 5000, // 5 seconds is enough for health check
+});
+
+// Make sure we always use HTTPS for production URLs
+const ensureHttps = (url: string): string => {
+    if (process.env.NODE_ENV === 'production' && url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+    }
+    return url;
+};
 
 export default function SignIn() {
     const router = useRouter();
-    const { login, isAuthenticated, isLoading, error: authError } = useAuthStore();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [apiStatus, setApiStatus] = useState('');
     const [isCheckingApi, setIsCheckingApi] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const { login, token, isAuthenticated } = useAuthStore(state => ({
+        login: state.login,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated
+    }));
 
     // Check API connectivity
     const checkApiStatus = async () => {
         setIsCheckingApi(true);
         setApiStatus('Checking API connection...');
         try {
-            const apiUrl = Platform.OS === 'web' 
-                ? 'http://localhost:8081/health' 
-                : 'http://10.0.2.2:8081/health';
-                
-            await axios.get(apiUrl, { timeout: 5000 });
-            setApiStatus('API connection successful!');
+            // Use Railway deployed URL for production, fallback to local for development
+            const baseUrl = process.env.NODE_ENV === 'production' 
+                ? 'https://auth-user-service-production.up.railway.app'  // Ensure HTTPS
+                : Platform.OS === 'web' 
+                    ? 'http://localhost:8080' 
+                    : 'http://10.0.2.2:8080';
+            
+            // Try to get a simple response from the API to verify connection
+            try {
+                // Try actuator/health first (Spring Boot standard endpoint)
+                await healthCheckAxios.get(`${baseUrl}/actuator/health`);
+                setApiStatus('API connection successful!');
+            } catch (actuatorError) {
+                try {
+                    // Fall back to just hitting the base URL
+                    await healthCheckAxios.get(`${baseUrl}`);
+                    setApiStatus('API reachable, ready to authenticate!');
+                } catch (baseError) {
+                    throw baseError; // Re-throw to be caught by outer catch
+                }
+            }
         } catch (error: any) {
+            console.error('API check error:', error);
             setApiStatus(`API connection failed: ${error.message || 'Unknown error'}`);
         } finally {
             setIsCheckingApi(false);
         }
     };
 
-    // Redirect to home if authenticated
+    // Check API status on component mount
     useEffect(() => {
-        if (isAuthenticated) {
+        checkApiStatus();
+    }, []);
+
+    // Check if user is already authenticated and redirect if needed
+    useEffect(() => {
+        if (isAuthenticated && token) {
             router.replace('/home');
         }
-    }, [isAuthenticated, router]);
-
-    // Display auth error if it exists
-    useEffect(() => {
-        if (authError) {
-            setError(authError);
-        }
-    }, [authError]);
+    }, [isAuthenticated, token, router]);
 
     const handleSubmit = async () => {
-        if (!email || !password) {
-            setError('Please enter both email and password');
+        if (!username.trim() || !password.trim()) {
+            setError('Username and password are required');
             return;
         }
         
+        setIsLoading(true);
         setError('');
+        
         try {
-            await login(email, password);
-            // If successful, the isAuthenticated effect will handle redirection
-        } catch (err: any) {
-            // Error handling is done via the authError effect
+            await login(username, password);
+            router.replace('/home'); // Add navigation to home on successful login
+        } catch (err) {
             console.error('Sign in error:', err);
+            if (axios.isAxiosError(err)) {
+                const axiosError = err as AxiosError<any>;
+                // Handle specific error responses
+                if (axiosError.response?.status === 401) {
+                    setError('Invalid username or password');
+                } else if (axiosError.response?.status === 400) {
+                    if (typeof axiosError.response.data === 'string') {
+                        setError(axiosError.response.data);
+                    } else if (axiosError.response.data && typeof axiosError.response.data === 'object' && 'message' in axiosError.response.data) {
+                        setError(axiosError.response.data.message as string);
+                    } else {
+                        setError('Invalid login data');
+                    }
+                } else if (axiosError.response?.status === 500) {
+                    setError('Server error. Please try again later.');
+                } else if (axiosError.code === 'ECONNABORTED') {
+                    setError('Request timed out. The server might be under high load. Please try again later.');
+                } else if (!axiosError.response) {
+                    setError('Network error. Please check your connection.');
+                } else {
+                    setError(`Login failed: ${axiosError.response?.status}`);
+                }
+            } else {
+                setError('Unable to connect to the server. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.form}>
-                <Text style={styles.title}>Love Tiers 💧 </Text>
-                <Text style={styles.subtitle}>Welcome back!</Text>
+                <Text style={styles.title}>Love Tiers</Text>
+                <Text style={styles.subtitle}>Sign in</Text>
                 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -86,12 +146,11 @@ export default function SignIn() {
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder="Username or Email"
                     placeholderTextColor="#999"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={username}
+                    onChangeText={setUsername}
                     autoCapitalize="none"
-                    keyboardType="email-address"
                 />
 
                 <TextInput
@@ -104,7 +163,7 @@ export default function SignIn() {
                 />
 
                 <TouchableOpacity 
-                    style={styles.button}
+                    style={[styles.button, isLoading && styles.buttonDisabled]}
                     onPress={handleSubmit}
                     disabled={isLoading}
                 >
@@ -193,6 +252,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+    },
+    buttonDisabled: {
+        backgroundColor: '#FFB6C1',
+        opacity: 0.7,
     },
     buttonText: {
         color: '#fff',

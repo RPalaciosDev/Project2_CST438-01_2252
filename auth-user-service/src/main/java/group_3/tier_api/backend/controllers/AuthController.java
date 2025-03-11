@@ -7,6 +7,8 @@ import group_3.tier_api.backend.models.Role;
 import group_3.tier_api.backend.models.User;
 import group_3.tier_api.backend.repositories.UserRepository;
 import group_3.tier_api.backend.security.JwtUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,109 +21,138 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = {
+                "https://frontend-production-c2bc.up.railway.app",
+                "https://imageapi-production-af11.up.railway.app",
+                "https://lovetiers.com",
+                // The following HTTP URLs are only for local development
+                "http://localhost:19006",
+                "http://localhost:3000"
+}, allowCredentials = "true", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    @Autowired
-    private AuthenticationManager authenticationManager;
+        private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    private UserRepository userRepository;
+        @Autowired
+        private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private PasswordEncoder encoder;
+        @Autowired
+        private UserRepository userRepository;
 
-    @Autowired
-    private JwtUtils jwtUtils;
+        @Autowired
+        private PasswordEncoder encoder;
 
-    @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        @Autowired
+        private JwtUtils jwtUtils;
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
-        
-        org.springframework.security.core.userdetails.UserDetails userDetails = 
-                (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal();
-        
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-        
-        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        @PostMapping("/signin")
+        public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                                                loginRequest.getPassword()));
 
-        return ResponseEntity.ok(new AuthResponse(
-                jwt,
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                roles));
-    }
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                String jwt = jwtUtils.generateJwtToken(authentication);
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Error: Username is already taken!");
+                org.springframework.security.core.userdetails.UserDetails userDetails = (org.springframework.security.core.userdetails.UserDetails) authentication
+                                .getPrincipal();
+
+                List<String> roles = userDetails.getAuthorities().stream()
+                                .map(item -> item.getAuthority())
+                                .collect(Collectors.toList());
+
+                User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+
+                return ResponseEntity.ok(new AuthResponse(
+                                jwt,
+                                user.getId(),
+                                user.getUsername(),
+                                user.getEmail(),
+                                roles));
         }
 
-        // Check if email is already in use
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Error: Email is already in use!");
+        @PostMapping("/signup")
+        public ResponseEntity<?> registerUser(@RequestBody SignupRequest signUpRequest) {
+                try {
+                        logger.info("Received signup request for username: {}, email: {}",
+                                        signUpRequest.getUsername(), signUpRequest.getEmail());
+
+                        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+                                logger.warn("Username already taken: {}", signUpRequest.getUsername());
+                                return ResponseEntity
+                                                .badRequest()
+                                                .body("Error: Username is already taken!");
+                        }
+
+                        // Check if email is already in use
+                        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+                                logger.warn("Email already in use: {}", signUpRequest.getEmail());
+                                return ResponseEntity
+                                                .badRequest()
+                                                .body("Error: Email is already in use!");
+                        }
+
+                        logger.info("Creating new user with username: {}", signUpRequest.getUsername());
+                        User user = new User(
+                                        signUpRequest.getUsername(),
+                                        signUpRequest.getEmail(),
+                                        encoder.encode(signUpRequest.getPassword()));
+
+                        if (signUpRequest.getFullName() != null) {
+                                user.setFullName(signUpRequest.getFullName());
+                                logger.info("Setting full name: {}", signUpRequest.getFullName());
+                        }
+
+                        user.addRole(Role.ROLE_USER);
+                        logger.info("Added ROLE_USER to user");
+
+                        if (signUpRequest.getRoles() != null && signUpRequest.getRoles().contains("ROLE_ADMIN")) {
+                                user.addRole(Role.ROLE_ADMIN);
+                                logger.info("Added ROLE_ADMIN to user");
+                        }
+
+                        if (signUpRequest.getRoles() != null && signUpRequest.getRoles().contains("ROLE_MODERATOR")) {
+                                user.addRole(Role.ROLE_MODERATOR);
+                                logger.info("Added ROLE_MODERATOR to user");
+                        }
+
+                        logger.info("Saving user to database");
+                        userRepository.save(user);
+                        logger.info("User saved successfully with ID: {}", user.getId());
+
+                        return ResponseEntity.ok("User registered successfully!");
+                } catch (Exception e) {
+                        logger.error("Error registering user: ", e);
+                        return ResponseEntity
+                                        .internalServerError()
+                                        .body("Error registering user: " + e.getMessage());
+                }
         }
 
-        User user = new User(
-                signUpRequest.getUsername(),
-                signUpRequest.getEmail(),
-                encoder.encode(signUpRequest.getPassword())
-        );
-        
-        if (signUpRequest.getFullName() != null) {
-            user.setFullName(signUpRequest.getFullName());
+        @PostMapping("/register")
+        public ResponseEntity<?> registerUserAlias(@RequestBody SignupRequest signUpRequest) {
+                logger.info("Received register request - forwarding to /signup endpoint");
+                return registerUser(signUpRequest); // Calls the existing /signup method
         }
 
-        user.addRole(Role.ROLE_USER);
-        
-        if (signUpRequest.getRoles() != null && signUpRequest.getRoles().contains("ROLE_ADMIN")) {
-            user.addRole(Role.ROLE_ADMIN);
-        }
-        
-        if (signUpRequest.getRoles() != null && signUpRequest.getRoles().contains("ROLE_MODERATOR")) {
-            user.addRole(Role.ROLE_MODERATOR);
-        }
+        @GetMapping("/me")
+        public ResponseEntity<?> getCurrentUser() {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                String username = authentication.getName();
 
-        userRepository.save(user);
+                User user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new RuntimeException("Error: User not found."));
 
-        return ResponseEntity.ok("User registered successfully!");
-    }
-    
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUserAlias(@RequestBody SignupRequest signUpRequest) {
-        return registerUser(signUpRequest); // Calls the existing /signup method
-    }
-    
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Error: User not found."));
-        
-        List<String> roles = user.getRoles().stream()
-                .map(Role::name)
-                .collect(Collectors.toList());
-        
-        return ResponseEntity.ok(new AuthResponse(
-                null,
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                roles));
-    }
+                List<String> roles = user.getRoles().stream()
+                                .map(Role::name)
+                                .collect(Collectors.toList());
+
+                return ResponseEntity.ok(new AuthResponse(
+                                null,
+                                user.getId(),
+                                user.getUsername(),
+                                user.getEmail(),
+                                roles));
+        }
 }

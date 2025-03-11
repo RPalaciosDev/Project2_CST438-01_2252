@@ -44,7 +44,8 @@ public class SecurityConfig {
     private static final String DEFAULT_GOOGLE_CLIENT_ID = "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com";
     private static final String DEFAULT_GOOGLE_CLIENT_SECRET = "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";
 
-    @Value("${cors.allowed-origins:http://localhost:19006,https://frontend-production-c2bc.up.railway.app}")
+    // Updated to separate production (HTTPS) and development (HTTP) URLs
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,http://localhost:19006}")
     private String[] allowedOrigins;
 
     @Autowired
@@ -98,13 +99,30 @@ public class SecurityConfig {
             logger.info("Using Google Client Secret from environment variable");
         }
 
+        // Get redirect URI from environment or use a secure default for production
+        String redirectUri = System.getenv("OAUTH_REDIRECT_URI");
+        if (redirectUri == null || redirectUri.isEmpty()) {
+            // Default to a secure HTTPS URI for production
+            redirectUri = "{baseUrl}/login/oauth2/code/{registrationId}";
+            logger.info("Using default redirect URI: {}", redirectUri);
+        } else {
+            logger.info("Using custom redirect URI from environment: {}", redirectUri);
+            // Ensure redirect URI uses HTTPS in production
+            if (isProductionEnvironment() && redirectUri.startsWith("http://")) {
+                String secureRedirectUri = redirectUri.replace("http://", "https://");
+                logger.warn("Converting HTTP redirect URI to HTTPS for production: {} -> {}", 
+                            redirectUri, secureRedirectUri);
+                redirectUri = secureRedirectUri;
+            }
+        }
+
         // Create Google registration
         ClientRegistration googleRegistration = ClientRegistration.withRegistrationId("google")
                 .clientId(googleClientId)
                 .clientSecret(googleClientSecret)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .redirectUri(redirectUri)
                 .scope("openid", "profile", "email")
                 .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                 .tokenUri("https://www.googleapis.com/oauth2/v4/token")
@@ -115,6 +133,21 @@ public class SecurityConfig {
                 .build();
 
         return new InMemoryClientRegistrationRepository(googleRegistration);
+    }
+
+    /**
+     * Determines if the application is running in a production environment.
+     */
+    private boolean isProductionEnvironment() {
+        // Check active profiles
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        if (activeProfiles.contains("prod")) {
+            return true;
+        }
+        
+        // Check environment variables that would indicate production
+        String env = System.getenv("ENVIRONMENT");
+        return "production".equalsIgnoreCase(env) || "prod".equalsIgnoreCase(env);
     }
 
     @Bean
@@ -147,8 +180,8 @@ public class SecurityConfig {
         } catch (Exception e) {
             // Fallback to safe defaults if something goes wrong
             logger.error("Error configuring CORS allowed origins, using safe defaults", e);
-            corsAllowedOrigins = List.of("http://localhost:19006", "http://localhost:3000",
-                    "https://frontend-production-c2bc.up.railway.app");
+            corsAllowedOrigins = List.of("https://frontend-production-c2bc.up.railway.app", "http://localhost:19006",
+                    "http://localhost:3000");
         }
 
         configuration.setAllowedOrigins(corsAllowedOrigins);

@@ -7,9 +7,11 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../services/auth';
+import axios from 'axios';
 
 export default function SignUp() {
     const [username, setUsername] = useState('');
@@ -17,22 +19,68 @@ export default function SignUp() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuthStore();
+    const router = useRouter();
 
     const handleSubmit = async () => {
+        // Input validation
+        if (!username.trim()) {
+            setError('Username is required');
+            return;
+        }
+        if (!email.trim()) {
+            setError('Email is required');
+            return;
+        }
+        if (!password.trim()) {
+            setError('Password is required');
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+        
+        // Clear previous errors and show loading state
+        setError('');
+        setIsLoading(true);
+        
         try {
-            setError('');
-            if (password !== confirmPassword) {
-                setError('Passwords do not match');
-                return;
-            }
-            if (!username.trim()) {
-                setError('Username is required');
-                return;
-            }
             await register(username, email, password);
+            router.replace('/home'); // Navigate to home on success
         } catch (err) {
-            setError('Registration failed. Please try again.');
+            console.error('Sign up error:', err);
+            if (axios.isAxiosError(err)) {
+                // Handle timeout specifically
+                if (err.code === 'ECONNABORTED') {
+                    setError('Registration request timed out. The server might be under high load. Please try again later.');
+                }
+                // Handle specific response errors
+                else if (err.response) {
+                    if (err.response.status === 400) {
+                        if (typeof err.response.data === 'string') {
+                            setError(err.response.data);
+                        } else if (err.response.data?.message) {
+                            setError(err.response.data.message);
+                        } else {
+                            setError('Invalid registration data. Please check your information.');
+                        }
+                    } else if (err.response.status === 500) {
+                        setError('Server error. Please try again later.');
+                    } else {
+                        setError(`Registration failed: ${err.response.status}`);
+                    }
+                } 
+                // Handle network errors
+                else if (!err.response) {
+                    setError('Network error. Please check your connection and try again.');
+                }
+            } else {
+                setError('Registration failed. Please try again.');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -54,6 +102,7 @@ export default function SignUp() {
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
+                    editable={!isLoading}
                 />
 
                 <TextInput
@@ -64,6 +113,7 @@ export default function SignUp() {
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    editable={!isLoading}
                 />
 
                 <TextInput
@@ -73,6 +123,7 @@ export default function SignUp() {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    editable={!isLoading}
                 />
 
                 <TextInput
@@ -82,13 +133,19 @@ export default function SignUp() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
+                    editable={!isLoading}
                 />
 
                 <TouchableOpacity 
-                    style={styles.button}
+                    style={[styles.button, isLoading && styles.buttonDisabled]}
                     onPress={handleSubmit}
+                    disabled={isLoading}
                 >
-                    <Text style={styles.buttonText}>Sign Up</Text>
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.buttonText}>Sign Up</Text>
+                    )}
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
@@ -169,6 +226,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+    },
+    buttonDisabled: {
+        backgroundColor: '#FFB6C1',
+        opacity: 0.7,
     },
     buttonText: {
         color: '#fff',
