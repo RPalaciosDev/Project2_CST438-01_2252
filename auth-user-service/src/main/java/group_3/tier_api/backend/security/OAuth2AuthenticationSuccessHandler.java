@@ -1,14 +1,17 @@
 package group_3.tier_api.backend.security;
 
-import group_3.tier_api.backend.models.Role;
+import group_3.tier_api.backend.models.AuthProvider;
 import group_3.tier_api.backend.models.User;
 import group_3.tier_api.backend.repositories.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -18,119 +21,112 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+/**
+ * Simplified version of OAuth2AuthenticationSuccessHandler
+ * that doesn't depend on OAuth2 classes
+ */
 @Component
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    @Autowired
-    private UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
+
+    @Value("${cors.allowed-origins:http://localhost:19006,https://frontend-production-c2bc.up.railway.app}")
+    private String[] allowedOrigins;
+
+    @Value("${oauth2.redirect-uri:https://frontend-production-c2bc.up.railway.app/oauth2/redirect}")
+    private String redirectUri;
 
     @Autowired
     private JwtUtils jwtUtils;
 
-    @Value("${cors.allowed-origins:http://localhost:3000}")
-    private String[] allowedOrigins;
-
-    @Value("${oauth2.redirect-uri:${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}}")
-    private String redirectUri;
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+    public void onAuthenticationSuccess(
+            HttpServletRequest request,
+            HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
 
-        if (response.isCommitted()) {
-            return;
+        logger.info("OAuth2 Authentication Success Handler triggered");
+
+        try {
+            if (!(authentication instanceof OAuth2AuthenticationToken)) {
+                logger.error("Authentication is not an OAuth2AuthenticationToken: {}",
+                        authentication.getClass().getName());
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid authentication type");
+                return;
+            }
+
+            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+            OAuth2User oauth2User = oauthToken.getPrincipal();
+            String provider = oauthToken.getAuthorizedClientRegistrationId();
+
+            logger.info("Processing OAuth2 login for provider: {}", provider);
+
+            Map<String, Object> attributes = oauth2User.getAttributes();
+            String email = (String) attributes.get("email");
+            if (email == null) {
+                logger.error("Email is null for OAuth2 user: {}", attributes);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Email not provided by OAuth provider");
+                return;
+            }
+
+            logger.info("OAuth2 user email: {}", email);
+
+            // Find or create the user
+            User user = findOrCreateUser(provider, oauth2User);
+
+            // Generate token using the user's email
+            String token = jwtUtils.generateTokenFromUsername(user.getEmail());
+
+            String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
+                    .queryParam("token", token)
+                    .build().toUriString();
+
+            logger.info("Redirecting to: {}", targetUrl);
+            getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        } catch (Exception e) {
+            logger.error("Error in OAuth2 authentication success handler", e);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Authentication processing failed");
         }
+    }
 
-        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
-        OAuth2User oAuth2User = oauthToken.getPrincipal();
+    private User findOrCreateUser(String provider, OAuth2User oauth2User) {
+        Map<String, Object> attributes = oauth2User.getAttributes();
+        String email = (String) attributes.get("email");
+        String name = (String) attributes.get("name");
+        String providerId = (String) attributes.get("sub"); // For Google OAuth
 
-        String provider = oauthToken.getAuthorizedClientRegistrationId();
-        String providerId = oAuth2User.getName();
+        logger.info("Finding or creating user: email={}, provider={}, providerId={}", email, provider, providerId);
 
-        // Get user details from OAuth provider
-        String email = extractEmail(oAuth2User, provider);
-        String name = extractName(oAuth2User, provider);
+        Optional<User> existingUser = userRepository.findByEmail(email);
 
-        // Find existing user or create new one
-        Optional<User> existingUser = userRepository.findByProviderAndProviderId(provider, providerId);
-
-        User user;
         if (existingUser.isPresent()) {
-            user = existingUser.get();
-            // Update user info if needed
-            if (!user.getEmail().equals(email)) {
-                user.setEmail(email);
+            User user = existingUser.get();
+            logger.info("User already exists with ID: {}", user.getId());
+
+            // Update provider details if not already set
+            if (user.getProvider() == null || user.getProviderId() == null) {
+                logger.info("Updating provider details for existing user");
+                user.setProvider(provider.toUpperCase());
+                return userRepository.save(user);
             }
-            if (name != null && !name.equals(user.getFullName())) {
-                user.setFullName(name);
-            }
+
+            return user;
         } else {
-            // Check if user exists with this email
-            Optional<User> userByEmail = userRepository.findByEmail(email);
+            // Create new user
+            logger.info("Creating new user from OAuth2 data");
+            User user = new User();
+            user.setEmail(email);
+            user.setUsername(name);
+            user.setProvider(provider.toUpperCase());
+            user.setProviderId(providerId);
+            user.setEnabled(true);
 
-            if (userByEmail.isPresent()) {
-                // Link this provider to existing account
-                user = userByEmail.get();
-                user.setProvider(provider);
-                user.setProviderId(providerId);
-            } else {
-                // Create new user
-                String username = generateUsername(email);
-                user = new User(username, email, provider, providerId);
-                user.setFullName(name);
-                user.addRole(Role.ROLE_USER);
-            }
+            return userRepository.save(user);
         }
-
-        userRepository.save(user);
-
-        // Generate JWT token
-        String token = jwtUtils.generateTokenFromUsername(user.getUsername());
-
-        // Build the redirect URL with the token
-        String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
-                .queryParam("token", token)
-                .build().toUriString();
-
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
-    }
-
-    private String extractEmail(OAuth2User oAuth2User, String provider) {
-        Map<String, Object> attributes = oAuth2User.getAttributes();
-
-        if ("google".equals(provider)) {
-            return (String) attributes.get("email");
-        } else if ("github".equals(provider)) {
-            // GitHub doesn't always expose email, might need additional steps
-            return (String) attributes.get("email");
-        }
-
-        return "";
-    }
-
-    private String extractName(OAuth2User oAuth2User, String provider) {
-        Map<String, Object> attributes = oAuth2User.getAttributes();
-
-        if ("google".equals(provider)) {
-            return (String) attributes.get("name");
-        } else if ("github".equals(provider)) {
-            return (String) attributes.get("name");
-        }
-
-        return "";
-    }
-
-    private String generateUsername(String email) {
-        // Create username from email (remove domain part)
-        String username = email.substring(0, email.indexOf('@'));
-
-        // Check if username already exists
-        if (userRepository.existsByUsername(username)) {
-            // Append random number if username exists
-            username = username + System.currentTimeMillis() % 1000;
-        }
-
-        return username;
     }
 }

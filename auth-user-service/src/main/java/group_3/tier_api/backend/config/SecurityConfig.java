@@ -40,13 +40,11 @@ public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id}")
-    private String googleClientId;
+    // Hardcoded values as defaults with environment variables as overrides
+    private static final String DEFAULT_GOOGLE_CLIENT_ID = "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com";
+    private static final String DEFAULT_GOOGLE_CLIENT_SECRET = "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";
 
-    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
-    private String googleClientSecret;
-
-    @Value("${cors.allowed-origins:http://localhost:19006,https://yourdomain.up.railway.app}")
+    @Value("${cors.allowed-origins:http://localhost:19006,https://frontend-production-c2bc.up.railway.app}")
     private String[] allowedOrigins;
 
     @Autowired
@@ -80,6 +78,27 @@ public class SecurityConfig {
 
     @Bean
     public ClientRegistrationRepository clientRegistrationRepository() {
+        logger.info("Configuring Google OAuth2 Client Registration");
+
+        // Get client ID and secret from environment variables first, fall back to
+        // defaults
+        String googleClientId = System.getenv("GOOGLE_CLIENT_ID");
+        if (googleClientId == null || googleClientId.isEmpty()) {
+            googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
+            logger.info("Using default Google Client ID");
+        } else {
+            logger.info("Using Google Client ID from environment variable");
+        }
+
+        String googleClientSecret = System.getenv("GOOGLE_CLIENT_SECRET");
+        if (googleClientSecret == null || googleClientSecret.isEmpty()) {
+            googleClientSecret = DEFAULT_GOOGLE_CLIENT_SECRET;
+            logger.info("Using default Google Client Secret");
+        } else {
+            logger.info("Using Google Client Secret from environment variable");
+        }
+
+        // Create Google registration
         ClientRegistration googleRegistration = ClientRegistration.withRegistrationId("google")
                 .clientId(googleClientId)
                 .clientSecret(googleClientSecret)
@@ -128,7 +147,8 @@ public class SecurityConfig {
         } catch (Exception e) {
             // Fallback to safe defaults if something goes wrong
             logger.error("Error configuring CORS allowed origins, using safe defaults", e);
-            corsAllowedOrigins = List.of("http://localhost:19006", "http://localhost:3000");
+            corsAllowedOrigins = List.of("http://localhost:19006", "http://localhost:3000",
+                    "https://frontend-production-c2bc.up.railway.app");
         }
 
         configuration.setAllowedOrigins(corsAllowedOrigins);
@@ -161,8 +181,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/cache/**").permitAll() // For development
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> {
-                    oauth2.clientRegistrationRepository(clientRegistrationRepository());
-                    oauth2.successHandler(oAuth2AuthenticationSuccessHandler);
+                    try {
+                        oauth2.clientRegistrationRepository(clientRegistrationRepository());
+                        oauth2.successHandler(oAuth2AuthenticationSuccessHandler);
+                        logger.info("OAuth2 login configuration successful");
+                    } catch (Exception e) {
+                        logger.error("Failed to configure OAuth2 login", e);
+                    }
                 });
 
         http.authenticationProvider(authenticationProvider());
