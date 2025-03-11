@@ -3,6 +3,8 @@ package group_3.tier_api.backend.config;
 import group_3.tier_api.backend.security.AuthTokenFilter;
 import group_3.tier_api.backend.security.OAuth2AuthenticationSuccessHandler;
 import group_3.tier_api.backend.security.UserDetailsServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -36,11 +38,16 @@ import java.util.Arrays;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
 
     @Value("${spring.security.oauth2.client.registration.google.client-secret}")
     private String googleClientSecret;
+
+    @Value("${cors.allowed-origins:http://localhost:19006,https://yourdomain.up.railway.app}")
+    private String allowedOriginsString;
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
@@ -95,21 +102,33 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Get allowed origins from environment variable or use defaults
-        String allowedOriginsStr = System.getenv("ALLOWED_ORIGINS");
+        // Get allowed origins from application configuration
         List<String> allowedOrigins;
 
-        if (allowedOriginsStr != null && !allowedOriginsStr.isEmpty()) {
-            // Split comma-separated list of allowed origins
-            allowedOrigins = Arrays.asList(allowedOriginsStr.split(","));
-        } else {
-            // Default allowed origins for local development
-            allowedOrigins = List.of(
-                    "http://localhost:8083",
-                    "http://localhost:19006",
-                    "http://localhost:19000",
-                    "https://app.yourdomain.com" // Railway frontend domain
-            );
+        try {
+            // First check environment variable (highest priority)
+            String envAllowedOrigins = System.getenv("ALLOWED_ORIGINS");
+            if (envAllowedOrigins != null && !envAllowedOrigins.isEmpty()) {
+                allowedOrigins = Arrays.asList(envAllowedOrigins.split(","));
+                logger.info("Using CORS allowed origins from environment: {}", allowedOrigins);
+            } else {
+                // Use the value from application.yml
+                allowedOrigins = Arrays.asList(allowedOriginsString.split(","));
+                logger.info("Using CORS allowed origins from configuration: {}", allowedOrigins);
+            }
+
+            // Validate origins
+            for (String origin : allowedOrigins) {
+                if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
+                    logger.warn("Invalid origin format detected: {}. Origins should start with http:// or https://",
+                            origin);
+                }
+            }
+
+        } catch (Exception e) {
+            // Fallback to safe defaults if something goes wrong
+            logger.error("Error configuring CORS allowed origins, using safe defaults", e);
+            allowedOrigins = List.of("http://localhost:19006", "http://localhost:3000");
         }
 
         configuration.setAllowedOrigins(allowedOrigins);
@@ -117,6 +136,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-auth-token"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
         configuration.setAllowCredentials(true); // Enable credentials for authentication
+        configuration.setMaxAge(3600L); // Cache preflight requests for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -125,6 +145,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        logger.info("Configuring SecurityFilterChain");
+
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -135,6 +157,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/hello").permitAll()
                         .requestMatchers("/", "/error", "/favicon.ico").permitAll()
+                        .requestMatchers("/health", "/service-info").permitAll() // Allow health check endpoints
                         .requestMatchers("/api/cache/**").permitAll() // For development
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> {
