@@ -17,10 +17,10 @@ import java.util.Date;
 public class JwtUtils {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    @Value("${app.jwt.secret:somethingsupersecretthatnobodyshouldknowexcepttheappitself}")
+    @Value("${jwt.secret:somethingsupersecretthatnobodyshouldknowexcepttheappitself}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration:86400000}")
+    @Value("${jwt.expiration:86400000}")
     private int jwtExpirationMs;
 
     public String generateJwtToken(Authentication authentication) {
@@ -30,7 +30,7 @@ public class JwtUtils {
 
     public String generateTokenFromUsername(String username) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        
+
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
@@ -41,7 +41,7 @@ public class JwtUtils {
 
     public String getUserNameFromJwtToken(String token) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        
+
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()

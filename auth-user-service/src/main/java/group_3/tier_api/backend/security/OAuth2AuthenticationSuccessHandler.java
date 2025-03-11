@@ -28,7 +28,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Autowired
     private JwtUtils jwtUtils;
 
-    @Value("${app.oauth2.redirectUri:${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}}")
+    @Value("${cors.allowed-origins:http://localhost:3000}")
+    private String[] allowedOrigins;
+
+    @Value("${oauth2.redirect-uri:${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}}")
     private String redirectUri;
 
     @Override

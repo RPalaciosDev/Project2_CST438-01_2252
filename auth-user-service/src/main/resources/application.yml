@@ -49,6 +49,10 @@ jwt:
 cors:
   allowed-origins: ${ALLOWED_ORIGINS:http://localhost:19006,http://localhost:3000}
 
+# OAuth2 Configuration
+oauth2:
+  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
+
 ---
 spring:
   config:
