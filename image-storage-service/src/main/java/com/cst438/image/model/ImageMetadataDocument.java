@@ -3,7 +3,7 @@ package com.cst438.image.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "images") // Ensure this matches your MongoDB collection name
+@Document(collection = "images")
 public class ImageMetadataDocument {
 
     @Id
@@ -11,38 +11,34 @@ public class ImageMetadataDocument {
     private String fileName;
     private String s3Url;
     private String uploadedBy;
-    private String s3Key;  // Added missing field
-    private long size;  // Added missing field
+    private String s3Key;
+    private long size;
+    private String folder;  
 
-    // No-Args Constructor (Required for MongoDB & Serialization)
     public ImageMetadataDocument() {}
 
-    // Constructor with parameters
-    public ImageMetadataDocument(String fileName, String s3Url, String uploadedBy) {
+    public ImageMetadataDocument(String fileName, String s3Url, String uploadedBy, String folder) {
         this.fileName = fileName;
         this.s3Url = s3Url;
         this.uploadedBy = uploadedBy;
+        this.folder = folder;
     }
 
-    // Getters and Setters
     public String getId() { return id; }
-
     public String getFileName() { return fileName; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
-
     public String getS3Url() { return s3Url; }
-    public void setS3Url(String s3Url) { this.s3Url = s3Url; }
-
     public String getUploadedBy() { return uploadedBy; }
-    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
-
     public String getS3Key() { return s3Key; }
-    public void setS3Key(String s3Key) { this.s3Key = s3Key; }
-
     public long getSize() { return size; }
-    public void setSize(long size) { this.size = size; }
+    public String getFolder() { return folder; }
 
-    // Override toString() for debugging
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public void setS3Url(String s3Url) { this.s3Url = s3Url; }
+    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+    public void setS3Key(String s3Key) { this.s3Key = s3Key; }
+    public void setSize(long size) { this.size = size; }
+    public void setFolder(String folder) { this.folder = folder; }
+
     @Override
     public String toString() {
         return "ImageMetadataDocument{" +
@@ -52,6 +48,7 @@ public class ImageMetadataDocument {
                 ", uploadedBy='" + uploadedBy + '\'' +
                 ", s3Key='" + s3Key + '\'' +
                 ", size=" + size +
+                ", folder='" + folder + '\'' +
                 '}';
     }
 }

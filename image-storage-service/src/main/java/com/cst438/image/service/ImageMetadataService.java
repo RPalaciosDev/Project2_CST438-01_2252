@@ -14,12 +14,17 @@ public class ImageMetadataService {
         this.metadataRepository = metadataRepository;
     }
 
-    public ImageMetadataDocument storeImageUrl(String fileName, String s3Url, String uploadedBy) {
-        ImageMetadataDocument metadata = new ImageMetadataDocument(fileName, s3Url, uploadedBy);
+    public ImageMetadataDocument storeImageUrl(String fileName, String s3Url, String uploadedBy, String folder) {
+        ImageMetadataDocument metadata = new ImageMetadataDocument(fileName, s3Url, uploadedBy, folder);
         return metadataRepository.save(metadata);
     }
 
     public List<ImageMetadataDocument> getAllImages() {
-        return metadataRepository.findAll(); // Ensure this returns a List
+        return metadataRepository.findAll();
+    }
+
+    public List<ImageMetadataDocument> getImagesByFolder(String folder) {
+        return metadataRepository.findByFolder(folder);
     }
 }
+
