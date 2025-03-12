@@ -1,7 +1,9 @@
 spring:
+  application:
+    name: auth-user-service
   data:
     mongodb:
-      uri: mongodb://admin:A@mongodb:27017/auth_db?authSource=admin
+      uri: ${MONGODB_URI:mongodb://localhost:27017/auth_db?authSource=admin}
       auto-index-creation: true
       connection-pool:
         max-wait-time: 5000
@@ -16,9 +18,9 @@ spring:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-            redirect-uri: "http://localhost:8081/login/oauth2/code/google"
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+            redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
             scope:
               - email
               - profile
@@ -30,17 +32,57 @@ spring:
             user-name-attribute: sub
 
 server:
-  address: 0.0.0.0  # ✅ This makes it accessible outside the container
-  port: 8085
-
+  address: 0.0.0.0
+  port: ${PORT:8080}
 
 logging:
   level:
-    org.springframework.security: DEBUG
-    org.springframework.data.mongodb: DEBUG
+    org.springframework.security: INFO
+    org.springframework.data.mongodb: INFO
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:CHANGE_THIS_TO_A_RANDOM_SECRET_IN_PRODUCTION}
+  expiration: 86400000  # 24 hours in milliseconds
+
+# CORS Configuration
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:19006,http://localhost:3000}
+
+# OAuth2 Configuration
+oauth2:
+  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
 
 ---
 spring:
   config:
     activate:
       on-profile: docker
+  data:
+    mongodb:
+      uri: mongodb://admin:mongo-password@mongodb:27017/auth_db?authSource=admin
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+
+server:
+  port: ${PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: WARN
+    org.springframework.data.mongodb: WARN
+
+# For production, ensure these are set through environment variables
+jwt:
+  secret: ${JWT_SECRET}
+
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS}

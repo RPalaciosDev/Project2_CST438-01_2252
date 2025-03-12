@@ -1,11 +1,22 @@
-# Use a multi-platform compatible Gradle image for building
-FROM --platform=linux/amd64 gradle:8.5-jdk21 AS builder
+# Use a multi-platform compatible JDK image for building
+FROM --platform=linux/amd64 eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
-COPY . .
 
-# Build the application using Gradle
-RUN gradle build -x test
+# Copy gradle files first for better layer caching
+COPY gradle gradle
+COPY gradlew gradlew
+COPY gradlew.bat gradlew.bat
+COPY build.gradle settings.gradle ./
+
+# Make sure gradlew is executable
+RUN chmod +x gradlew
+
+# Copy the rest of the files
+COPY src src
+
+# Build the application using the Gradle wrapper
+RUN ./gradlew build -x test
 
 # Use JRE for the runtime image
 FROM --platform=linux/amd64 eclipse-temurin:21-jre
