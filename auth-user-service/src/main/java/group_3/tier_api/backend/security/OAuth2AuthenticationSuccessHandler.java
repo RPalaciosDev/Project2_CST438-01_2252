@@ -35,7 +35,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,http://localhost:19006}")
     private String[] allowedOrigins;
 
-    @Value("${oauth2.redirect-uri:https://frontend-production-c2bc.up.railway.app/oauth2/redirect}")
+    @Value("${oauth2.redirect-uri:https://frontend-production-c2bc.up.railway.app}")
     private String redirectUri;
 
     @Autowired
@@ -82,12 +82,23 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             // Generate token using the user's email
             String token = jwtUtils.generateTokenFromUsername(user.getEmail());
 
-            // Ensure redirect URI uses HTTPS in production
-            String targetUrl = UriComponentsBuilder.fromUriString(ensureSecureUrl(redirectUri))
+            // Build the redirect URL to the main frontend URL with token parameters
+            String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                     .queryParam("token", token)
+                    .queryParam("userId", user.getId())
+                    .queryParam("email", user.getEmail())
+                    .queryParam("username", user.getUsername())
+                    .queryParam("auth_time", System.currentTimeMillis())
+                    .queryParam("auth_status", "success")
+                    .queryParam("login_type", "oauth2_" + provider.toLowerCase())
                     .build().toUriString();
 
+            // Log the redirect for debugging
             logger.info("Redirecting to: {}", targetUrl);
+
+            // Ensure it's a secure URL in production
+            targetUrl = ensureSecureUrl(targetUrl);
+
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
         } catch (Exception e) {
             logger.error("Error in OAuth2 authentication success handler", e);

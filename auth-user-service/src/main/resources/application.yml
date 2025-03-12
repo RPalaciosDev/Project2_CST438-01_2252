@@ -3,7 +3,7 @@ spring:
     name: auth-user-service
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/auth_db?authSource=admin}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/auth_db?authSource=admin}
       auto-index-creation: true
       connection-pool:
         max-wait-time: 5000
@@ -39,6 +39,9 @@ logging:
   level:
     org.springframework.security: INFO
     org.springframework.data.mongodb: INFO
+    org.mongodb.driver: INFO  # Add MongoDB driver logs
+    group_3.tier_api.backend: DEBUG  # Add application logs
+    group_3.tier_api.backend.config: DEBUG  # Specifically log config classes
 
 # JWT Configuration
 jwt:
@@ -51,7 +54,22 @@ cors:
 
 # OAuth2 Configuration
 oauth2:
-  redirect-uri: ${OAUTH2_REDIRECT_URI:https://frontend-production-c2bc.up.railway.app/oauth2/redirect}
+  redirect-uri: ${OAUTH2_REDIRECT_URI:https://frontend-production-c2bc.up.railway.app}
+
+# Application-specific configuration
+app:
+  secure-base-url: ${APP_SECURE_BASE_URL:https://auth-user-service-production.up.railway.app}
+
+# Enable Actuator endpoints for health monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
 
 ---
 spring:
@@ -69,7 +87,7 @@ spring:
       on-profile: prod
   data:
     mongodb:
-      uri: ${MONGODB_URI}
+      uri: ${SPRING_DATA_MONGODB_URI}
 
 server:
   port: ${PORT:8080}
