@@ -10,16 +10,30 @@ public class User {
     @Id
     private String id;
     private String email;
+    private String username;
+    private String password;
     private String name;
     private String picture;
     private List<String> roles; // Example: ["USER", "ADMIN"]
     private Instant createdAt;
     private String jwtToken; // Store last issued JWT (optional)
 
+    public User() {
+        this.createdAt = Instant.now();
+    }
+
     public User(String email, String name, String picture, List<String> roles) {
         this.email = email;
         this.name = name;
         this.picture = picture;
+        this.roles = roles;
+        this.createdAt = Instant.now();
+    }
+
+    public User(String username, String email, String password, List<String> roles, boolean isPasswordEncoded) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
         this.roles = roles;
         this.createdAt = Instant.now();
     }
@@ -38,6 +52,22 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getName() {
@@ -80,4 +110,3 @@ public class User {
         this.jwtToken = jwtToken;
     }
 }
-

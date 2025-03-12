@@ -7,19 +7,85 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.data.mongodb.core.index.IndexOperations;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
 
 @Configuration
-public class MongoConfig {
+@EnableMongoRepositories(basePackages = "group_3.auth_user_api.repository")
+@EnableAutoConfiguration(exclude = {
+        MongoAutoConfiguration.class,
+        MongoDataAutoConfiguration.class
+})
+public class MongoConfig extends AbstractMongoClientConfiguration {
+    private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
+
+    @Value("${spring.data.mongodb.uri}")
+    private String mongoUri;
+
+    @PostConstruct
+    public void logConfig() {
+        // Mask the actual password in logs for security
+        String maskedUri = mongoUri.replaceAll(":[^:@]+@", ":***@");
+        logger.info("MongoDB Configuration initialized with URI: {}", maskedUri);
+        logger.info("Database name: {}", getDatabaseName());
+        logger.info("Auto-index creation: {}", autoIndexCreation());
+    }
+
+    @Override
+    protected String getDatabaseName() {
+        return "auth_db";
+    }
+
+    @Override
+    public MongoClient mongoClient() {
+        logger.debug("Creating MongoDB client with URI");
+        try {
+            return MongoClients.create(mongoUri);
+        } catch (Exception e) {
+            logger.error("Failed to create MongoDB client: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    protected boolean autoIndexCreation() {
+        return true;
+    }
 
     @Bean
     CommandLineRunner initDatabase(MongoTemplate mongoTemplate) {
         return args -> {
-            IndexOperations indexOps = mongoTemplate.indexOps(User.class);
+            try {
+                IndexOperations indexOps = mongoTemplate.indexOps(User.class);
 
-            // Ensure email field is unique
-            indexOps.ensureIndex(new Index().on("email", org.springframework.data.domain.Sort.Direction.ASC).unique());
+                // Check if the index already exists
+                boolean indexExists = indexOps.getIndexInfo().stream()
+                        .anyMatch(indexInfo -> indexInfo.getIndexFields().stream()
+                                .anyMatch(field -> field.getKey().equals("email")));
 
-            System.out.println("✅ MongoDB indexes and collections initialized.");
+                if (!indexExists) {
+                    // Ensure email field is unique
+                    indexOps.ensureIndex(
+                            new Index().on("email", org.springframework.data.domain.Sort.Direction.ASC).unique());
+                    logger.info("✅ MongoDB email index created successfully");
+                } else {
+                    logger.info("ℹ️ MongoDB email index already exists");
+                }
+
+                logger.info("✅ MongoDB connection and initialization successful");
+            } catch (Exception e) {
+                logger.error("❌ Failed to initialize MongoDB: {}", e.getMessage(), e);
+                // Log but don't rethrow to prevent application startup failure
+            }
         };
     }
 }
