@@ -1,21 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../services/auth';
 import { useStyle } from './context/StyleContext';
+import axios from 'axios';
 
 export default function Home() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, token } = useAuthStore();
   const { selectedStyle, setSelectedStyle } = useStyle();
+  const [loading, setLoading] = useState(false);
+  const [loadingTierlists, setLoadingTierlists] = useState(false);
 
   // local state to force re render when selected style updates
   const [pickerValue, setPickerValue] = useState(selectedStyle);
 
   useEffect(() => {
+    // Verify token is valid on component mount
+    const verifyToken = async () => {
+      if (!token) {
+        router.replace('/sign-in');
+        return;
+      }
+      
+      try {
+        // Check if token is still valid - optional but good practice
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://auth-user-service-production.up.railway.app'
+          : 'http://localhost:8080';
+        
+        await axios.get(`${baseUrl}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } catch (error) {
+        console.error('Token validation error:', error);
+        // If token is invalid, logout and redirect
+        if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+          Alert.alert(
+            "Session Expired",
+            "Your session has expired. Please sign in again.",
+            [{ text: "OK", onPress: () => handleLogout() }]
+          );
+        }
+      }
+    };
+    
+    verifyToken();
     setPickerValue(selectedStyle);
-  }, [selectedStyle]);
+  }, [selectedStyle, token]);
 
   const handleSelection = (itemValue: string) => {
     if (itemValue) {
@@ -27,12 +62,41 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
+      setLoading(true);
       await logout();
       router.replace('/sign-in');
     } catch (error) {
       console.error('Logout error:', error);
+      Alert.alert(
+        "Logout Error",
+        "There was a problem logging out. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
+
+  const navigateToTierlists = () => {
+    try {
+      setLoadingTierlists(true);
+      router.push('/tierlists');
+    } catch (err: unknown) {
+      console.error('Navigation error:', err);
+      Alert.alert("Navigation Error", "Unable to access tier lists at this time.");
+    } finally {
+      // Reset loading state after navigation or error
+      setTimeout(() => setLoadingTierlists(false), 500);
+    }
+  };
+
+  if (!user) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF4B6E" />
+        <Text>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -76,16 +140,32 @@ export default function Home() {
         </View>
 
         <View style={styles.actionContainer}>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/tierlists')}>
-            <Text style={styles.buttonText}>View My Tier Lists</Text>
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={navigateToTierlists}
+            disabled={loadingTierlists}
+          >
+            {loadingTierlists ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>View My Tier Lists</Text>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.button} onPress={() => router.push('/create-tierlist')}>
             <Text style={styles.buttonText}>Create New Tier List</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
-            <Text style={styles.buttonText}>Logout</Text>
+          <TouchableOpacity 
+            style={[styles.button, styles.logoutButton]} 
+            onPress={handleLogout}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>Logout</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -96,6 +176,12 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFF5F5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#FFF5F5',
   },
   scrollContainer: {

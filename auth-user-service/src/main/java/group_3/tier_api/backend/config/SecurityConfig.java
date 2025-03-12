@@ -44,8 +44,15 @@ public class SecurityConfig {
     private static final String DEFAULT_GOOGLE_CLIENT_ID = "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com";
     private static final String DEFAULT_GOOGLE_CLIENT_SECRET = "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";
 
-    @Value("${cors.allowed-origins:http://localhost:19006,https://frontend-production-c2bc.up.railway.app}")
+    // Updated to separate production (HTTPS) and development (HTTP) URLs
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,http://localhost:19006}")
     private String[] allowedOrigins;
+
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    @Value("${app.secure-base-url:https://auth-user-service-production.up.railway.app}")
+    private String secureBaseUrl;
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
@@ -61,8 +68,10 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+
         return authProvider;
     }
 
@@ -98,13 +107,25 @@ public class SecurityConfig {
             logger.info("Using Google Client Secret from environment variable");
         }
 
+        // In production environments, ensure we're using a secure base URL for OAuth
+        String redirectUriTemplate;
+        if (isProductionEnvironment()) {
+            // Use the secure base URL explicitly instead of {baseUrl}
+            redirectUriTemplate = secureBaseUrl + contextPath + "/login/oauth2/code/{registrationId}";
+            logger.info("Using secure redirect URI template for production: {}", redirectUriTemplate);
+        } else {
+            // Use the default {baseUrl} placeholder for development
+            redirectUriTemplate = "{baseUrl}/login/oauth2/code/{registrationId}";
+            logger.info("Using default redirect URI template for development: {}", redirectUriTemplate);
+        }
+
         // Create Google registration
         ClientRegistration googleRegistration = ClientRegistration.withRegistrationId("google")
                 .clientId(googleClientId)
                 .clientSecret(googleClientSecret)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .redirectUri(redirectUriTemplate)
                 .scope("openid", "profile", "email")
                 .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                 .tokenUri("https://www.googleapis.com/oauth2/v4/token")
@@ -117,43 +138,37 @@ public class SecurityConfig {
         return new InMemoryClientRegistrationRepository(googleRegistration);
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        // Get allowed origins from application configuration
-        List<String> corsAllowedOrigins;
-
-        try {
-            // First check environment variable (highest priority)
-            String envAllowedOrigins = System.getenv("ALLOWED_ORIGINS");
-            if (envAllowedOrigins != null && !envAllowedOrigins.isEmpty()) {
-                corsAllowedOrigins = Arrays.asList(envAllowedOrigins.split(","));
-                logger.info("Using CORS allowed origins from environment: {}", corsAllowedOrigins);
-            } else {
-                // Use the value from application.yml
-                corsAllowedOrigins = Arrays.asList(allowedOrigins);
-                logger.info("Using CORS allowed origins from configuration: {}", corsAllowedOrigins);
-            }
-
-            // Validate origins
-            for (String origin : corsAllowedOrigins) {
-                if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
-                    logger.warn("Invalid origin format detected: {}. Origins should start with http:// or https://",
-                            origin);
-                }
-            }
-
-        } catch (Exception e) {
-            // Fallback to safe defaults if something goes wrong
-            logger.error("Error configuring CORS allowed origins, using safe defaults", e);
-            corsAllowedOrigins = List.of("http://localhost:19006", "http://localhost:3000",
-                    "https://frontend-production-c2bc.up.railway.app");
+    /**
+     * Determines if the application is running in a production environment.
+     */
+    private boolean isProductionEnvironment() {
+        // Check active profiles
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        if (activeProfiles.contains("prod")) {
+            return true;
         }
 
-        configuration.setAllowedOrigins(corsAllowedOrigins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-auth-token"));
+        // Check environment variables
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        return env != null && env.contains("prod");
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        logger.info("Configuring CORS with allowed origins: {}", Arrays.toString(allowedOrigins));
+
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "X-AUTH-TOKEN",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
         configuration.setAllowCredentials(true); // Enable credentials for authentication
         configuration.setMaxAge(3600L); // Cache preflight requests for 1 hour

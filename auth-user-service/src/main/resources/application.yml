@@ -3,7 +3,7 @@ spring:
     name: auth-user-service
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/auth_db?authSource=admin}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/auth_db?authSource=admin}
       auto-index-creation: true
       connection-pool:
         max-wait-time: 5000
@@ -20,7 +20,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
             client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
-            redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
+            redirect-uri: ${OAUTH_REDIRECT_URI:https://auth-user-service-production.up.railway.app/login/oauth2/code/google}
             scope:
               - email
               - profile
@@ -39,6 +39,9 @@ logging:
   level:
     org.springframework.security: INFO
     org.springframework.data.mongodb: INFO
+    org.mongodb.driver: INFO  # Add MongoDB driver logs
+    group_3.tier_api.backend: DEBUG  # Add application logs
+    group_3.tier_api.backend.config: DEBUG  # Specifically log config classes
 
 # JWT Configuration
 jwt:
@@ -47,11 +50,26 @@ jwt:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:19006,http://localhost:3000}
+  allowed-origins: ${ALLOWED_ORIGINS:https://frontend-production-c2bc.up.railway.app,http://localhost:19006,http://localhost:3000}
 
 # OAuth2 Configuration
 oauth2:
-  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
+  redirect-uri: ${OAUTH2_REDIRECT_URI:https://frontend-production-c2bc.up.railway.app}
+
+# Application-specific configuration
+app:
+  secure-base-url: ${APP_SECURE_BASE_URL:https://auth-user-service-production.up.railway.app}
+
+# Enable Actuator endpoints for health monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
 
 ---
 spring:
@@ -69,7 +87,7 @@ spring:
       on-profile: prod
   data:
     mongodb:
-      uri: ${MONGODB_URI}
+      uri: ${SPRING_DATA_MONGODB_URI}
 
 server:
   port: ${PORT:8080}

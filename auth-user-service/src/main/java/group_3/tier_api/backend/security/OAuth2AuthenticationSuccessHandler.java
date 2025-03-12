@@ -32,10 +32,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
 
-    @Value("${cors.allowed-origins:http://localhost:19006,https://frontend-production-c2bc.up.railway.app}")
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,http://localhost:19006}")
     private String[] allowedOrigins;
 
-    @Value("${oauth2.redirect-uri:https://frontend-production-c2bc.up.railway.app/oauth2/redirect}")
+    @Value("${oauth2.redirect-uri:https://frontend-production-c2bc.up.railway.app}")
     private String redirectUri;
 
     @Autowired
@@ -82,11 +82,23 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             // Generate token using the user's email
             String token = jwtUtils.generateTokenFromUsername(user.getEmail());
 
+            // Build the redirect URL to the main frontend URL with token parameters
             String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                     .queryParam("token", token)
+                    .queryParam("userId", user.getId())
+                    .queryParam("email", user.getEmail())
+                    .queryParam("username", user.getUsername())
+                    .queryParam("auth_time", System.currentTimeMillis())
+                    .queryParam("auth_status", "success")
+                    .queryParam("login_type", "oauth2_" + provider.toLowerCase())
                     .build().toUriString();
 
+            // Log the redirect for debugging
             logger.info("Redirecting to: {}", targetUrl);
+
+            // Ensure it's a secure URL in production
+            targetUrl = ensureSecureUrl(targetUrl);
+
             getRedirectStrategy().sendRedirect(request, response, targetUrl);
         } catch (Exception e) {
             logger.error("Error in OAuth2 authentication success handler", e);
@@ -128,5 +140,34 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
             return userRepository.save(user);
         }
+    }
+
+    /**
+     * Ensures that URLs use HTTPS in production environments.
+     * In development, HTTP is allowed.
+     */
+    private String ensureSecureUrl(String url) {
+        // Check if we're in production and the URL is using HTTP
+        if (isProductionEnvironment() && url.startsWith("http://")) {
+            String secureUrl = url.replace("http://", "https://");
+            logger.warn("Converting HTTP URL to HTTPS for production: {} -> {}", url, secureUrl);
+            return secureUrl;
+        }
+        return url;
+    }
+
+    /**
+     * Determines if the application is running in a production environment.
+     */
+    private boolean isProductionEnvironment() {
+        // Check active profiles
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        if (activeProfiles.contains("prod")) {
+            return true;
+        }
+
+        // Check environment variables that would indicate production
+        String env = System.getenv("ENVIRONMENT");
+        return "production".equalsIgnoreCase(env) || "prod".equalsIgnoreCase(env);
     }
 }
