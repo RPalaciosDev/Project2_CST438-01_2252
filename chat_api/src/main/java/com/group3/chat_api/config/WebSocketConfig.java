@@ -30,9 +30,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
         } else {
             // Default allowed origins for local development
             allowedOrigins = new String[] {
-                    "http://localhost:19006",
-                    "http://localhost:19000",
-                    "https://app.yourdomain.com" // Railway frontend domain
+                    "ws://localhost:19006",
+                    "ws://localhost:19000",
+                    "ws://app.yourdomain.com" // Railway frontend domain
             };
             logger.info("Using default WebSocket allowed origins: {}", Arrays.toString(allowedOrigins));
         }

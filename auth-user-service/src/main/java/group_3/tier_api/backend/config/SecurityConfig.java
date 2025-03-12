@@ -3,6 +3,8 @@ package group_3.tier_api.backend.config;
 import group_3.tier_api.backend.security.AuthTokenFilter;
 import group_3.tier_api.backend.security.OAuth2AuthenticationSuccessHandler;
 import group_3.tier_api.backend.security.UserDetailsServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -36,11 +38,21 @@ import java.util.Arrays;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id}")
-    private String googleClientId;
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
-    private String googleClientSecret;
+    // Hardcoded values as defaults with environment variables as overrides
+    private static final String DEFAULT_GOOGLE_CLIENT_ID = "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com";
+    private static final String DEFAULT_GOOGLE_CLIENT_SECRET = "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";
+
+    // Updated to separate production (HTTPS) and development (HTTP) URLs
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,http://localhost:19006}")
+    private String[] allowedOrigins;
+
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    @Value("${app.secure-base-url:https://auth-user-service-production.up.railway.app}")
+    private String secureBaseUrl;
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
@@ -56,8 +68,10 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+
         return authProvider;
     }
 
@@ -73,12 +87,45 @@ public class SecurityConfig {
 
     @Bean
     public ClientRegistrationRepository clientRegistrationRepository() {
+        logger.info("Configuring Google OAuth2 Client Registration");
+
+        // Get client ID and secret from environment variables first, fall back to
+        // defaults
+        String googleClientId = System.getenv("GOOGLE_CLIENT_ID");
+        if (googleClientId == null || googleClientId.isEmpty()) {
+            googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
+            logger.info("Using default Google Client ID");
+        } else {
+            logger.info("Using Google Client ID from environment variable");
+        }
+
+        String googleClientSecret = System.getenv("GOOGLE_CLIENT_SECRET");
+        if (googleClientSecret == null || googleClientSecret.isEmpty()) {
+            googleClientSecret = DEFAULT_GOOGLE_CLIENT_SECRET;
+            logger.info("Using default Google Client Secret");
+        } else {
+            logger.info("Using Google Client Secret from environment variable");
+        }
+
+        // In production environments, ensure we're using a secure base URL for OAuth
+        String redirectUriTemplate;
+        if (isProductionEnvironment()) {
+            // Use the secure base URL explicitly instead of {baseUrl}
+            redirectUriTemplate = secureBaseUrl + contextPath + "/login/oauth2/code/{registrationId}";
+            logger.info("Using secure redirect URI template for production: {}", redirectUriTemplate);
+        } else {
+            // Use the default {baseUrl} placeholder for development
+            redirectUriTemplate = "{baseUrl}/login/oauth2/code/{registrationId}";
+            logger.info("Using default redirect URI template for development: {}", redirectUriTemplate);
+        }
+
+        // Create Google registration
         ClientRegistration googleRegistration = ClientRegistration.withRegistrationId("google")
                 .clientId(googleClientId)
                 .clientSecret(googleClientSecret)
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .redirectUri(redirectUriTemplate)
                 .scope("openid", "profile", "email")
                 .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
                 .tokenUri("https://www.googleapis.com/oauth2/v4/token")
@@ -91,32 +138,40 @@ public class SecurityConfig {
         return new InMemoryClientRegistrationRepository(googleRegistration);
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        // Get allowed origins from environment variable or use defaults
-        String allowedOriginsStr = System.getenv("ALLOWED_ORIGINS");
-        List<String> allowedOrigins;
-
-        if (allowedOriginsStr != null && !allowedOriginsStr.isEmpty()) {
-            // Split comma-separated list of allowed origins
-            allowedOrigins = Arrays.asList(allowedOriginsStr.split(","));
-        } else {
-            // Default allowed origins for local development
-            allowedOrigins = List.of(
-                    "http://localhost:8083",
-                    "http://localhost:19006",
-                    "http://localhost:19000",
-                    "https://app.yourdomain.com" // Railway frontend domain
-            );
+    /**
+     * Determines if the application is running in a production environment.
+     */
+    private boolean isProductionEnvironment() {
+        // Check active profiles
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        if (activeProfiles.contains("prod")) {
+            return true;
         }
 
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-auth-token"));
+        // Check environment variables
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        return env != null && env.contains("prod");
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        logger.info("Configuring CORS with allowed origins: {}", Arrays.toString(allowedOrigins));
+
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "X-AUTH-TOKEN",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
         configuration.setAllowCredentials(true); // Enable credentials for authentication
+        configuration.setMaxAge(3600L); // Cache preflight requests for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -125,6 +180,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        logger.info("Configuring SecurityFilterChain");
+
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -135,11 +192,17 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/hello").permitAll()
                         .requestMatchers("/", "/error", "/favicon.ico").permitAll()
+                        .requestMatchers("/health", "/service-info").permitAll() // Allow health check endpoints
                         .requestMatchers("/api/cache/**").permitAll() // For development
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> {
-                    oauth2.clientRegistrationRepository(clientRegistrationRepository());
-                    oauth2.successHandler(oAuth2AuthenticationSuccessHandler);
+                    try {
+                        oauth2.clientRegistrationRepository(clientRegistrationRepository());
+                        oauth2.successHandler(oAuth2AuthenticationSuccessHandler);
+                        logger.info("OAuth2 login configuration successful");
+                    } catch (Exception e) {
+                        logger.error("Failed to configure OAuth2 login", e);
+                    }
                 });
 
         http.authenticationProvider(authenticationProvider());
