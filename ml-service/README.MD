@@ -1,20 +1,20 @@
 # ML Service README
 
 ## Overview
-This is a Flask-based machine learning service for processing and comparing tier lists in a tier-list-based dating app. The service receives user tier lists, computes similarity scores using machine learning, and returns the most similar users.
+This is a Flask-based machine learning service for processing and comparing tier lists in a tier-list-based dating app. The service receives user tier lists, clusters them using Agglomerative Clustering, computes similarity scores, and returns the most similar users.
 
 ## Project Structure
 ```
 ml-service/
 │── app.py                 # Flask API entry point
 │── requirements.txt       # Python dependencies
-│── model/                 # ML model (demonstration version, not final)
+│── Dockerfile             # Containerization setup for deployment
 │── README.md              # Project documentation
 ```
 
 ## Setup & Installation
 ### Prerequisites
-Ensure you have Python 3.8+ installed.
+Ensure you have Python 3.9+ installed.
 
 ### 1. Clone the Repository
 ```bash
@@ -38,44 +38,68 @@ To start the Flask API:
 ```bash
 python app.py
 ```
-The service will run at `http://localhost:5000`.
+The service will run at `http://localhost:8086`.
 
 ## API Endpoints
-### 1. Compare Tier Lists
-**Endpoint:** `/compare_tiers`  
+### 1. Submit a Tier List
+**Endpoint:** `/submit_tier_list`  
 **Method:** `POST`  
 **Request Body:**
 ```json
 {
   "user_id": "user1",
-  "vector": [0.2, 0.8, 0.5]
+  "tier_list": {
+    "Monkey_D_Luffy": "S",
+    "Roronoa_Zoro": "A",
+    "Sanji": "B",
+    "Nami": "C"
+  }
 }
 ```
 **Response:**
 ```json
 {
+  "message": "Tier list submitted successfully!",
+  "user_id": "user1"
+}
+```
+
+### 2. Get User Matches
+**Endpoint:** `/get_matches/<user_id>`  
+**Method:** `GET`  
+**Response:**
+```json
+{
+  "user_id": "user1",
   "matches": [
-    ["user2", 0.89],
-    ["user3", 0.76]
+    {
+      "user_id": "user2",
+      "euclidean_distance": 0.0336,
+      "cosine_similarity": 0.9712
+    }
   ]
 }
 ```
 
 ## Deployment
 ### Deploy to Railway
-1. Initialize Railway project
+1. Ensure Docker is installed.
+2. Push code to GitHub and deploy via Railway:
 ```bash
-railway init
+git add .
+git commit -m "Deploy Flask API with clustering"
+git push origin main
 ```
-2. Deploy the service
+3. Deploy the service
 ```bash
 railway up
 ```
 
 ## Future Improvements
-- Implement the final ML model
-- Optimize performance with precomputed embeddings
-- Deploy to AWS Lambda for serverless processing
+- Implement a persistent database for storing tier lists.
+- Optimize performance with precomputed embeddings.
+- Deploy to AWS Lambda for serverless processing.
+- Improve clustering accuracy with advanced machine learning techniques.
 
 ## License
 This project is licensed under the MIT License.

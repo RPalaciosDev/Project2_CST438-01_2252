@@ -1,0 +1,13 @@
+[service]
+name = "flask-service"
+env = "production"
+
+[build]
+builder = "dockerfile"
+dockerfile = "Dockerfile"
+
+[deploy]
+restart_policy = "always"
+
+[env]
+PORT = "5000"
