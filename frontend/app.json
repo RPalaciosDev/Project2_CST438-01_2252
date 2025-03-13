@@ -16,22 +16,66 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.group3.tierlist"
+      "bundleIdentifier": "com.group3.tierlist",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "associatedDomains": [
+        "applinks:frontend-production-c2bc.up.railway.app"
+      ],
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "tierlist"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.group3.tierlist"
+      "package": "com.group3.tierlist",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "*.railway.app",
+              "pathPrefix": "/auth/google/callback"
+            },
+            {
+              "scheme": "tierlist",
+              "host": "auth.callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+        }
+      ]
     ],
-    "scheme": "tierlist"
+    "scheme": "tierlist",
+    "extra": {
+      "googleClientId": "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com",
+      "googleClientSecret": "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",
+      "backendUrl": "https://auth-user-api-production.up.railway.app",
+      "frontendUrl": "https://frontend-production-c2bc.up.railway.app",
+      "eas": {
+        "projectId": "tierlist-app"
+      }
+    }
   }
 } 

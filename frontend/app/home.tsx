@@ -25,16 +25,16 @@ export default function Home() {
       }
       
       try {
-        // Check if token is still valid - optional but good practice
-        const baseUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://auth-user-service-production.up.railway.app'
-          : 'http://localhost:8080';
+        // Use the new checkStatus method instead of direct API call
+        const status = await useAuthStore.getState().checkStatus();
         
-        await axios.get(`${baseUrl}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        if (!status.isAuthenticated) {
+          Alert.alert(
+            "Session Expired",
+            "Your session has expired. Please sign in again.",
+            [{ text: "OK", onPress: () => handleLogout() }]
+          );
+        }
       } catch (error) {
         console.error('Token validation error:', error);
         // If token is invalid, logout and redirect

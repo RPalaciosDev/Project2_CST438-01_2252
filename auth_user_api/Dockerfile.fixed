@@ -32,4 +32,4 @@ USER spring:spring
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Run the application with proper memory settings for containerized environments
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-XX:+UseContainerSupport", "-jar", "app.jar"] 
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-XX:+UseContainerSupport", "-jar", "app.jar"]
