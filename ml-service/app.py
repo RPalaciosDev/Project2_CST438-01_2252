@@ -3,9 +3,9 @@ import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from gensim.models import Word2Vec
-from sklearn.metrics.pairwise import cosine_similarity
-from scipy.spatial.distance import euclidean
 from sklearn.cluster import AgglomerativeClustering
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -18,10 +18,11 @@ tier_weights = {"S": 6, "A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0}
 user_embeddings = {}
 user_tier_lists = []
 model = None  # Placeholder for Word2Vec model
+daily_matches = {}  # Store matches for all users
 
 @app.route("/")
 def home():
-    return jsonify({"message": "Flask API is running with Agglomerative Clustering!"})
+    return jsonify({"message": "Flask API is running with scheduled matching!"})
 
 @app.route("/submit_tier_list", methods=["POST"])
 def submit_tier_list():
@@ -63,7 +64,6 @@ def submit_tier_list():
 
     return jsonify({"message": "Tier list submitted successfully!", "user_id": user_id})
 
-
 def get_user_embedding(user_tier_list):
     """Compute a user's embedding by averaging word vectors with weighted tiers."""
     weighted_vectors = []
@@ -82,16 +82,22 @@ def get_user_embedding(user_tier_list):
         print("No valid embeddings found!")
         return np.zeros(50)  # Ensure we return a valid array
 
+@app.route("/get_matches", methods=["GET"])
+def get_matches():
+    """Returns all users' top 5 matches after the scheduled match time."""
+    return jsonify({"daily_matches": daily_matches})
 
-@app.route("/get_matches/<user_id>", methods=["GET"])
-def get_matches(user_id):
-    """Returns the top 5 matches for a given user using Agglomerative Clustering."""
-    if user_id not in user_embeddings:
-        return jsonify({"error": "User not found"}), 404
+def schedule_daily_matching():
+    """Runs the daily matching process at 5 PM."""
+    global daily_matches
+    print(f"Running daily matching at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}...")
 
-    matches = find_top_matches(user_id, top_n=5)
-    print(f"Cluster-based Matches for {user_id}: {matches}")  # Debugging output
-    return jsonify({"user_id": user_id, "matches": matches})
+    daily_matches = {}  # Reset matches for the new day
+    for user_id in user_embeddings.keys():
+        matches = find_top_matches(user_id, top_n=5)
+        daily_matches[user_id] = [match["user_id"] for match in matches]
+
+    print("Daily matching completed!")
 
 def find_top_matches(user_id, top_n=5):
     """Finds the closest users to a given user based on Agglomerative Clustering."""
@@ -114,25 +120,17 @@ def find_top_matches(user_id, top_n=5):
     # Find users in the same cluster
     cluster_members = [user_ids[i] for i in range(len(user_ids)) if cluster_labels[i] == user_cluster and user_ids[i] != user_id]
 
-    # Compute similarity within the cluster
     matches = []
     for other_id in cluster_members:
-        dist = float(euclidean(user_embeddings[user_id], user_embeddings[other_id]))  # Convert to float
-        sim = float(cosine_similarity([user_embeddings[user_id]], [user_embeddings[other_id]])[0][0])  # Convert to float
-        matches.append((other_id, dist, sim))
+        matches.append({"user_id": other_id})
 
-    # Sort by Euclidean distance (lower is better)
-    matches.sort(key=lambda x: x[1])
+    return matches[:top_n]
 
-    if not matches:
-        print(f"No matches found in cluster for {user_id}!")
-        return []
-
-    print(f"Matches for {user_id} in Cluster: {matches[:top_n]}")
-    
-    return [{"user_id": match[0], "euclidean_distance": match[1], "cosine_similarity": match[2]} for match in matches[:top_n]]
+# Schedule the daily matching at 5 PM
+scheduler = BackgroundScheduler()
+scheduler.add_job(schedule_daily_matching, 'cron', hour=17, minute=0)  # 17:00 = 5 PM
+scheduler.start()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8086))
     app.run(host="0.0.0.0", port=port)
-
