@@ -34,10 +34,11 @@ export default function SignIn() {
     const [apiStatus, setApiStatus] = useState('');
     const [isCheckingApi, setIsCheckingApi] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const { login, token, isAuthenticated } = useAuthStore(state => ({
+    const { login, token, isAuthenticated, loginWithGoogle } = useAuthStore(state => ({
         login: state.login,
         token: state.token,
-        isAuthenticated: state.isAuthenticated
+        isAuthenticated: state.isAuthenticated,
+        loginWithGoogle: state.loginWithGoogle
     }));
 
     // Check API connectivity
@@ -130,58 +131,96 @@ export default function SignIn() {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setError('');
+        setIsLoading(true);
+        
+        try {
+            await loginWithGoogle();
+            // If successful, the useEffect will redirect to home
+        } catch (error) {
+            if (error instanceof Error) {
+                setError(error.message);
+            } else {
+                setError('Failed to sign in with Google');
+            }
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <Text style={styles.title}>Sign In</Text>
+            
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            
             <View style={styles.form}>
-                <Text style={styles.title}>Love Tiers</Text>
-                <Text style={styles.subtitle}>Sign in</Text>
-                
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-
-                {apiStatus ? <Text style={styles.apiStatus}>{apiStatus}</Text> : null}
-                {isCheckingApi && <ActivityIndicator size="small" color="#FF4B6E" />}
-                <TouchableOpacity onPress={checkApiStatus} style={styles.apiCheckButton}>
-                    <Text style={styles.apiCheckButtonText}>Check API Connection</Text>
-                </TouchableOpacity>
-
+                <Text style={styles.label}>Username or Email</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Username or Email"
-                    placeholderTextColor="#999"
+                    placeholder="Enter your username or email"
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
+                    editable={!isLoading}
                 />
-
+                
+                <Text style={styles.label}>Password</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#999"
+                    placeholder="Enter your password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    editable={!isLoading}
                 />
-
-                <TouchableOpacity 
+                
+                <TouchableOpacity
                     style={[styles.button, isLoading && styles.buttonDisabled]}
                     onPress={handleSubmit}
                     disabled={isLoading}
                 >
                     {isLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator color="#fff" />
                     ) : (
                         <Text style={styles.buttonText}>Sign In</Text>
                     )}
                 </TouchableOpacity>
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Don't have an account? </Text>
-                    <Link href="/sign-up" style={styles.link}>
-                        Sign Up
-                    </Link>
+                
+                <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.dividerLine} />
                 </View>
+                
+                <TouchableOpacity
+                    style={[styles.googleButton, isLoading && styles.buttonDisabled]}
+                    onPress={handleGoogleLogin}
+                    disabled={isLoading}
+                >
+                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                </TouchableOpacity>
+                
+                <Link href="/sign-up" asChild>
+                    <TouchableOpacity style={styles.linkButton}>
+                        <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
+                    </TouchableOpacity>
+                </Link>
             </View>
-        </View>
+            
+            {apiStatus ? (
+                <View style={styles.apiStatus}>
+                    <Text style={styles.apiStatusText}>{apiStatus}</Text>
+                    {isCheckingApi && <ActivityIndicator size="small" color="#666" />}
+                    <TouchableOpacity onPress={checkApiStatus}>
+                        <Text style={styles.refreshText}>Refresh</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : null}
+        </KeyboardAvoidingView>
     );
 }
 
@@ -215,11 +254,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#FF4B6E',
     },
-    subtitle: {
+    label: {
         fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 30,
+        fontWeight: 'bold',
+        marginBottom: 8,
     },
     input: {
         backgroundColor: '#FFFFFF',
@@ -262,42 +300,71 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
     },
-    footer: {
+    divider: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 25,
         alignItems: 'center',
+        marginVertical: 20,
     },
-    footerText: {
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#E0E0E0',
+    },
+    dividerText: {
+        paddingHorizontal: 10,
         color: '#666',
-        fontSize: 15,
     },
-    link: {
-        color: '#FF4B6E',
+    googleButton: {
+        backgroundColor: '#4285F4',
+        padding: 15,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    googleButtonText: {
+        color: 'white',
         fontWeight: 'bold',
-        fontSize: 15,
     },
-    error: {
+    errorText: {
         color: '#FF4B6E',
         marginBottom: 15,
         textAlign: 'center',
         fontSize: 14,
     },
     apiStatus: {
-        marginBottom: 10,
-        textAlign: 'center',
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        shadowColor: '#FFE4E8',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    apiStatusText: {
         color: '#666',
         fontSize: 14,
+        marginBottom: 10,
     },
-    apiCheckButton: {
-        marginBottom: 15,
-        padding: 8,
-        backgroundColor: '#FFE4E8',
-        borderRadius: 8,
-    },
-    apiCheckButtonText: {
+    refreshText: {
         color: '#FF4B6E',
         fontSize: 14,
-        textAlign: 'center',
+        fontWeight: 'bold',
+    },
+    linkButton: {
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    linkText: {
+        color: '#FF4B6E',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
 }); 

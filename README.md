@@ -17,6 +17,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - [Configuration Management](#configuration-management)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
+- [Enhanced Authentication System](#enhanced-authentication-system)
 
 ## Quick Start
 
@@ -287,5 +288,66 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Expo Team for the mobile framework
 - Spring Boot Team for the backend framework
 - All contributors to this project
+
+## Enhanced Authentication System
+
+This project implements a robust authentication system using Spring Boot with OAuth2 Resource Server for JWT-based authentication and authorization.
+
+## Features
+
+- JWT-based authentication for API endpoints
+- User registration and login with password encryption
+- Google OAuth2 login integration
+- Token validation and refresh
+- Role-based authorization
+- CORS configuration for frontend integration
+
+## Security Configuration
+
+The security configuration has been enhanced to use Spring Security's OAuth2 Resource Server capabilities, which provides a standardized way to validate and process JWT tokens.
+
+### Key Components
+
+1. **JwtTokenProvider**: Generates and validates JWT tokens
+2. **JwtAuthConverter**: Converts JWT tokens to Spring Security Authentication objects
+3. **CustomUserDetailsService**: Loads user details from MongoDB for authentication
+4. **SecurityConfig**: Configures security filters, authentication, and authorization rules
+
+## JWT Authentication Flow
+
+The application uses a simplified JWT authentication flow:
+
+1. **User Registration/Login**: User registers or logs in via `/api/auth/signup` or `/api/auth/signin`
+2. **Google OAuth**: Alternatively, user can log in via Google OAuth at `/oauth2/authorization/google`
+3. **JWT Generation**: On successful authentication, a JWT token is generated
+4. **Token Usage**: Frontend stores the token and includes it in the `Authorization` header
+5. **Token Validation**: Backend validates the token using the same secret key
+
+## Environment Variables
+
+For correct authentication configuration, set these environment variables in Railway:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `JWT_SECRET` | Secret key for JWT signing | Yes | your-very-long-secret-key-should-be-kept-safe |
+| `GOOGLE_CLIENT_ID` | Google OAuth2 client ID | For OAuth | - |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret | For OAuth | - |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | Yes | http://localhost:3000,http://localhost:19006 |
+| `FRONTEND_URL` | URL to redirect after OAuth login | Yes | http://localhost:3000 |
+
+## Testing OAuth Integration
+
+You can test OAuth integration using these endpoints:
+
+- `/api/oauth/config` - Get OAuth configuration for clients
+- `/api/oauth/test` - Test endpoint to verify OAuth integration
+- `/oauth2/authorization/google` - Start Google OAuth flow
+
+## Best Practices
+
+- Keep your JWT secret secure and different in each environment
+- Make sure the CORS configuration allows your frontend domains
+- Set appropriate token expiration (default is 24 hours)
+- Use HTTPS in production
 
 

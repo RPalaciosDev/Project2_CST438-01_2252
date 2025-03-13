@@ -3,6 +3,13 @@ export interface User {
     id: string;
     username: string;
     email: string;
+    roles?: string[];
+}
+
+export interface AuthStatusResponse {
+    isAuthenticated: boolean;
+    googleAuthUrl?: string;
+    user?: User;
 }
 
 export interface AuthState {
@@ -15,6 +22,9 @@ export interface AuthState {
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     loadStoredAuth: () => Promise<void>;
+    checkStatus: () => Promise<AuthStatusResponse>;
+    loginWithGoogle: () => Promise<void>;
+    setUser: (userData: { token: string, user: User }) => Promise<boolean>;
 }
 
 // TierList Types

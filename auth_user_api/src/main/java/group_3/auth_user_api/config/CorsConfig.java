@@ -15,12 +15,14 @@ import java.util.List;
 public class CorsConfig {
 
     // Try to use environment variable, but provide fallback if it can't be resolved
-    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com}")
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com,http://localhost:19006,http://localhost:3000}")
     private List<String> allowedOrigins;
 
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+        // Configuration for API endpoints
         CorsConfiguration authConfig = new CorsConfiguration();
         authConfig.setAllowCredentials(true);
 
@@ -29,14 +31,43 @@ public class CorsConfig {
             authConfig.setAllowedOrigins(Arrays.asList(
                     "https://frontend-production-c2bc.up.railway.app",
                     "https://imageapi-production-af11.up.railway.app",
-                    "https://lovetiers.com"));
+                    "https://lovetiers.com",
+                    "http://localhost:19006", // Expo web development server
+                    "http://localhost:3000" // Common React development port
+            ));
         } else {
             authConfig.setAllowedOrigins(allowedOrigins);
         }
 
         authConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        authConfig.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));
+        authConfig.setAllowedHeaders(
+                Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        authConfig.setExposedHeaders(Arrays.asList("Authorization"));
+        authConfig.setMaxAge(3600L);
         source.registerCorsConfiguration("/api/**", authConfig);
+
+        // Specific configuration for OAuth endpoints - crucial for preflight OPTIONS
+        // requests
+        CorsConfiguration oauthConfig = new CorsConfiguration();
+        oauthConfig.setAllowCredentials(true);
+
+        if (allowedOrigins == null || allowedOrigins.isEmpty()) {
+            oauthConfig.setAllowedOrigins(Arrays.asList(
+                    "https://frontend-production-c2bc.up.railway.app",
+                    "https://imageapi-production-af11.up.railway.app",
+                    "https://lovetiers.com",
+                    "http://localhost:19006",
+                    "http://localhost:3000"));
+        } else {
+            oauthConfig.setAllowedOrigins(allowedOrigins);
+        }
+
+        oauthConfig.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS"));
+        oauthConfig.setAllowedHeaders(
+                Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        oauthConfig.setExposedHeaders(Arrays.asList("Authorization"));
+        oauthConfig.setMaxAge(3600L);
+        source.registerCorsConfiguration("/oauth2/**", oauthConfig);
 
         // Add specific configuration for health endpoints - allow any origin
         CorsConfiguration healthConfig = new CorsConfiguration();

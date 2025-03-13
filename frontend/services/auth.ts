@@ -1,8 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../types';
+import { useGoogleAuth, fetchAccessTokenFromCode, exchangeGoogleTokenForJWT, getRedirectUri } from './oauth';
 
 // Make sure we always use HTTPS for production URLs
 const ensureHttps = (url: string): string => {
@@ -15,6 +16,27 @@ const ensureHttps = (url: string): string => {
 // Create axios instance with better timeout and retry configuration
 const axiosInstance = axios.create({
     timeout: 30000, // 30 seconds timeout
+    withCredentials: true, // Add credentials for CORS requests
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+});
+
+// Add request interceptor to include auth token in requests
+axiosInstance.interceptors.request.use(async config => {
+    try {
+        const token = await storage.getItem('token');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+            console.log('Added token to request:', config.url);
+        }
+    } catch (error) {
+        console.error('Error setting auth header:', error);
+    }
+    return config;
+}, error => {
+    return Promise.reject(error);
 });
 
 // Add retry logic for network failures
@@ -46,7 +68,7 @@ axiosInstance.interceptors.response.use(null, async error => {
 const API_URL = (() => {
     // For Railway deployment - ensure HTTPS for production
     if (process.env.NODE_ENV === 'production') {
-        return 'https://auth-user-service-production.up.railway.app';
+        return ensureHttps('https://auth-user-service-production.up.railway.app');
     }
     
     // For local development
@@ -54,6 +76,9 @@ const API_URL = (() => {
         ? 'http://localhost:8080' 
         : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
 })();
+
+// Verify the API endpoint is correct during initialization
+console.log('API URL initialized as:', API_URL);
 
 // Services URLs for other microservices - ensure HTTPS for production
 export const TIERLIST_API_URL = process.env.NODE_ENV === 'production' 
@@ -71,6 +96,11 @@ export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
 // Special instance for registration with longer timeout
 const registrationAxios = axios.create({
     timeout: 60000, // 60 seconds for registration
+    withCredentials: true, // Add credentials for CORS requests
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
 });
 
 // Add the same retry logic
@@ -97,6 +127,22 @@ registrationAxios.interceptors.response.use(null, async error => {
     return Promise.reject(error);
 });
 
+// Add the same token interceptor to registration axios
+registrationAxios.interceptors.request.use(async config => {
+    try {
+        const token = await storage.getItem('token');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+            console.log('Added token to registration request:', config.url);
+        }
+    } catch (error) {
+        console.error('Error setting auth header for registration:', error);
+    }
+    return config;
+}, error => {
+    return Promise.reject(error);
+});
+
 const storage = {
     setItem: async (key: string, value: string) => {
         if (Platform.OS === 'web') {
@@ -117,6 +163,176 @@ const storage = {
         } else {
             await SecureStore.deleteItemAsync(key);
         }
+    }
+};
+
+// Add this new function to check auth status properly
+export const checkAuthStatus = async () => {
+    try {
+        console.log(`Checking auth status at ${API_URL}/api/auth/status`);
+        const response = await axiosInstance.get(`${API_URL}/api/auth/status`, {
+            // Add maxRedirects option to help with debugging
+            maxRedirects: 0,
+            validateStatus: function (status) {
+                console.log(`Auth status response status: ${status}`);
+                return status < 500; // Accept any status code less than 500 to see redirects
+            }
+        });
+        
+        console.log('Auth status response:', response.data);
+        
+        if (response.status === 302) {
+            console.log('Redirect location:', response.headers.location || response.headers.Location);
+        }
+        
+        return response.data;
+    } catch (error) {
+        console.error('Auth status check failed:', error);
+        if (axios.isAxiosError(error) && error.response) {
+            console.log('Error response status:', error.response.status);
+            console.log('Error response headers:', error.response.headers);
+        }
+        throw error;
+    }
+};
+
+// Add a function to validate JWT token
+export const validateToken = async (token: string | null): Promise<boolean> => {
+    if (!token) {
+        console.log('No token to validate');
+        return false;
+    }
+
+    try {
+        console.log(`Validating token at ${API_URL}/api/auth/me`);
+        
+        // Make sure token is properly formatted
+        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        console.log('Authorization header:', `${formattedToken.substring(0, 20)}...`);
+        
+        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
+            headers: {
+                Authorization: formattedToken
+            },
+            // Add debugging options
+            maxRedirects: 0,
+            validateStatus: function (status) {
+                console.log(`Token validation status: ${status}`);
+                return status < 500;
+            }
+        });
+
+        console.log('Token validation response status:', response.status);
+
+        // For debug purpose, check token with JWT debugger if it's failing
+        if (response.status !== 200) {
+            try {
+                console.log(`Debug token at ${API_URL}/api/auth/debug?token=${encodeURIComponent(token)}`);
+                const debugResponse = await axiosInstance.get(
+                    `${API_URL}/api/auth/debug?token=${encodeURIComponent(token)}`
+                );
+                console.log('Token debug response:', debugResponse.data);
+            } catch (debugError) {
+                console.error('Failed to debug token:', debugError);
+            }
+        }
+
+        return response.status === 200;
+    } catch (error) {
+        console.error('Token validation error details:', {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            isAxiosError: axios.isAxiosError(error),
+            response: axios.isAxiosError(error) ? {
+                status: error.response?.status,
+                data: error.response?.data
+            } : null
+        });
+
+        return false;
+    }
+};
+
+// Add a function to initiate OAuth flow
+export const initiateGoogleAuth = () => {
+    // This needs to be a full browser navigation, not an XHR request
+    const authUrl = `${API_URL}/oauth2/authorization/google`;
+    console.log(`Redirecting to Google Auth at ${authUrl}`);
+    
+    // Use Linking which works on both web and mobile
+    Linking.openURL(authUrl)
+        .catch(err => {
+            console.error('Failed to open auth URL:', err);
+        });
+};
+
+// Add this function to handle the Google OAuth flow
+export const handleGoogleAuth = async () => {
+    try {
+        console.log("Starting Google auth flow");
+        
+        // Get instance of the Google auth handler
+        const googleAuth = useGoogleAuth();
+        
+        // Extract the promptAsync function regardless of return type (array or object)
+        const promptAsyncFn = Array.isArray(googleAuth) 
+            ? googleAuth[2] 
+            : googleAuth.promptAsync;
+        
+        if (!promptAsyncFn) {
+            throw new Error("OAuth config is not properly initialized");
+        }
+        
+        // This will open a web browser for authentication
+        const result = await promptAsyncFn();
+        console.log('Google auth result type:', result.type);
+        
+        if (result.type === 'success' && result.params) {
+            // Extract the authorization code from the redirect URL
+            const { code } = result.params;
+            
+            if (!code) {
+                throw new Error('No authorization code returned from Google');
+            }
+            
+            console.log('Received authorization code, exchanging for token...');
+            
+            // Get redirect URI
+            const redirectUri = getRedirectUri();
+            
+            // Exchange authorization code for access token
+            const tokenData = await fetchAccessTokenFromCode(code, redirectUri);
+            
+            if (!tokenData.access_token) {
+                throw new Error('No access token returned from Google');
+            }
+            
+            console.log('Successfully received access token, exchanging for JWT...');
+            
+            // Exchange Google token for our application JWT
+            const authData = await exchangeGoogleTokenForJWT(tokenData.access_token, API_URL);
+            
+            console.log('Successfully exchanged for app JWT');
+            
+            // Store the token and user info
+            await storage.setItem('token', authData.token);
+            await storage.setItem('user', JSON.stringify({
+                id: authData.id,
+                username: authData.username,
+                email: authData.email,
+                roles: authData.roles
+            }));
+            
+            return authData;
+        } else if (result.type === 'error') {
+            console.error('Google auth error:', result.error);
+            throw new Error(`Authentication error: ${typeof result.error === 'object' && result.error ? String((result.error as any).message || 'Unknown error') : 'Unknown error'}`);
+        } else {
+            console.warn('Auth dismissed:', result.type);
+            throw new Error('Authentication was dismissed or cancelled');
+        }
+    } catch (error) {
+        console.error('Google auth error:', error);
+        throw error;
     }
 };
 
@@ -202,26 +418,41 @@ export const useAuthStore = create<AuthState>((set) => ({
 
             console.log('Registration response:', signupResponse.status);
             
-            // Since signup returns a success message but not credentials,
-            // we need to login the user after successful registration
+            // Handle the response data which now includes the token directly
             if (signupResponse.status === 200) {
-                // Now login to get the token
-                const loginResponse = await axiosInstance.post(`${API_URL}/api/auth/signin`, {
-                    username: email.trim(), // or username, depending on your backend
-                    password,
-                }, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-                
-                const { token, id, username: userName, email: userEmail, roles } = loginResponse.data;
+                const { token, id, username: userName, email: userEmail, roles } = signupResponse.data;
                 const user = { id, username: userName, email: userEmail, roles };
 
-                await storage.setItem('token', token);
-                await storage.setItem('user', JSON.stringify(user));
+                console.log('Received token and user from signup:', { hasToken: !!token, id });
+                
+                if (token) {
+                    // Save the token and user to storage
+                    await storage.setItem('token', token);
+                    await storage.setItem('user', JSON.stringify(user));
+                    
+                    // Update state with the new user information and token
+                    set({ token, user, isAuthenticated: true, isLoading: false });
+                } else {
+                    // Fallback to the old method if token not received (backwards compatibility)
+                    console.log('No token received from signup, falling back to login');
+                    
+                    const loginResponse = await axiosInstance.post(`${API_URL}/api/auth/signin`, {
+                        username: email.trim(), 
+                        password,
+                    }, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    
+                    const { token, id, username: userName, email: userEmail, roles } = loginResponse.data;
+                    const user = { id, username: userName, email: userEmail, roles };
 
-                set({ token, user, isAuthenticated: true, isLoading: false });
+                    await storage.setItem('token', token);
+                    await storage.setItem('user', JSON.stringify(user));
+
+                    set({ token, user, isAuthenticated: true, isLoading: false });
+                }
             } else {
                 throw new Error('Registration failed');
             }
@@ -229,11 +460,25 @@ export const useAuthStore = create<AuthState>((set) => ({
             console.error('Registration failed:', error);
             
             // More specific error message for timeout
-            if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
-                set({ 
-                    error: 'Registration timed out. Our servers might be experiencing high load. Please try again later.',
-                    isLoading: false 
-                });
+            if (axios.isAxiosError(error)) {
+                const axiosError = error as any;
+                if (axiosError.code === 'ECONNABORTED') {
+                    set({ 
+                        error: 'Registration timed out. Our servers might be experiencing high load. Please try again later.',
+                        isLoading: false 
+                    });
+                } else if (axiosError.response?.status === 500) {
+                    console.error('Server error details:', axiosError.response?.data);
+                    set({
+                        error: 'Server error during registration. This might be due to an email or username already in use, or the server is experiencing issues.',
+                        isLoading: false
+                    });
+                } else {
+                    set({ 
+                        error: `Registration failed: ${axiosError.message || 'Unknown error'}`, 
+                        isLoading: false 
+                    });
+                }
             } else {
                 set({ error: 'Registration failed', isLoading: false });
             }
@@ -281,6 +526,124 @@ export const useAuthStore = create<AuthState>((set) => ({
         } catch (err) {
             console.error('Load stored auth error:', err);
             set({ error: 'Failed to load authentication', isLoading: false });
+        }
+    },
+
+    // Update checkStatus to use validateToken
+    checkStatus: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            // First check if we have a token stored
+            const token = await storage.getItem('token');
+            
+            if (token) {
+                // Validate the token by making a request to /me endpoint
+                const isValid = await validateToken(token);
+                
+                if (isValid) {
+                    // If token is valid, load user data
+                    const userJson = await storage.getItem('user');
+                    if (userJson) {
+                        try {
+                            const user = JSON.parse(userJson) as User;
+                            set({ token, user, isAuthenticated: true, isLoading: false });
+                            return { isAuthenticated: true };
+                        } catch (e) {
+                            console.error('Error parsing user data:', e);
+                        }
+                    }
+                } else {
+                    // If token is invalid, clear storage
+                    await Promise.all([
+                        storage.removeItem('token'),
+                        storage.removeItem('user')
+                    ]);
+                }
+            }
+            
+            // If we don't have a valid token or failed validation, check auth status
+            const status = await checkAuthStatus();
+            
+            if (status.isAuthenticated) {
+                // If already authenticated, update the store
+                const user = status.user;
+                const token = status.token || await storage.getItem('token');
+                
+                if (token) {
+                    await storage.setItem('token', token);
+                    if (user) {
+                        await storage.setItem('user', JSON.stringify(user));
+                    }
+                    set({ token, user, isAuthenticated: true, isLoading: false });
+                    return { isAuthenticated: true };
+                }
+            }
+            
+            set({ isLoading: false });
+            return { 
+                isAuthenticated: false, 
+                googleAuthUrl: status.googleAuthUrl 
+            };
+        } catch (error) {
+            console.error('Status check error:', error);
+            set({ error: 'Failed to check authentication status', isLoading: false });
+            return { isAuthenticated: false };
+        }
+    },
+    
+    // Add method for Google login
+    loginWithGoogle: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            // Handle the Google login flow
+            const authData = await handleGoogleAuth();
+            
+            set({
+                token: authData.token,
+                user: {
+                    id: authData.id,
+                    username: authData.username,
+                    email: authData.email,
+                    roles: authData.roles
+                },
+                isAuthenticated: true,
+                isLoading: false
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'Google login failed. Please try again.';
+            
+            console.error('Google login error:', errorMessage);
+            set({ error: errorMessage, isLoading: false });
+            throw error;
+        }
+    },
+
+    // Add setUser method
+    setUser: async (userData: { token: string, user: User }) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            // Store the token and user data
+            await storage.setItem('token', userData.token);
+            await storage.setItem('user', JSON.stringify(userData.user));
+            
+            // Update state
+            set({ 
+                token: userData.token, 
+                user: userData.user, 
+                isAuthenticated: true, 
+                isLoading: false 
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('Error setting user data:', error);
+            set({ error: 'Failed to set user data', isLoading: false });
+            return false;
         }
     },
 }));

@@ -20,11 +20,11 @@ env = [
 
 [[services]]
 name = "auth-service"
-directory = "auth-user-service"
+directory = "auth_user_api"
 dockerfile = "Dockerfile"
 domains = ["auth.${RAILWAY_PUBLIC_DOMAIN}"]
 ports = [8080]
-healthcheck_path = "/actuator/health"
+healthcheck_path = "/health"
 healthcheck_timeout_seconds = 10
 resources = { cpu = 0.5, memory = 512 }
 env = [

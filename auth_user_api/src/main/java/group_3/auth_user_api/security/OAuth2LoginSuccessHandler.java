@@ -1,85 +1,111 @@
 package group_3.auth_user_api.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import group_3.auth_user_api.model.User;
-import group_3.auth_user_api.repository.UserRepository;
+import group_3.auth_user_api.security.jwt.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
-public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
+public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final UserRepository userRepository;
-    private final JwtUtil jwtUtil;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Logger logger = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
 
-    @Value("${app.frontend-url:http://localhost:3000}")
-    private String frontendUrl;
+    private final JwtTokenProvider tokenProvider;
+    // Hard-coded URL for deployment
+    private final String frontendUrl = "https://lovetiers.com";
 
-    public OAuth2LoginSuccessHandler(UserRepository userRepository, JwtUtil jwtUtil) {
-        this.userRepository = userRepository;
-        this.jwtUtil = jwtUtil;
+    @Autowired
+    public OAuth2LoginSuccessHandler(JwtTokenProvider tokenProvider) {
+        this.tokenProvider = tokenProvider;
+        // Set default target URL directly
+        setDefaultTargetUrl(frontendUrl);
     }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
-        String email = oAuth2User.getAttribute("email");
-        if (email == null) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Email is required");
+        if (response.isCommitted()) {
+            logger.info("Response has already been committed");
             return;
         }
 
-        // Find or create user
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        User user;
+        try {
+            OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
 
-        if (existingUser.isPresent()) {
-            user = existingUser.get();
-        } else {
-            // Create new user from OAuth data
-            user = new User();
-            user.setEmail(email);
-            user.setName(oAuth2User.getAttribute("name"));
-            user.setPicture(oAuth2User.getAttribute("picture"));
-            user.setRoles(List.of("ROLE_USER"));
-            userRepository.save(user);
+            // Get user info from OAuth2 user
+            String email = extractEmail(oauth2User);
+            String name = extractName(oauth2User);
+
+            logger.info("OAuth2 login success for user: {}", email);
+
+            // Generate JWT token
+            String token = tokenProvider.generateTokenFromUsername(
+                    email,
+                    Collections.singletonList("ROLE_USER"));
+
+            // Build redirection URL with token
+            String targetUrl = buildRedirectUrl(token, email, name);
+
+            // Clear authentication attributes to prevent session fixation
+            clearAuthenticationAttributes(request);
+
+            // Redirect to frontend
+            getRedirectStrategy().sendRedirect(request, response, targetUrl);
+
+        } catch (Exception e) {
+            logger.error("OAuth2 authentication success handling failed", e);
+            super.onAuthenticationSuccess(request, response, authentication);
+        }
+    }
+
+    /**
+     * Build the redirect URL with token and user info
+     */
+    private String buildRedirectUrl(String token, String email, String name) {
+        return frontendUrl + "/oauth-callback" +
+                "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8) +
+                "&email=" + URLEncoder.encode(email, StandardCharsets.UTF_8) +
+                "&name=" + URLEncoder.encode(name != null ? name : "", StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Extract email from OAuth2User
+     */
+    private String extractEmail(OAuth2User oauth2User) {
+        Map<String, Object> attributes = oauth2User.getAttributes();
+
+        String email = (String) attributes.get("email");
+        if (email == null) {
+            // Fallback to other attribute names
+            email = (String) attributes.getOrDefault("mail", "");
         }
 
-        // Generate JWT token
-        String token = jwtUtil.generateToken(email);
-        user.setJwtToken(token); // Optional: store the token
-        userRepository.save(user);
+        return email;
+    }
 
-        // Create response with user data and token
-        Map<String, Object> responseData = new HashMap<>();
-        responseData.put("token", token);
-        responseData.put("user", Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "name", user.getName(),
-                "picture", user.getPicture(),
-                "roles", user.getRoles()));
+    /**
+     * Extract name from OAuth2User
+     */
+    private String extractName(OAuth2User oauth2User) {
+        Map<String, Object> attributes = oauth2User.getAttributes();
 
-        // Set response headers and write the JSON response
-        response.setContentType("application/json");
-        response.getWriter().write(objectMapper.writeValueAsString(responseData));
-
-        // Alternatively, redirect to the frontend with token
-        // response.sendRedirect(frontendUrl + "/oauth2/redirect?token=" + token);
+        // Try different attribute names that might contain the name
+        return (String) attributes.getOrDefault("name",
+                (String) attributes.getOrDefault("display_name",
+                        (String) attributes.getOrDefault("displayName", "")));
     }
 }
