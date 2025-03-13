@@ -24,15 +24,19 @@ public class ImageMetadataController {
     public ResponseEntity<ImageMetadataDocument> storeImageUrl(
             @RequestParam String fileName,
             @RequestParam String s3Url,
-            @RequestParam String uploadedBy) {
+            @RequestParam String uploadedBy,
+            @RequestParam(required = false) String folder) {
 
-        ImageMetadataDocument savedMetadata = metadataService.storeImageUrl(fileName, s3Url, uploadedBy);
+        ImageMetadataDocument savedMetadata = metadataService.storeImageUrl(fileName, s3Url, uploadedBy, folder);
         return ResponseEntity.ok(savedMetadata);
     }
 
     @GetMapping
-    public ResponseEntity<List<ImageMetadataDocument>> getAllImages() {
-        List<ImageMetadataDocument> images = metadataService.getAllImages();
+    public ResponseEntity<List<ImageMetadataDocument>> getImagesByFolder(
+            @RequestParam(required = false) String folder) {
+        List<ImageMetadataDocument> images = (folder != null && !folder.isEmpty())
+                ? metadataService.getImagesByFolder(folder)
+                : metadataService.getAllImages();
         return ResponseEntity.ok(images);
     }
 

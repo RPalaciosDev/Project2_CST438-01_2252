@@ -31,10 +31,7 @@ public class StorageService {
 
     @PostConstruct
     public void init() {
-        // Log the AWS credentials and bucket information
-        System.out.println("AWS Access Key: " + System.getenv("AWS_ACCESS_KEY_ID"));
         System.out.println("AWS Bucket Name: " + bucketName);
-        System.out.println("AWS Region: " + region);
     }
 
     /**
@@ -47,21 +44,16 @@ public class StorageService {
         ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
         ListObjectsV2Response result = s3Client.listObjectsV2(request);
 
-        if (result.contents().isEmpty()) {
-            System.out.println("No files found in S3 bucket: " + bucketName);
-        }
-
         for (S3Object s3Object : result.contents()) {
-            System.out.println("Checking: " + s3Object.key());
-
             String fileKey = s3Object.key();
+            if (fileKey.endsWith("/")) continue; // Skip empty folders
+
             String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;
+            
+            String folder = fileKey.contains("/") ? fileKey.substring(0, fileKey.lastIndexOf('/')) : "root";
 
             Optional<ImageMetadataDocument> existing = metadataRepository.findByFileName(fileKey);
-            if (existing.isPresent()) {
-                System.out.println("Already exists in MongoDB: " + fileKey);
-                continue;
-            }
+            if (existing.isPresent()) continue;
 
             ImageMetadataDocument metadata = new ImageMetadataDocument();
             metadata.setFileName(fileKey);
@@ -69,9 +61,10 @@ public class StorageService {
             metadata.setS3Url(fileUrl);
             metadata.setSize(s3Object.size());
             metadata.setUploadedBy("auto-sync");
-            metadataRepository.save(metadata);
+            metadata.setFolder(folder);  
 
-            System.out.println("Stored in MongoDB: " + fileUrl);
+            metadataRepository.save(metadata);
+            System.out.println("Stored in MongoDB: " + fileUrl + " (Folder: " + folder + ")");
         }
 
         System.out.println("syncS3ToMongo() completed.");
