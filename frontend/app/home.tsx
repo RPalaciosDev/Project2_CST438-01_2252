@@ -11,7 +11,6 @@ export default function Home() {
   const { user, logout, token } = useAuthStore();
   const { selectedStyle, setSelectedStyle } = useStyle();
   const [loading, setLoading] = useState(false);
-  const [loadingTierlists, setLoadingTierlists] = useState(false);
 
   // local state to force re render when selected style updates
   const [pickerValue, setPickerValue] = useState(selectedStyle);
@@ -76,19 +75,6 @@ export default function Home() {
     }
   };
 
-  const navigateToTierlists = () => {
-    try {
-      setLoadingTierlists(true);
-      router.push('/tierlists');
-    } catch (err: unknown) {
-      console.error('Navigation error:', err);
-      Alert.alert("Navigation Error", "Unable to access tier lists at this time.");
-    } finally {
-      // Reset loading state after navigation or error
-      setTimeout(() => setLoadingTierlists(false), 500);
-    }
-  };
-
   if (!user) {
     return (
       <View style={styles.loadingContainer}>
@@ -139,35 +125,17 @@ export default function Home() {
           </Text>
         </View>
 
-        <View style={styles.actionContainer}>
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={navigateToTierlists}
-            disabled={loadingTierlists}
-          >
-            {loadingTierlists ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>View My Tier Lists</Text>
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/create-tierlist')}>
-            <Text style={styles.buttonText}>Create New Tier List</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.button, styles.logoutButton]} 
-            onPress={handleLogout}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Logout</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={[styles.button, styles.logoutButton]} 
+          onPress={handleLogout}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Logout</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -207,14 +175,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#FFE4E8',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   cardTitle: {
     fontSize: 20,
@@ -261,32 +221,20 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  actionContainer: {
-    marginTop: 10,
-  },
   button: {
     backgroundColor: '#FF4B6E',
     padding: 16,
     borderRadius: 15,
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#FF4B6E',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  logoutButton: {
-    backgroundColor: '#FF8BA3',
-    marginTop: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
+  logoutButton: {
+    backgroundColor: '#FF8BA3',
+    marginTop: 10,
+  },
 });
-
