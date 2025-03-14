@@ -12,7 +12,7 @@ try {
   process.exit(1);
 }
 
-const API_BASE = 'https://auth-user-api-production.up.railway.app';
+const API_BASE = 'https://auth-user-service-production.up.railway.app';
 const FRONTEND_URL = 'https://frontend-production-c2bc.up.railway.app';
 
 async function testEndpoint(endpoint, options = {}) {

@@ -14,7 +14,11 @@ export default function GoogleCallback() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const setUser = useAuthStore(state => state.setUser);
-  const API_URL = Constants.expoConfig?.extra?.backendUrl || 'https://auth-user-api-production.up.railway.app';
+  
+  // Use the correct API URL for the auth service
+  const API_URL = 'https://auth-user-service-production.up.railway.app';
+  
+  console.log("Using API URL in callback:", API_URL);
 
   useEffect(() => {
     async function handleCallback() {
@@ -34,14 +38,58 @@ export default function GoogleCallback() {
         // Exchange authorization code for access token
         const tokenData = await fetchAccessTokenFromCode(code, redirectUri);
         
-        if (!tokenData.access_token) {
-          throw new Error('No access token returned from Google');
+        // Log what tokens we got back
+        console.log('Received tokens:', {
+          hasAccessToken: !!tokenData.accessToken,
+          hasIdToken: !!tokenData.idToken,
+          tokenType: tokenData.tokenType
+        });
+        
+        if (!tokenData.accessToken && !tokenData.idToken) {
+          throw new Error('No tokens returned from Google');
         }
         
-        console.log('Received access token');
+        // DEBUGGING: Log detailed token info
+        console.log('All token data keys:', Object.keys(tokenData));
+        if (!tokenData.idToken) {
+          console.error('CRITICAL ERROR: No ID token in tokenData - the backend will fail');
+        } else {
+          console.log('ID token length:', tokenData.idToken.length);
+          console.log('ID token starts with:', tokenData.idToken.substring(0, 10) + '...');
+        }
+        
+        // IMPORTANT: Prefer ID token if available, otherwise use access token
+        // The ID token contains the user's email address which is needed by the backend
+        const tokenToUse = tokenData.idToken || tokenData.accessToken;
+        
+        console.log('Using token type for backend:', tokenData.idToken ? 'ID Token' : 'Access Token');
+        
+        // If we're sending an access token, warn about potential issues
+        if (!tokenData.idToken && tokenData.accessToken) {
+          console.warn('⚠️ USING ACCESS TOKEN INSTEAD OF ID TOKEN - THIS WILL CAUSE BACKEND ERRORS');
+        }
+        
+        // If we have an ID token, try to decode it for debugging
+        if (tokenData.idToken) {
+          try {
+            const parts = tokenData.idToken.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              console.log('ID token payload contains:', Object.keys(payload));
+              console.log('Has email:', !!payload.email);
+              console.log('Has sub:', !!payload.sub);
+              if (payload.email) {
+                console.log('Email value:', payload.email);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not decode ID token:', e);
+          }
+        }
         
         // Exchange Google token for our application JWT
-        const authData = await exchangeGoogleTokenForJWT(tokenData.access_token, API_URL);
+        console.log('Exchanging token with backend at:', API_URL);
+        const authData = await exchangeGoogleTokenForJWT(tokenToUse, API_URL);
         
         console.log('Exchanged Google token for app JWT');
         
@@ -69,7 +117,7 @@ export default function GoogleCallback() {
     }
     
     handleCallback();
-  }, [params.code, router]);
+  }, [params.code, router, API_URL]);
   
   return (
     <View style={styles.container}>

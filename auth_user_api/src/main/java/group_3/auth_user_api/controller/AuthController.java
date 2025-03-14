@@ -23,6 +23,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -317,20 +320,19 @@ public class AuthController {
         }
 
         try {
-            // Validate Google token by calling Google's tokeninfo endpoint
+            // Validate Google token and get user info
             String googleResponse = validateGoogleToken(googleToken);
 
             if (googleResponse == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Google token");
             }
 
-            // Parse the Google response to get user information
-            // This is a simplified example - in production you would use a proper JSON
-            // parser
+            // Parse the Google response to get user information using JSON
             String email = extractEmailFromGoogleResponse(googleResponse);
             String name = extractNameFromGoogleResponse(googleResponse);
 
             if (email == null) {
+                logger.error("No email found in Google response: {}", googleResponse);
                 return ResponseEntity.badRequest().body("Email not found in Google token");
             }
 
@@ -374,65 +376,94 @@ public class AuthController {
         }
     }
 
-    // Helper method to validate Google token
+    // Helper method to validate Google token and get user info
     private String validateGoogleToken(String token) {
         try {
-            // Call Google's tokeninfo endpoint to validate the token
-            URL url = new URL("https://oauth2.googleapis.com/tokeninfo?id_token=" + token);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            // First try: Use userinfo endpoint (for access tokens)
+            URL userInfoUrl = new URL("https://www.googleapis.com/oauth2/v3/userinfo");
+            HttpURLConnection userInfoConn = (HttpURLConnection) userInfoUrl.openConnection();
+            userInfoConn.setRequestMethod("GET");
+            userInfoConn.setRequestProperty("Authorization", "Bearer " + token);
 
-            int responseCode = conn.getResponseCode();
-            if (responseCode == 200) {
-                // Read the response
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            int userInfoResponseCode = userInfoConn.getResponseCode();
+            if (userInfoResponseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(userInfoConn.getInputStream()));
                 String inputLine;
                 StringBuilder response = new StringBuilder();
-
                 while ((inputLine = in.readLine()) != null) {
                     response.append(inputLine);
                 }
                 in.close();
-
+                logger.info("Successfully validated token with userinfo endpoint");
                 return response.toString();
-            } else {
-                logger.error("Error validating Google token: HTTP error code: {}", responseCode);
-                return null;
             }
+
+            // Second try: Validate as ID token
+            URL idTokenUrl = new URL("https://oauth2.googleapis.com/tokeninfo?id_token=" + token);
+            HttpURLConnection idTokenConn = (HttpURLConnection) idTokenUrl.openConnection();
+            idTokenConn.setRequestMethod("GET");
+
+            int idTokenResponseCode = idTokenConn.getResponseCode();
+            if (idTokenResponseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(idTokenConn.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                return response.toString();
+            }
+
+            logger.error("All validation methods failed for Google token");
+            return null;
         } catch (Exception e) {
             logger.error("Exception validating Google token: ", e);
             return null;
         }
     }
 
-    // Helper method to extract email from Google's response
+    // Helper method to extract email from Google's response using JSON parsing
     private String extractEmailFromGoogleResponse(String response) {
-        // This is a very basic extraction. In production, use a proper JSON parser
-        // Example: {"email":"user@example.com", ...}
-        int emailStart = response.indexOf("\"email\":\"");
-        if (emailStart >= 0) {
-            emailStart += 9; // Length of "\"email\":\""
-            int emailEnd = response.indexOf("\"", emailStart);
-            if (emailEnd > emailStart) {
-                return response.substring(emailStart, emailEnd);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(response);
+
+            // Try different possible field names for email
+            if (rootNode.has("email")) {
+                return rootNode.get("email").asText();
+            } else if (rootNode.has("sub")) {
+                // If no email, use the subject (sub) which is often the email
+                return rootNode.get("sub").asText();
             }
+
+            logger.error("No email found in Google response: {}", response);
+            return null;
+        } catch (Exception e) {
+            logger.error("Error parsing Google response: ", e);
+            return null;
         }
-        return null;
     }
 
-    // Helper method to extract name from Google's response
+    // Helper method to extract name from Google's response using JSON parsing
     private String extractNameFromGoogleResponse(String response) {
-        // This is a very basic extraction. In production, use a proper JSON parser
-        // Example: {"name":"John Doe", ...}
-        int nameStart = response.indexOf("\"name\":\"");
-        if (nameStart >= 0) {
-            nameStart += 8; // Length of "\"name\":\""
-            int nameEnd = response.indexOf("\"", nameStart);
-            if (nameEnd > nameStart) {
-                return response.substring(nameStart, nameEnd);
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(response);
+
+            if (rootNode.has("name")) {
+                return rootNode.get("name").asText();
+            } else if (rootNode.has("email")) {
+                // If no name, use the email username as a fallback
+                String email = rootNode.get("email").asText();
+                return email.split("@")[0];
             }
+
+            return null;
+        } catch (Exception e) {
+            logger.error("Error parsing Google response for name: ", e);
+            return null;
         }
-        return null;
     }
 
     @GetMapping("/debug-token")
@@ -476,5 +507,151 @@ public class AuthController {
 
         logger.info("JWT Debug requested: {}", debug);
         return ResponseEntity.ok(debug);
+    }
+
+    // Add a debug endpoint for Google token validation
+    @PostMapping("/debug-google-token")
+    @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:19006",
+            "https://frontend-production-c2bc.up.railway.app" })
+    public ResponseEntity<?> debugGoogleToken(@RequestBody Map<String, String> tokenRequest) {
+        String googleToken = tokenRequest.get("token");
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("tokenReceived", googleToken != null && !googleToken.isEmpty());
+        response.put("tokenLength", googleToken != null ? googleToken.length() : 0);
+
+        if (googleToken == null || googleToken.isEmpty()) {
+            response.put("error", "No token provided");
+            return ResponseEntity.ok(response);
+        }
+
+        // Try to validate against all Google endpoints separately
+        try {
+            // First endpoint - access_token
+            response.put("accessTokenValidation", validateGoogleTokenWithDetails(googleToken, "access_token"));
+
+            // Second endpoint - id_token
+            response.put("idTokenValidation", validateGoogleTokenWithDetails(googleToken, "id_token"));
+
+            // Third endpoint - userinfo
+            response.put("userinfoValidation", validateGoogleUserInfoWithDetails(googleToken));
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            response.put("stacktrace", Arrays.toString(e.getStackTrace()));
+            return ResponseEntity.ok(response);
+        }
+    }
+
+    // Helper method to validate token with detailed response
+    private Map<String, Object> validateGoogleTokenWithDetails(String token, String tokenType) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String endpoint = "https://oauth2.googleapis.com/tokeninfo?" + tokenType + "=" + token;
+            result.put("endpoint", endpoint);
+
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            int responseCode = conn.getResponseCode();
+            result.put("responseCode", responseCode);
+
+            if (responseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                result.put("success", true);
+                result.put("response", response.toString());
+            } else {
+                // Get error stream if available
+                BufferedReader in = null;
+                try {
+                    in = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+                    in.close();
+                    result.put("errorResponse", response.toString());
+                } catch (Exception e) {
+                    result.put("errorStreamReadingError", e.getMessage());
+                }
+                result.put("success", false);
+            }
+
+            // Add headers for debugging
+            Map<String, List<String>> headers = conn.getHeaderFields();
+            result.put("headers", headers);
+
+            return result;
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            result.put("errorType", e.getClass().getName());
+            return result;
+        }
+    }
+
+    // Helper method to validate against userinfo endpoint
+    private Map<String, Object> validateGoogleUserInfoWithDetails(String token) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String endpoint = "https://www.googleapis.com/oauth2/v3/userinfo";
+            result.put("endpoint", endpoint);
+
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+
+            int responseCode = conn.getResponseCode();
+            result.put("responseCode", responseCode);
+
+            if (responseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+                result.put("success", true);
+                result.put("response", response.toString());
+            } else {
+                // Get error stream if available
+                BufferedReader in = null;
+                try {
+                    in = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+                    in.close();
+                    result.put("errorResponse", response.toString());
+                } catch (Exception e) {
+                    result.put("errorStreamReadingError", e.getMessage());
+                }
+                result.put("success", false);
+            }
+
+            // Add headers for debugging
+            Map<String, List<String>> headers = conn.getHeaderFields();
+            result.put("headers", headers);
+
+            return result;
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            result.put("errorType", e.getClass().getName());
+            return result;
+        }
     }
 }

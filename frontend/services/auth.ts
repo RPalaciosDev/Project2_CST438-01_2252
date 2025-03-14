@@ -3,7 +3,7 @@ import { Platform, Linking } from 'react-native';
 import { create } from 'zustand';
 import axios from 'axios';
 import { User, AuthState } from '../types';
-import { useGoogleAuth, fetchAccessTokenFromCode, exchangeGoogleTokenForJWT, getRedirectUri } from './oauth';
+import { getGoogleAuthHandler, fetchAccessTokenFromCode, exchangeGoogleTokenForJWT, getRedirectUri } from './oauth';
 
 // Make sure we always use HTTPS for production URLs
 const ensureHttps = (url: string): string => {
@@ -270,68 +270,49 @@ export const handleGoogleAuth = async () => {
     try {
         console.log("Starting Google auth flow");
         
-        // Get instance of the Google auth handler
-        const googleAuth = useGoogleAuth();
+        // Use the non-hook version that's safe outside of React components
+        const googleAuth = getGoogleAuthHandler();
         
-        // Extract the promptAsync function regardless of return type (array or object)
-        const promptAsyncFn = Array.isArray(googleAuth) 
-            ? googleAuth[2] 
-            : googleAuth.promptAsync;
-        
-        if (!promptAsyncFn) {
+        // Check if googleAuth was properly initialized
+        if (!googleAuth || !googleAuth.promptAsync) {
             throw new Error("OAuth config is not properly initialized");
         }
         
         // This will open a web browser for authentication
-        const result = await promptAsyncFn();
-        console.log('Google auth result type:', result.type);
+        const result = await googleAuth.promptAsync();
+        console.log('Google auth result:', result);
         
-        if (result.type === 'success' && result.params) {
-            // Extract the authorization code from the redirect URL
-            const { code } = result.params;
-            
-            if (!code) {
-                throw new Error('No authorization code returned from Google');
+        if (result.type === 'success') {
+            // In the WebBrowser approach, we get params directly
+            if (result.params && result.params.code) {
+                const { code } = result.params;
+                
+                if (!code) {
+                    throw new Error('No authorization code found in the response');
+                }
+                
+                // Get the redirect URI (same as was used to start the flow)
+                const redirectUri = getRedirectUri();
+                
+                // Exchange the code for an access token
+                const { accessToken } = await fetchAccessTokenFromCode(code, redirectUri);
+                
+                // Exchange the access token for our app's JWT
+                const API_URL = process.env.NODE_ENV === 'production'
+                    ? 'https://auth-user-service-production.up.railway.app' // Railway deployed auth service
+                    : 'http://localhost:8080';
+                
+                return await exchangeGoogleTokenForJWT(accessToken, API_URL);
+            } else {
+                throw new Error('No authorization code found in the response');
             }
-            
-            console.log('Received authorization code, exchanging for token...');
-            
-            // Get redirect URI
-            const redirectUri = getRedirectUri();
-            
-            // Exchange authorization code for access token
-            const tokenData = await fetchAccessTokenFromCode(code, redirectUri);
-            
-            if (!tokenData.access_token) {
-                throw new Error('No access token returned from Google');
-            }
-            
-            console.log('Successfully received access token, exchanging for JWT...');
-            
-            // Exchange Google token for our application JWT
-            const authData = await exchangeGoogleTokenForJWT(tokenData.access_token, API_URL);
-            
-            console.log('Successfully exchanged for app JWT');
-            
-            // Store the token and user info
-            await storage.setItem('token', authData.token);
-            await storage.setItem('user', JSON.stringify({
-                id: authData.id,
-                username: authData.username,
-                email: authData.email,
-                roles: authData.roles
-            }));
-            
-            return authData;
         } else if (result.type === 'error') {
-            console.error('Google auth error:', result.error);
-            throw new Error(`Authentication error: ${typeof result.error === 'object' && result.error ? String((result.error as any).message || 'Unknown error') : 'Unknown error'}`);
+            throw new Error(`Google authentication failed: ${result.error}`);
         } else {
-            console.warn('Auth dismissed:', result.type);
-            throw new Error('Authentication was dismissed or cancelled');
+            throw new Error(`Google authentication failed: ${result.type}`);
         }
     } catch (error) {
-        console.error('Google auth error:', error);
+        console.log('Google auth error:', error);
         throw error;
     }
 };

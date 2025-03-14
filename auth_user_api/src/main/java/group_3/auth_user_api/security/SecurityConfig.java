@@ -103,6 +103,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/debug").permitAll()
                         .requestMatchers("/api/auth/debug-token").permitAll()
                         .requestMatchers("/api/auth/google-token").permitAll()
+                        .requestMatchers("/api/auth/debug-google-token").permitAll()
                         // OAuth test endpoints
                         .requestMatchers("/api/oauth/config").permitAll()
                         .requestMatchers("/api/oauth/test").permitAll()

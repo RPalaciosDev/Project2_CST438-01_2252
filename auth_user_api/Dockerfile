@@ -4,7 +4,11 @@ WORKDIR /workspace/app
 # Copy gradle files and download dependencies
 COPY gradle gradle
 COPY build.gradle settings.gradle gradlew ./
-RUN chmod +x gradlew
+
+# Fix line endings and make gradlew executable
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
+
+# Download dependencies but continue if there's an issue
 RUN ./gradlew dependencies --no-daemon || echo "Dependencies may have failed, continuing anyway"
 
 # Copy source code
