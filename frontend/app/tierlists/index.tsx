@@ -4,20 +4,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useStyle } from "../context/StyleContext";
 import stylesMap from "../../styles/index";
 
-// Local image imports
-const localImages = [
-    { id: "1", image: { uri: "/Brook_Portrait.webp" } },
-    { id: "2", image: { uri: "/Franky_Portrait.webp" } },
-    { id: "3", image: { uri: "/Jinbe_Portrait.webp" } },
-    { id: "4", image: { uri: "/Monkey_D._Luffy_Portrait.webp" } },
-    { id: "5", image: { uri: "/Nami_Portrait.webp" } },
-    { id: "6", image: { uri: "/Nico_Robin_Post_Timeskip_Portrait.webp" } },
-    { id: "7", image: { uri: "/Roronoa_Zoro_Portrait.webp" } },
-    { id: "8", image: { uri: "/Sanji_Portrait.webp" } },
-    { id: "9", image: { uri: "/Tony_Tony_Chopper_Portrait.webp" } },
-    { id: "10", image: { uri: "/Usopp_Portrait.webp" } },
-];
-
 interface TierItem {
     id: string;
     image: any;
@@ -29,10 +15,28 @@ export default function TierList() {
     const [theme, setTheme] = useState(stylesMap[selectedStyle] || stylesMap["default"]);
     const [tierItems, setTierItems] = useState<TierItem[]>([]);
     const [selectedItem, setSelectedItem] = useState<TierItem | null>(null);
+    const [tierImages, setTierImages] = useState<TierItem[]>([]);  // Holds images fetched from AWS S3
 
     useEffect(() => {
         setTheme(stylesMap[selectedStyle] || stylesMap["default"]);
     }, [selectedStyle]);
+
+    useEffect(() => {
+        const fetchImages = async () => {
+            try {
+                const response = await fetch("https://imageapi-production-af11.up.railway.app/api/images?folder=Anime/OnePiece/StrawHatPirates");
+                const data = await response.json();
+                const formattedImages = data.map((img: any, index: number) => ({
+                    id: index.toString(),
+                    image: { uri: img.s3Url },
+                }));
+                setTierImages(formattedImages);
+            } catch (error) {
+                console.error("Error fetching images:", error);
+            }
+        };
+        fetchImages();
+    }, []);
 
     const handleImageSelect = (item: TierItem) => {
         setSelectedItem(item);
@@ -40,7 +44,6 @@ export default function TierList() {
 
     const handleTierSelect = (tierLabel: string) => {
         if (selectedItem) {
-            // Move selected image to the chosen tier
             setTierItems((prev) => [
                 ...prev.filter((item) => item.id !== selectedItem.id),
                 { ...selectedItem, tier: tierLabel },
@@ -57,11 +60,10 @@ export default function TierList() {
                 {TIERS.map(({ label, color }) => (
                     <TouchableOpacity key={label} onPress={() => handleTierSelect(label)}>
                         <View style={styles.tierRow}>
-                            <View style={[styles.tierLabelContainer, { backgroundColor: color }]}>
+                            <View style={[styles.tierLabelContainer, { backgroundColor: color }]}> 
                                 <Text style={styles.tierLabel}>{label}</Text>
                             </View>
                             <View style={[styles.tierContent, { flexDirection: "row", flexWrap: "wrap" }]}>
-                                {/* Display images in the selected tier left to right */}
                                 {tierItems.filter((item) => item.tier === label).map((item) => (
                                     <Image key={item.id} source={item.image} style={{ width: 50, height: 50, margin: 5 }} />
                                 ))}
@@ -73,7 +75,7 @@ export default function TierList() {
                 <View style={{ marginTop: 20 }}>
                     <Text style={styles.tierLabel}>Select an Image</Text>
                     <FlatList
-                        data={localImages}
+                        data={tierImages}  // Updated to fetch from AWS S3
                         keyExtractor={(item) => item.id}
                         numColumns={5}
                         renderItem={({ item }) => (
@@ -96,4 +98,3 @@ export default function TierList() {
         </GestureHandlerRootView>
     );
 }
-
