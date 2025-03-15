@@ -6,9 +6,26 @@ from gensim.models import Word2Vec
 from sklearn.cluster import AgglomerativeClustering
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
+from dotenv import load_dotenv
+from rabbitmq import RabbitMQConnection
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Connect to RabbitMQ
+rabbitmq_connection = RabbitMQConnection(
+    host=os.getenv("RABBITMQ_HOST", "localhost"),
+    port=os.getenv("RABBITMQ_PORT", 5672),
+    username=os.getenv("RABBITMQ_USERNAME", "guest"),
+    password=os.getenv("RABBITMQ_PASSWORD", "guest")
+)
+
+try:
+    rabbitmq_connection.connect()
+except Exception as e:
+    print(f"Error connecting to RabbitMQ: {e}")
 
 # Define tier categories and weight mapping
 tiers = ["S", "A", "B", "C", "D", "E", "F"]
@@ -95,6 +112,14 @@ def schedule_daily_matching():
     daily_matches = {}  # Reset matches for the new day
     for user_id in user_embeddings.keys():
         matches = find_top_matches(user_id, top_n=5)
+        
+        # Send User ID and Match to Queue
+        for match in matches:
+            user_id = match['user_id'] # Get the user ID
+            match_id = match['match']['user_id'] # Get the match ID
+            # Send match to RabbitMQ
+            rabbitmq_connection.send_match(user_id, match_id)
+            
         daily_matches[user_id] = [match["user_id"] for match in matches]
 
     print("Daily matching completed!")
@@ -128,9 +153,12 @@ def find_top_matches(user_id, top_n=5):
 
 # Schedule the daily matching at 5 PM
 scheduler = BackgroundScheduler()
-scheduler.add_job(schedule_daily_matching, 'cron', hour=17, minute=0)  # 17:00 = 5 PM
+scheduler.add_job(schedule_daily_matching, 'cron', hour=17, minute=00)  # 17:00 = 5 PM
 scheduler.start()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8086))
     app.run(host="0.0.0.0", port=port)
+    
+    # Close RabbitMQ connection when the app exits
+    rabbitmq_connection.close_connection()
