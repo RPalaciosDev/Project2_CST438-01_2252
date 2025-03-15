@@ -71,7 +71,7 @@
     "extra": {
       "googleClientId": "90481875753-p89h3cguug4634l6qj5jbe5ei11omguo.apps.googleusercontent.com",
       "googleClientSecret": "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",
-      "backendUrl": "https://auth-user-api-production.up.railway.app",
+      "backendUrl": "https://auth-user-service-production.up.railway.app",
       "frontendUrl": "https://frontend-production-c2bc.up.railway.app",
       "eas": {
         "projectId": "tierlist-app"
