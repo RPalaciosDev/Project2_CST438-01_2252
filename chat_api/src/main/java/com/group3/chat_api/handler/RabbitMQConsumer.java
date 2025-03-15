@@ -5,8 +5,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class RabbitMQConsumer {
-    @RabbitListener(queues = "chat-queue")
-    public void receiveMessage(String message) {
-        System.out.println(message);
+    @RabbitListener(queues = "match-queue")
+    public void receiveMatchMessage(String message) {
+        System.out.println("Match Queue: " + message);
+    }
+
+    @RabbitListener(queues = "auth-queue")
+    public void receiveAuthMessage(String message) {
+        System.out.println("Auth Queue: " + message);
     }
 }
