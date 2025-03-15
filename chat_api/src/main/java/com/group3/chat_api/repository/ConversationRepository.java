@@ -9,9 +9,7 @@ import java.util.List;
 @Repository
 public interface ConversationRepository extends CrudRepository<Conversation, String> {
 
-    List<Conversation> findByParticipantsContaining(String user_id);
+    List<Conversation> findByParticipant1OrParticipant2(String userId);
 
-    List<Conversation> findByParticipantsContainingAndActive(String user_id);
-
-    Conversation findByConversationId(String conversation_id);
+    Conversation findByConversationId(String conversationId);
 }
