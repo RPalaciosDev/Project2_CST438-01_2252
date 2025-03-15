@@ -36,8 +36,8 @@ public class SecurityConfig {
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "https://imageapi-production-af11.up.railway.app",
-                    "https://app.yourdomain.com");
-            logger.info("Using default CORS allowed origins");
+                    "https://frontend-production-c2bc.up.railway.app");
+            logger.info("Using default CORS allowed origins: {}", allowedOrigins);
         }
 
         configuration.setAllowedOrigins(allowedOrigins);
@@ -64,6 +64,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/info").permitAll()
                         .requestMatchers("/service-info").permitAll()
                         .requestMatchers("/service-info/**").permitAll()
+                        // Add actuator endpoints - explicitly allow all for health checks
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/health").permitAll()
+                        .requestMatchers("/health-check").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(basic -> {
                 })

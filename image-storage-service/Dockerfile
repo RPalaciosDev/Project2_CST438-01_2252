@@ -1,43 +1,40 @@
-# Use a multi-platform compatible JDK image for building
-FROM --platform=linux/amd64 eclipse-temurin:21-jdk AS builder
+# Use OpenJDK with full Gradle installation
+FROM gradle:8.5-jdk21-alpine AS builder
 
 WORKDIR /app
 
-# Copy gradle files first for better layer caching
-COPY gradle gradle
-COPY gradlew gradlew
-COPY gradlew.bat gradlew.bat
-COPY build.gradle settings.gradle ./
+# Copy the project files
+COPY . .
 
-# Make sure gradlew is executable
-RUN chmod +x gradlew
+# Run Gradle commands directly (with detailed logging)
+RUN gradle bootJar --no-daemon -x test --info
 
-# Copy the rest of the files
-COPY src src
-
-# Build the application using the Gradle wrapper
-RUN ./gradlew build -x test
-
-# Use JRE for the runtime image
-FROM --platform=linux/amd64 eclipse-temurin:21-jre
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy the built JAR
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# Set minimal environment variables (Railway will provide the rest via env vars)
+# Add non-root user for security
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Set environment variables
 ENV SPRING_OUTPUT_ANSI_ENABLED=ALWAYS \
     JAVA_OPTS="-Xmx512m -Xms256m" \
     SPRING_PROFILES_ACTIVE="prod" \
-    SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true \
     PORT=8080
 
-# Expose the port (will be set by Railway)
 EXPOSE 8080
 
-# Configure the container to run as a non-root user
-RUN addgroup --system --gid 1001 appuser && \
-    adduser --system --uid 1001 --gid 1001 appuser
-USER appuser
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# Run the jar file with proper configuration
-ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar -Dserver.port=${PORT} app.jar"]
+# Run the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -jar app.jar"]

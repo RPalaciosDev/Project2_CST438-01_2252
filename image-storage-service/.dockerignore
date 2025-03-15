@@ -1,0 +1,28 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore build output directories 
+build/
+bin/
+target/
+
+# Keep gradle wrapper files!
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
+
+# Ignore IDE files
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Ignore logs
+*.log
+
+# Ignore OS files
+.DS_Store
+Thumbs.db 
