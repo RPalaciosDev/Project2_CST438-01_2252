@@ -14,37 +14,40 @@ import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
-@Table
+@Table("conversation")
 @Data
 @Builder
 @Getter
 @Setter
 public class Conversation {
     @PrimaryKey private UUID conversationId;
-    private Set<String> participants;
+    private UUID participant1;
+    private UUID participant2;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
-    private Boolean active;
+    private Boolean locked;
 
     public Conversation() {
     }
 
-    public Conversation(UUID conversationId, Set<String> participants, LocalDateTime createdAt, LocalDateTime expiresAt, Boolean active) {
+    public Conversation(UUID conversationId, UUID participant1, UUID participant2, LocalDateTime createdAt, LocalDateTime expiresAt, Boolean locked) {
         this.conversationId = conversationId;
-        this.participants = participants;
+        this.participant1 = participant1;
+        this.participant2 = participant2;
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
-        this.active = active;
+        this.locked = locked;
     }
 
     @Override
     public String toString() {
         return "Conversation{" +
                 "conversationId=" + conversationId +
-                ", participants=" + participants +
+                ", participant1=" + participant1 +
+                ", participant2=" + participant2 +
                 ", createdAt=" + createdAt +
                 ", expiresAt=" + expiresAt +
-                ", active=" + active +
+                ", locked=" + locked +
                 '}';
     }
 }

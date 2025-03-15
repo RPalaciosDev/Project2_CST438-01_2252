@@ -7,33 +7,29 @@ import com.group3.chat_api.model.Conversation;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.UUID;
 
 @Component
 public class ConversationMapper {
     public Conversation toEntity(ConversationRequest conversationRequest) {
-        HashSet<String> part = new HashSet<>();
-
-        part.add(conversationRequest.getUser1());
-        part.add(conversationRequest.getUser2());
-
         return Conversation.builder()
                 .conversationId(UUID.randomUUID())
-                .participants(part)
+                .participant1(UUID.fromString(conversationRequest.getParticipant1()))
+                .participant2(UUID.fromString(conversationRequest.getParticipant2()))
                 .createdAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now())
-                .active(true)
+                .locked(false)
                 .build();
     }
 
     public ConversationResponse toResponse(Conversation conversation) {
         return ConversationResponse.builder()
-                .conversation_id(conversation.getConversationId())
-                .participants(conversation.getParticipants())
-                .created_at(conversation.getCreatedAt())
-                .expires_at(conversation.getExpiresAt())
-                .active(conversation.getActive())
+                .conversationId(conversation.getConversationId())
+                .participant1(conversation.getParticipant1())
+                .participant2(conversation.getParticipant2())
+                .createdAt(conversation.getCreatedAt())
+                .expiresAt(conversation.getExpiresAt())
+                .locked(conversation.getLocked())
                 .build();
     }
 }

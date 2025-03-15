@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class ConversationRequest {
-    private String user1;
-    private String user2;
+    private String participant1;
+    private String participant2;
 }

@@ -10,9 +10,10 @@ import java.util.UUID;
 @Data
 @Builder
 public class ConversationResponse {
-    private UUID conversation_id;
-    private Set<String> participants;
-    private LocalDateTime created_at;
-    private LocalDateTime expires_at;
-    private Boolean active;
+    private UUID conversationId;
+    private UUID participant1;
+    private UUID participant2;
+    private LocalDateTime createdAt;
+    private LocalDateTime expiresAt;
+    private Boolean locked;
 }
