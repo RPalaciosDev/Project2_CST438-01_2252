@@ -2,6 +2,7 @@ package group_3.tierlistservice.controller;
 
 import group_3.tierlistservice.dto.TierlistTemplateRequest;
 import group_3.tierlistservice.dto.TierlistTemplateResponse;
+import group_3.tierlistservice.dto.TierlistTemplateWithImagesResponse;
 import group_3.tierlistservice.service.TierlistTemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,12 @@ public class TierlistTemplateController {
     @GetMapping("/{id}")
     public ResponseEntity<TierlistTemplateResponse> getTemplateById(@PathVariable String id) {
         TierlistTemplateResponse response = templateService.getTemplateById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/with-images")
+    public ResponseEntity<TierlistTemplateWithImagesResponse> getTemplateWithImagesById(@PathVariable String id) {
+        TierlistTemplateWithImagesResponse response = templateService.getTemplateWithImagesById(id);
         return ResponseEntity.ok(response);
     }
 

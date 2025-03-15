@@ -22,33 +22,51 @@ interface ImageMetadata {
   folder: string;
 }
 
+// Define the template with images type
+interface TemplateWithImages {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+  images: ImageMetadata[];
+}
+
 export default function MyTiers() {
-  const [images, setImages] = useState<ImageMetadata[]>([]);
+  const [template, setTemplate] = useState<TemplateWithImages | null>(null);
   const [loading, setLoading] = useState(true);
   const { token } = useAuthStore();
 
   useEffect(() => {
-    fetchImages();
+    fetchTemplate();
   }, []);
 
-  const fetchImages = async () => {
+  const fetchTemplate = async () => {
     try {
-      const response = await axios.get('https://imageapi-production-af11.up.railway.app/api/images', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setImages(response.data);
+      // Get the template with images from the tier list service
+      const response = await axios.get(
+        'https://tierlist.railway.app/api/templates/67d56133c34b7e51aea8211f/with-images',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-User-ID': useAuthStore.getState().user?.id || 'user123', // Fallback user ID
+          },
+        }
+      );
+      setTemplate(response.data);
+      console.log('Template fetched:', response.data);
     } catch (error) {
-      console.error('Error fetching images:', error);
+      console.error('Error fetching template:', error);
       if (axios.isAxiosError(error)) {
         console.error('Response status:', error.response?.status);
         console.error('Response data:', error.response?.data);
-        console.error('CORS error:', error.message);
       }
       Alert.alert(
         'Error',
-        'Failed to load images. Please try again later.'
+        'Failed to load template. Please try again later.'
       );
     } finally {
       setLoading(false);
@@ -59,8 +77,19 @@ export default function MyTiers() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF4B6E" />
-        <Text>Loading images...</Text>
+        <Text>Loading template...</Text>
       </View>
+    );
+  }
+
+  if (!template) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Tier Lists</Text>
+          <Text style={styles.noTemplateText}>Template not found</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -68,15 +97,22 @@ export default function MyTiers() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Tier Lists</Text>
-          <Text style={styles.subtitle}>Your uploaded images</Text>
+          <Text style={styles.title}>{template.title}</Text>
+          <Text style={styles.subtitle}>{template.description}</Text>
+          <View style={styles.tagsContainer}>
+            {template.tags.map((tag, index) => (
+              <View key={index} style={styles.tagPill}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         <View style={styles.imageGrid}>
-          {images.length === 0 ? (
-            <Text style={styles.noImagesText}>No images found</Text>
+          {template.images.length === 0 ? (
+            <Text style={styles.noImagesText}>No images in this template</Text>
           ) : (
-            images.map((image) => (
+            template.images.map((image) => (
               <View key={image.id} style={styles.imageContainer}>
                 <Image
                   source={{ uri: image.s3Url }}
@@ -124,6 +160,25 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  tagPill: {
+    backgroundColor: '#FFE0E5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  tagText: {
+    color: '#FF4B6E',
+    fontSize: 12,
   },
   imageGrid: {
     flexDirection: 'row',
@@ -158,5 +213,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 20,
     width: '100%',
+  },
+  noTemplateText: {
+    textAlign: 'center',
+    color: '#FF4B6E',
+    fontSize: 18,
+    marginTop: 20,
   },
 }); 

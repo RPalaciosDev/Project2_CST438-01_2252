@@ -45,4 +45,14 @@ public class ImageMetadataController {
         storageService.syncS3ToMongo();
         return ResponseEntity.ok("S3 Images Synced to MongoDB");
     }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<ImageMetadataDocument>> getImagesByIds(
+            @RequestBody List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<ImageMetadataDocument> images = metadataService.getImagesByIds(ids);
+        return ResponseEntity.ok(images);
+    }
 }

@@ -42,5 +42,5 @@ public class TierlistTemplate {
     private List<String> tags = new ArrayList<>();
 
     @Builder.Default
-    private List<String> itemIds = new ArrayList<>();
+    private List<String> imageIds = new ArrayList<>();
 }

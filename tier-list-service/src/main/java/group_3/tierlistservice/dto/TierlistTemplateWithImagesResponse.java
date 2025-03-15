@@ -7,12 +7,24 @@ import java.util.List;
 
 @Data
 @Builder
-public class TierlistTemplateResponse {
+public class TierlistTemplateWithImagesResponse {
     private String id;
+    private String userId;
     private String title;
     private String description;
     private int viewCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> tags;
+    private List<ImageMetadata> images;
+
+    @Data
+    @Builder
+    public static class ImageMetadata {
+        private String id;
+        private String fileName;
+        private String s3Url;
+        private String uploadedBy;
+        private String folder;
+    }
 }

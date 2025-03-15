@@ -17,5 +17,5 @@ public class TierlistTemplateRequest {
     @Size(max = 10, message = "Cannot have more than 10 tags")
     private List<String> tags;
 
-    private List<String> itemIds;
+    private List<String> imageIds;
 }
