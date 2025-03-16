@@ -5,9 +5,9 @@ buildCommand = "./gradlew bootJar"
 
 [deploy]
 healthcheckPath = "/actuator/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 10
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+restartPolicyMaxRetries = 3
 sleepApplication = false
 numReplicas = 1
 
@@ -16,4 +16,11 @@ autoStart = true
 
 [scaling]
 min = 1
-max = 1 
+max = 1
+
+[variables]
+SPRING_PROFILES_ACTIVE = "prod"
+SPRING_DATA_MONGODB_URI = "${{MONGODB_URL}}"
+AWS_S3_REGION = "${{AWS_S3_REGION}}"
+AWS_S3_BUCKET = "${{AWS_S3_BUCKET}}"
+ALLOWED_ORIGINS = "http://localhost:19006,https://frontend-production-c2bc.up.railway.app,https://tier-list-service-production.up.railway.app" 

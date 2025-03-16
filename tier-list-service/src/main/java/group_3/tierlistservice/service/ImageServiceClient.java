@@ -33,24 +33,44 @@ public class ImageServiceClient {
      */
     public List<ImageMetadata> getImagesByIds(List<String> imageIds) {
         if (imageIds == null || imageIds.isEmpty()) {
+            log.info("No image IDs provided, returning empty list");
             return Collections.emptyList();
         }
 
+        log.info("Fetching {} images from image service at URL: {}",
+                imageIds.size(), webClient.toString());
+        log.info("Image IDs to fetch: {}", imageIds);
+
         try {
+            log.info("Making POST request to /api/images/bulk with {} image IDs", imageIds.size());
             return webClient.post()
                     .uri("/api/images/bulk")
                     .bodyValue(imageIds)
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
                     .retrieve()
                     .bodyToFlux(Map.class)
+                    .doOnNext(map -> log.info("Received image data: id={}", map.get("id")))
                     .map(this::mapToImageMetadata)
+                    .doOnNext(img -> log.info("Mapped to ImageMetadata: id={}, url={}", img.getId(), img.getS3Url()))
                     .collectList()
+                    .doOnError(e -> {
+                        log.error("Error fetching images from image service: {}", e.getMessage(), e);
+                        if (e instanceof WebClientException) {
+                            log.error("WebClient error details: {}", e.toString());
+                        }
+                    })
                     .onErrorResume(e -> {
-                        log.error("Error fetching images from image service: {}", e.getMessage());
+                        log.error("Falling back to empty list due to error: {}", e.getMessage());
                         return Mono.just(Collections.emptyList());
                     })
                     .block();
         } catch (WebClientException e) {
-            log.error("Error connecting to image service: {}", e.getMessage());
+            log.error("WebClient exception: {}", e.getMessage(), e);
+            log.error("WebClient exception class: {}", e.getClass().getName());
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("Unexpected error when fetching images: {} ({})", e.getMessage(), e.getClass().getName(), e);
             return Collections.emptyList();
         }
     }

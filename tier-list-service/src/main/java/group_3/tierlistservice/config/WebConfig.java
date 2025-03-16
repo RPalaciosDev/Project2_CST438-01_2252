@@ -37,9 +37,19 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "x-auth-token")
+                .allowedHeaders("Authorization", "Content-Type", "x-auth-token", "X-User-ID", "Accept", "Origin")
                 .exposedHeaders("x-auth-token")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(3600);
+
+        // Add specific rule for frontend domain in case environment variables aren't
+        // working
+        registry.addMapping("/**")
+                .allowedOrigins("https://frontend-production-c2bc.up.railway.app")
+                .allowedMethods("*")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
 
         logger.info("CORS configuration initialized for tier list service");
     }

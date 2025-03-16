@@ -36,13 +36,15 @@ public class SecurityConfig {
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "https://imageapi-production-af11.up.railway.app",
+                    "https://tier-list-service-production.up.railway.app",
                     "https://frontend-production-c2bc.up.railway.app");
             logger.info("Using default CORS allowed origins: {}", allowedOrigins);
         }
 
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "x-auth-token"));
+        configuration.setAllowedHeaders(
+                List.of("Authorization", "Content-Type", "x-auth-token", "X-User-ID", "Accept", "Origin"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
         configuration.setAllowCredentials(true);
 

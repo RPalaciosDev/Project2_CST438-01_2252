@@ -46,27 +46,63 @@ export default function MyTiers() {
 
   const fetchTemplate = async () => {
     try {
-      // Get the template with images from the tier list service
+      console.log('Starting template fetch attempt');
+      // For debugging, let's try fetching without images first to isolate the issue
+      const baseApiUrl = 'https://tier-list-service-production.up.railway.app';
+      const templateId = '67d6584e6999d45c678ba23c';
+      
+      // First try to get just the template without images
+      try {
+        console.log('Attempting to fetch template without images first');
+        const basicResponse = await axios.get(
+          `${baseApiUrl}/api/templates/${templateId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+          }
+        );
+        console.log('Basic template fetch successful:', basicResponse.data);
+      } catch (basicError) {
+        console.error('Failed to fetch basic template:', basicError);
+      }
+      
+      // Now try with images
+      console.log('Now attempting to fetch template with images');
+      const apiUrl = `${baseApiUrl}/api/templates/${templateId}/with-images`;
+      console.log('Making request to:', apiUrl);
+      
       const response = await axios.get(
-        'https://tierlist.railway.app/api/templates/67d56133c34b7e51aea8211f/with-images',
+        apiUrl,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'X-User-ID': useAuthStore.getState().user?.id || 'user123', // Fallback user ID
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
         }
       );
       setTemplate(response.data);
-      console.log('Template fetched:', response.data);
+      console.log('Template fetched successfully:', response.data);
     } catch (error) {
       console.error('Error fetching template:', error);
       if (axios.isAxiosError(error)) {
         console.error('Response status:', error.response?.status);
         console.error('Response data:', error.response?.data);
+        console.error('Error message:', error.message);
+        // Log the specific error details from the API if available
+        if (error.response?.data?.message) {
+          console.error('API error message:', error.response.data.message);
+        }
+        if (error.response?.data?.error) {
+          console.error('API error details:', error.response.data.error);
+        }
       }
       Alert.alert(
         'Error',
-        'Failed to load template. Please try again later.'
+        `Failed to load template: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`
       );
     } finally {
       setLoading(false);
@@ -118,6 +154,7 @@ export default function MyTiers() {
                   source={{ uri: image.s3Url }}
                   style={styles.image}
                   resizeMode="cover"
+                  onError={(e) => console.error('Image loading error:', e.nativeEvent.error, image.s3Url)}
                 />
                 <Text style={styles.imageText} numberOfLines={1}>
                   {image.fileName}

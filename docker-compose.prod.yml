@@ -64,13 +64,11 @@ services:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/tierlist_db
-      - JAVA_OPTS=-XX:+UseG1GC -Xmx512m -Xms256m
-      # CORS Configuration
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/tier_list_db?authSource=admin
       - ALLOWED_ORIGINS=http://localhost:19006,http://frontend:19006
     restart: unless-stopped
     depends_on:
-      - db
+      - mongodb
 
   chat-service:
     build:

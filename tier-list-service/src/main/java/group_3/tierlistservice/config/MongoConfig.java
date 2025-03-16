@@ -6,8 +6,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.convert.converter.Converter;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 @EnableMongoRepositories(basePackages = "group_3.tierlistservice.repository")
@@ -20,8 +27,8 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
 
     @Override
     protected String getDatabaseName() {
-        logger.info("Using hardcoded database name: tierlist_db");
-        return "tier_list_db"; // Always return hardcoded database name
+        logger.info("Using database name: tier_list_db");
+        return "tier_list_db"; // Using consistent name with underscore
     }
 
     @Override
@@ -41,7 +48,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
             }
 
             logger.error("No MongoDB URI found. Using fallback connection.");
-            return MongoClients.create("mongodb://localhost:27017/tierlist_db");
+            return MongoClients.create("mongodb://localhost:27017/tier_list_db");
         }
 
         try {
@@ -49,7 +56,47 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
             return MongoClients.create(mongoUri);
         } catch (Exception e) {
             logger.error("Error creating MongoDB client: {}", e.getMessage());
-            return MongoClients.create("mongodb://localhost:27017/tierlist_db");
+            return MongoClients.create("mongodb://localhost:27017/tier_list_db");
+        }
+    }
+
+    /**
+     * Configure custom conversions to handle ID formats properly
+     */
+    @Bean
+    @Override
+    public MongoCustomConversions customConversions() {
+        List<Converter<?, ?>> converters = new ArrayList<>();
+        // Add converters for String to ObjectId and vice versa
+        converters.add(new StringToObjectIdConverter());
+        converters.add(new ObjectIdToStringConverter());
+        return new MongoCustomConversions(converters);
+    }
+
+    /**
+     * Converter to transform String to ObjectId
+     */
+    private static class StringToObjectIdConverter implements Converter<String, ObjectId> {
+        @Override
+        public ObjectId convert(String source) {
+            try {
+                return new ObjectId(source);
+            } catch (Exception e) {
+                // Log the error but don't throw it
+                LoggerFactory.getLogger(StringToObjectIdConverter.class)
+                        .error("Failed to convert String to ObjectId: {}", source);
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Converter to transform ObjectId to String
+     */
+    private static class ObjectIdToStringConverter implements Converter<ObjectId, String> {
+        @Override
+        public String convert(ObjectId source) {
+            return source.toString();
         }
     }
 }

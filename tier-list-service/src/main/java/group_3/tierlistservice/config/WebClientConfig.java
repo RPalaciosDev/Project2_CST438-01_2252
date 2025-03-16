@@ -9,9 +9,9 @@ public class WebClientConfig {
 
     @Bean
     public WebClient imageServiceWebClient() {
-        // Hardcoded URL to avoid property resolution issues
+        // Update URL to match the frontend environment variable
         return WebClient.builder()
-                .baseUrl("https://imageapi-production-af11.up.railway.app")
+                .baseUrl("https://image-storage-service-production.up.railway.app")
                 .build();
     }
 }

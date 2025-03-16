@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 @Slf4j
 @Service
@@ -46,14 +47,45 @@ public class TierlistTemplateService {
         }
 
         public TierlistTemplateResponse getTemplateById(String id) {
-                TierlistTemplate template = templateRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Template not found with id: " + id));
+                try {
+                        log.info("Trying to fetch template with ID: {}", id);
 
-                // Increment view count
-                template.setViewCount(template.getViewCount() + 1);
-                templateRepository.save(template);
+                        // Try to find the template by ID
+                        TierlistTemplate template = null;
+                        try {
+                                template = templateRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException(
+                                                                "Template not found with id: " + id));
+                                log.info("Successfully found template with ID: {} and userId: {}", id,
+                                                template.getUserId());
+                        } catch (Exception e) {
+                                log.error("Failed to find template with ID: {}", id, e);
+                                throw e;
+                        }
 
-                return buildTemplateResponse(template);
+                        // Increment view count
+                        try {
+                                template.setViewCount(template.getViewCount() + 1);
+                                templateRepository.save(template);
+                                log.info("Successfully incremented view count for template: {}", id);
+                        } catch (Exception e) {
+                                log.error("Failed to update view count for template: {}", id, e);
+                                // Continue execution even if view count update fails
+                        }
+
+                        // Build response
+                        try {
+                                TierlistTemplateResponse response = buildTemplateResponse(template);
+                                log.info("Successfully built response for template: {}", id);
+                                return response;
+                        } catch (Exception e) {
+                                log.error("Failed to build response for template: {}", id, e);
+                                throw e;
+                        }
+                } catch (Exception e) {
+                        log.error("Unhandled exception in getTemplateById for ID {}: {}", id, e.getMessage(), e);
+                        throw e;
+                }
         }
 
         /**
@@ -63,20 +95,63 @@ public class TierlistTemplateService {
          * @return Template with all image data included
          */
         public TierlistTemplateWithImagesResponse getTemplateWithImagesById(String id) {
-                // Get the template
-                TierlistTemplate template = templateRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Template not found with id: " + id));
+                try {
+                        log.info("Beginning getTemplateWithImagesById for id: {}", id);
 
-                // Increment view count
-                template.setViewCount(template.getViewCount() + 1);
-                templateRepository.save(template);
+                        // Get the template
+                        log.info("Attempting to fetch template from database with id: {}", id);
+                        TierlistTemplate template = null;
+                        try {
+                                template = templateRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException(
+                                                                "Template not found with id: " + id));
 
-                // Fetch images from the image service
-                List<TierlistTemplateWithImagesResponse.ImageMetadata> images = imageServiceClient
-                                .getImagesByIds(template.getImageIds());
+                                // Added log to show the userId in the template for debugging
+                                log.info("Successfully retrieved template from database: {} with userId: {}",
+                                                template.getId(), template.getUserId());
+                        } catch (Exception e) {
+                                log.error("Failed to retrieve template from database: {}", e.getMessage(), e);
+                                throw e;
+                        }
 
-                // Build and return the combined response
-                return buildTemplateWithImagesResponse(template, images);
+                        // Increment view count
+                        log.info("Incrementing view count for template: {}", template.getId());
+                        try {
+                                template.setViewCount(template.getViewCount() + 1);
+                                templateRepository.save(template);
+                                log.info("View count incremented and saved successfully");
+                        } catch (Exception e) {
+                                log.error("Failed to update view count: {}", e.getMessage(), e);
+                                // Continue execution even if view count update fails
+                        }
+
+                        // Fetch images from the image service
+                        log.info("Preparing to fetch images. Template has {} image IDs", template.getImageIds().size());
+                        List<TierlistTemplateWithImagesResponse.ImageMetadata> images = null;
+                        try {
+                                images = imageServiceClient.getImagesByIds(template.getImageIds());
+                                log.info("Successfully retrieved {} images from image service", images.size());
+                        } catch (Exception e) {
+                                log.error("Error while fetching images from image service: {}", e.getMessage(), e);
+                                // Continue with empty images rather than failing completely
+                                images = Collections.emptyList();
+                        }
+
+                        // Build and return the combined response
+                        log.info("Building final response with template and {} images", images.size());
+                        try {
+                                TierlistTemplateWithImagesResponse response = buildTemplateWithImagesResponse(template,
+                                                images);
+                                log.info("Successfully built response with template ID: {}", response.getId());
+                                return response;
+                        } catch (Exception e) {
+                                log.error("Error while building template response: {}", e.getMessage(), e);
+                                throw e;
+                        }
+                } catch (Exception e) {
+                        log.error("Unhandled exception in getTemplateWithImagesById: {}", e.getMessage(), e);
+                        throw e;
+                }
         }
 
         public List<TierlistTemplateResponse> getTemplatesByUserId(String userId) {

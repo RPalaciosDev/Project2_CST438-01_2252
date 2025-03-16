@@ -20,8 +20,8 @@ db.images.createIndex({ "uploadDate": 1 });
 db.images.createIndex({ "userId": 1 });
 db.thumbnails.createIndex({ "originalImageId": 1 });
 
-// Initialize `tierlist_db` database
-db = db.getSiblingDB('tierlist_db');
+// Initialize `tier_list_db` database
+db = db.getSiblingDB('tier_list_db');
 
 // Create collections for tierlist data
 db.createCollection('tierlist_templates');

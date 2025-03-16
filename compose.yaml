@@ -46,7 +46,7 @@ services:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/tierlist_db?authSource=admin
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongodb:27017/tier_list_db?authSource=admin
       - ALLOWED_ORIGINS=http://localhost:19000,http://localhost:19006
     depends_on:
       - mongodb
