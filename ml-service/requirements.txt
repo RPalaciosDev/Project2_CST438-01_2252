@@ -5,3 +5,5 @@ scikit-learn
 gensim
 gunicorn
 apscheduler
+pika
+python-dotenv

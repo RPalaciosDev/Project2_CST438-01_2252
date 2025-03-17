@@ -7,6 +7,7 @@ This is a Flask-based machine learning service for processing and comparing tier
 ```
 ml-service/
 │── app.py                 # Flask API entry point
+│── rabbitmq.py            # RabbitMQ message queue 
 │── requirements.txt       # Python dependencies
 │── Dockerfile             # Containerization setup for deployment
 │── README.md              # Project documentation
@@ -82,6 +83,14 @@ The service will run at `http://localhost:8086`.
 ```
 
 ## Deployment
+
+### Setting Environment Variables
+The following environment variables are needed to override the default values:
+- `RABBITMQ_HOST`: RabbitMQ host address
+- `RABBITMQ_PORT`: RabbitMQ port number
+- `RABBITMQ_USERNAME`: RabbitMQ username
+- `RABBITMQ_PASSWORD`: RabbitMQ password
+
 ### Deploy to Railway
 1. Ensure Docker is installed.
 2. Push code to GitHub and deploy via Railway:
