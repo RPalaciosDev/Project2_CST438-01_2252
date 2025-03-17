@@ -73,12 +73,15 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
 
-        User user = userOptional.get();
+         User user = userOptional.get();
         Map<String, Object> userResponse = new HashMap<>();
         userResponse.put("id", user.getId());
         userResponse.put("username", user.getUsername());
         userResponse.put("email", user.getEmail());
         userResponse.put("roles", user.getRoles());
+        userResponse.put("sex", user.getSex());
+        userResponse.put("lookingFor", user.getLookingFor());
+        userResponse.put("age", user.getAge());
 
         return ResponseEntity.ok(userResponse);
     }

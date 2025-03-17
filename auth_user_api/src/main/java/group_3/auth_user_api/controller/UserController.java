@@ -31,4 +31,20 @@ public class UserController {
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
+
+    // Update profile fields: sex, lookingFor, age
+    @PutMapping("/update-profile")
+    public Optional<User> updateProfile(@AuthenticationPrincipal OAuth2User principal, @RequestBody User updatedUser) {
+        String email = principal.getAttribute("email");
+        Optional<User> userOptional = userRepository.findByEmail(email);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            user.setSex(updatedUser.getSex());
+            user.setLookingFor(updatedUser.getLookingFor());
+            user.setAge(updatedUser.getAge());
+            return Optional.of(userRepository.save(user));
+        }
+        return Optional.empty();
+    }
 }
