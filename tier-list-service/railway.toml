@@ -1,0 +1,15 @@
+# Railway configuration for tier-list-service
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 10
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[variables]
+SPRING_PROFILES_ACTIVE = "prod"
+SPRING_DATA_MONGODB_URI = "${{MONGODB_URL}}"
+IMAGE_SERVICE_URL = "https://imageapi-production-af11.up.railway.app"
+ALLOWED_ORIGINS = "https://frontend-production-c2bc.up.railway.app" 

@@ -26,5 +26,8 @@ public class ImageMetadataService {
     public List<ImageMetadataDocument> getImagesByFolder(String folder) {
         return metadataRepository.findByFolder(folder);
     }
-}
 
+    public List<ImageMetadataDocument> getImagesByIds(List<String> ids) {
+        return metadataRepository.findByIdIn(ids);
+    }
+}

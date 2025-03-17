@@ -9,7 +9,8 @@ import java.util.Optional;
 @Repository
 public interface ImageMetadataRepository extends MongoRepository<ImageMetadataDocument, String> {
     Optional<ImageMetadataDocument> findByFileName(String fileName);
-    List<ImageMetadataDocument> findByFolder(String folder); 
+
+    List<ImageMetadataDocument> findByFolder(String folder);
+
+    List<ImageMetadataDocument> findByIdIn(List<String> ids);
 }
-
-

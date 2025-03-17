@@ -15,6 +15,9 @@ const Sidebar = () => {
       <TouchableOpacity style={styles.link} onPress={() => router.push('/my-tiers')}>
         <Text style={styles.linkText}>My Tiers</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/tier-builder')}>
+        <Text style={styles.linkText}>Tier Builder</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.link} onPress={() => router.push('/chats')}>
         <Text style={styles.linkText}>Chats</Text>
       </TouchableOpacity>

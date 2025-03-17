@@ -9,11 +9,6 @@ spring:
       authentication-database: admin
       username: ${MONGODB_USERNAME:root}
       password: ${MONGODB_PASSWORD:example}
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
     
 server:
   port: ${SERVER_PORT:8082}
@@ -24,15 +19,7 @@ management:
       exposure:
         include: health,info,metrics
 
-# RabbitMQ Configuration
-rabbitmq:
-  queues:
-    template-updates: template-updates
-    item-updates: item-updates
-  exchanges:
-    tierlist: tierlist-exchange
-  routingKeys:
-    create-template: create.template
-    update-template: update.template
-    create-item: create.item
-    update-item: update.item 
+# External Services
+services:
+  image-storage:
+    url: ${IMAGE_SERVICE_URL:http://localhost:8080} 

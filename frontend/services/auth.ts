@@ -82,7 +82,7 @@ console.log('API URL initialized as:', API_URL);
 
 // Services URLs for other microservices - ensure HTTPS for production
 export const TIERLIST_API_URL = process.env.NODE_ENV === 'production' 
-    ? ensureHttps('https://tierlist-service-production.up.railway.app')
+    ? ensureHttps('https://tier-list-service-production.up.railway.app')
     : 'http://localhost:8082';
 
 export const CHAT_API_URL = process.env.NODE_ENV === 'production'
