@@ -31,15 +31,7 @@ public class ConversationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ConversationResponse>> getConversations(@RequestParam(required = false) Boolean active,
-                                                                       @RequestHeader("X-User-Id") String userId) {
-        if (active)
-            return ResponseEntity.ok(
-                    conversationService.getActiveConversations(userId).stream()
-                            .map(conversationMapper::toResponse)
-                            .toList()
-            );
-
+    public ResponseEntity<List<ConversationResponse>> getConversations(@RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(
                 conversationService.getAllConversations(userId).stream()
                         .map(conversationMapper::toResponse)

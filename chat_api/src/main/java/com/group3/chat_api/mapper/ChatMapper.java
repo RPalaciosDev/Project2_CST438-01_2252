@@ -19,7 +19,7 @@ public class ChatMapper {
                 .senderId(UUID.fromString(
                         chatRequest.getSenderId()))
                 .message(chatRequest.getMessage())
-                .sendAt(LocalDateTime.now())
+                .sentAt(LocalDateTime.now())
                 .build();
     }
 

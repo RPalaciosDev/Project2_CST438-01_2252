@@ -27,15 +27,11 @@ public class ConversationService {
         return conversationRepository.save(conversation);
     }
 
-    public List<Conversation> getAllConversations(String user_id) {
-        return conversationRepository.findByParticipantsContaining(user_id);
+    public List<Conversation> getAllConversations(String userId) {
+        return conversationRepository.findByParticipant1OrParticipant2(userId);
     }
 
-    public List<Conversation> getActiveConversations(String user_id) {
-        return conversationRepository.findByParticipantsContainingAndActive(user_id);
-    }
-
-    public Conversation getConversation(String conversation_id) {
-       return conversationRepository.findByConversationId(conversation_id);
+    public Conversation getConversation(String conversationId) {
+       return conversationRepository.findByConversationId(conversationId);
     }
 }
