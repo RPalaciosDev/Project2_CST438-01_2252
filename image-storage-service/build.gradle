@@ -34,10 +34,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security:3.2.2'
 
-    // RabbitMQ
-    implementation 'org.springframework.boot:spring-boot-starter-amqp'
-    
-
     // ✅ Added MongoDB Support
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
