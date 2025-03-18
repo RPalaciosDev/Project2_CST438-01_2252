@@ -9,6 +9,21 @@ spring:
       authentication-database: admin
       username: ${MONGODB_USERNAME:root}
       password: ${MONGODB_PASSWORD:example}
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
+    template:
+      exchange: ${RABBITMQ_EXCHANGE:tierlist_exchange}
+      routing-key: ${RABBITMQ_ROUTING_KEY:tierlist_routing_key} 
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 1.5
+        default-requeue-rejected: false
+    
+# Removed custom RabbitMQ configuration
     
 server:
   port: ${SERVER_PORT:8082}
