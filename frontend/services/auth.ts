@@ -380,7 +380,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     },
 
-    register: async (username: string, email: string, password: string) => {
+    register: async (username: string, email: string, password: string, dateOfBirth: Date) => {
         try {
             set({ isLoading: true, error: null });
             
@@ -391,6 +391,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                 username,
                 email,
                 password,
+                dateOfBirth: dateOfBirth.toISOString().split('T')[0], // Format as YYYY-MM-DD
             }, {
                 headers: {
                     'Content-Type': 'application/json',

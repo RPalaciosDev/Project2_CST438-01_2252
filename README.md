@@ -1,6 +1,6 @@
 # LoveTiers App
 
-A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication and OAuth2 authentication.
+A modern application for creating and sharing tier lists in a dating app style.
 
 ## Table of Contents
 - [Quick Start](#quick-start)
@@ -12,19 +12,20 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - [Tier List Service](#tier-list-service)
   - [Chat Service](#chat-service)
   - [Image Storage Service](#image-storage-service)
+  - [ML Service](#ml-service)
 - [Development Setup](#development-setup)
 - [Production Deployment](#production-deployment)
 - [Configuration Management](#configuration-management)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
-- [Enhanced Authentication System](#enhanced-authentication-system)
+- [Authentication System](#authentication-system)
 
 ## Quick Start
 
-1. **Clone and Install Dependencies**
+1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/tierlist-app.git
-   cd tierlist-app
+   git clone https://github.com/CST438-Org/Project2_CST438-01_2252.git
+   cd Project2_CST438-01_2252
    ```
 
 2. **Run Setup Script**
@@ -39,50 +40,63 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    chmod +x setup.sh
    ./setup.sh
    ```
+   This script will install all dependencies and prepare your environment.
 
-3. **Setup and Start Frontend Expo App**
+3. **Start Frontend Expo App**
    ```bash
    chmod +x frontend.sh
    ./frontend.sh
    ```
    This script updates Expo packages to their required versions and launches the development server.
 
-4. **Start Backend Services**
-   
-   Development:
+4. **Running Backend Services (Optional)**
    ```bash
    docker-compose up -d
    ```
 
-   Production:
+### Alternative Setup (Optional)
+
+If the scripts aren't working for you:
+
+1. **Install Dependencies Manually**
    ```bash
-   docker-compose -f docker-compose.prod.yml up -d
+   npm install
+   ```
+
+2. **Start Development Server Manually**
+   ```bash
+   npx expo start
    ```
 
 ## Prerequisites
 
 - Node.js (v18 or later)
-- Docker and Docker Compose
+- npm or yarn
 - Expo CLI (`npm install -g expo-cli`)
-- Java 17 (for backend services)
+- Docker and Docker Compose (for running backend services locally)
 - Git
-- OpenSSL (for SSL certificates)
+- Java 17 (for backend services)
 
 ## Project Structure
 
 ```
 ├── frontend/             # Expo React Native application
-│   ├── app/             # App directory (Expo Router)
-│   ├── components/      # Reusable components
-│   ├── services/        # API services
-│   ├── styles/         # Shared styles
-│   └── types/          # TypeScript types
-├── auth-user-service/   # Authentication microservice
-├── tier-list-service/  # Tier list management service
-├── chat-service/       # Real-time chat functionality
-├── image-storage-service/ # Image handling and storage
-├── secrets/           # Secure credential storage
-└── docker/            # Shared Docker configurations
+│   ├── app/              # App directory (Expo Router)
+│   ├── components/       # Reusable components
+│   ├── services/         # API services
+│   ├── styles/           # Shared styles
+│   └── types/            # TypeScript types
+├── auth_user_api/        # Authentication microservice
+├── auth-user-service/    # Authentication service (Spring Boot)
+├── tier-list-service/    # Tier list management service (Spring Boot)
+├── chat_api/             # Real-time chat functionality (Spring Boot)
+├── image-storage-service/# Image handling and storage (Spring Boot)
+├── ml-service/           # Machine learning service (Python)
+├── secrets/              # Secure credential storage
+├── docker/               # Shared Docker configurations
+├── compose.yaml          # Docker compose configuration for development
+├── docker-compose.prod.yml # Docker compose configuration for production
+└── setup scripts         # setup.sh, setup.ps1, frontend.sh
 ```
 
 ## Services Overview
@@ -123,11 +137,10 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - Tier list CRUD operations
   - Category management
   - Voting system
-- **Database**: PostgreSQL
+- **Database**: MongoDB
 - **Environment Variables**:
-  - `POSTGRES_USER`
-  - `POSTGRES_PASSWORD`
-  - `POSTGRES_TIER_DB`
+  - `SPRING_DATA_MONGODB_URI`
+  - `ALLOWED_ORIGINS`
 
 ### Chat Service
 - **Technology**: Spring Boot
@@ -138,53 +151,68 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - Chat history
 - **Database**: Cassandra 
 - **Environment Variables**:
-  - `CASSANDRA_CLUSTER_NAME`
-  - `CASSANDRA_DC`
-  - `CASSANDRA_RACK`
-  - `CASSANDRA_ENDPOINT_SNITCH`
+  - `SPRING_DATA_CASSANDRA_KEYSPACE-NAME`
+  - `SPRING_DATA_CASSANDRA_CONTACT-POINTS`
+  - `SPRING_DATA_CASSANDRA_PORT`
+  - `SPRING_DATA_CASSANDRA_DATACENTER`
 
 ### Image Storage Service
 - **Technology**: Spring Boot
 - **Port**: 8084
 - **Features**:
   - Image upload/download
-  - Automatic S3 to MongoDB synchronization
   - Metadata management
   - Secure file storage
   - Support for multiple image formats
-  - Automatic error handling and retry mechanisms
 - **Storage**: 
   - AWS S3 (for image files)
   - MongoDB (for metadata)
 - **Environment Variables**:
-  - `AWS_ACCESS_KEY`: AWS access key for S3 bucket access
-  - `AWS_SECRET_KEY`: AWS secret key for S3 bucket access
-  - `AWS_S3_BUCKET`: Name of the S3 bucket (default: strawhat-tierlist-images)
-  - `AWS_REGION`: AWS region (default: us-east-2)
-  - `MONGO_ROOT_PASSWORD`: MongoDB root password
-  - `MONGO_URI`: MongoDB connection string
+  - `AWS_ACCESS_KEY_ID`: AWS access key for S3 bucket access
+  - `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3 bucket access
+  - `AWS_S3_REGION`: AWS region
+  - `AWS_S3_BUCKET`: Name of the S3 bucket
+  - `SPRING_DATA_MONGODB_URI`: MongoDB connection string
+
+### ML Service
+- **Technology**: Python
+- **Features**:
+  - Content analysis
+  - RabbitMQ integration for messaging
+  - Machine learning predictions
+- **Environment Variables**:
+  - Configured in railway.toml
 
 ## Development Setup
 
 1. **Environment Configuration**
-   - Run the setup script (`setup.ps1` or `setup.sh`)
-   - Review generated `credentials.txt`
-   - Configure Google OAuth2 (see below)
+   - Create a `.env` file in the root directory based on `.env.example`
+   - Configure environment variables for services you'll be using
 
-2. **Frontend Setup**
-   - Run the frontend script (`frontend.sh`)
-   - This updates required Expo packages to compatible versions
-   - Launches the Expo development server
-   - See the frontend README for more details
+2. **Running All Services**
+   ```bash
+   # Start all services with Docker Compose
+   docker-compose up -d
+   ```
 
-3. **Google OAuth2 Setup**
-   a. Visit [Google Cloud Console](https://console.cloud.google.com)
-   b. Create/select a project
-   c. Enable Google+ API
-   d. Create OAuth 2.0 credentials
-   e. Add redirect URIs:
-      - Development: `http://localhost:8081/login/oauth2/code/google`
-      - Production: `https://your-domain.com/login/oauth2/code/google`
+3. **Frontend Development**
+   ```bash
+   # Use the frontend script
+   chmod +x frontend.sh
+   ./frontend.sh
+   
+   # Or manually
+   cd frontend
+   npm install
+   npx expo start
+   ```
+
+4. **Google OAuth2 Setup** (if using authentication)
+   - Visit [Google Cloud Console](https://console.cloud.google.com)
+   - Create/select a project
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials
+   - Add redirect URIs as needed
 
 ## Production Deployment
 
@@ -192,18 +220,16 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    ```bash
    # Copy production configuration
    cp .env.example .env.production
-   
-   # Generate production certificates
-   # (Use Let's Encrypt or similar for production)
+   # Update with production values
    ```
 
-2. **Start Services**
+2. **Start Services in Production Mode**
    ```bash
    docker-compose -f docker-compose.prod.yml up -d
    ```
 
 3. **Production Checklist**
-   - [ ] Replace self-signed certificates with valid SSL
+   - [ ] Configure production environment variables
    - [ ] Update OAuth2 redirect URIs
    - [ ] Configure production database credentials
    - [ ] Set up monitoring and logging
@@ -221,38 +247,33 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - SSL enabled
   - Optimized for performance
   - Secure credential management
-  - MongoDB for auth service
 
 ### Environment Files
 - `.env`: Development environment variables
 - `.env.production`: Production settings
-- `application.yml`: Service-specific configuration
-- `secrets/`: Secure credentials storage
+- `railway.toml`: Railway deployment configurations
 
 ## Security
 
 ### Best Practices
-- Use secure password manager for team credentials
-- Regularly rotate secrets
 - Never commit sensitive data to Git
 - Use SSL/TLS in production
 - Implement rate limiting
 - Enable security headers
 
 ### SSL Configuration
-- Development: Self-signed certificates
+- Development: Self-signed certificates or HTTP
 - Production: Use Let's Encrypt or commercial SSL
 - Configure HTTPS redirect
-- Enable HTTP/2
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **SSL Certificate Issues**
-   - Ensure your Railway custom domains have valid SSL certificates
-   - For local development, modern browsers accept localhost connections without HTTPS
-   - When deploying to other platforms, use platform-specific SSL certificate setup
+1. **Expo Issues**
+   - Clear cache: `npx expo start --clear`
+   - Restart development server
+   - Check Expo documentation for version-specific issues
 
 2. **Database Connection Issues**
    - Verify credentials in `.env`
@@ -274,80 +295,28 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    ```
 
 ### Getting Help
-- Check service logs: `docker-compose logs`
-- Review error messages in browser console
-- Check application logs in `logs/` directory
-- Contact team lead for credential issues
+- Check application logs
+- Review error messages in browser/device console
+- Open an issue on the GitHub repository
 
-## License
+## Authentication System
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project implements a robust authentication system using JWT-based authentication and authorization.
 
-## Acknowledgments
-
-- Expo Team for the mobile framework
-- Spring Boot Team for the backend framework
-- All contributors to this project
-
-## Enhanced Authentication System
-
-This project implements a robust authentication system using Spring Boot with OAuth2 Resource Server for JWT-based authentication and authorization.
-
-## Features
+### Features
 
 - JWT-based authentication for API endpoints
 - User registration and login with password encryption
 - Google OAuth2 login integration
 - Token validation and refresh
 - Role-based authorization
-- CORS configuration for frontend integration
 
-## Security Configuration
+### JWT Authentication Flow
 
-The security configuration has been enhanced to use Spring Security's OAuth2 Resource Server capabilities, which provides a standardized way to validate and process JWT tokens.
-
-### Key Components
-
-1. **JwtTokenProvider**: Generates and validates JWT tokens
-2. **JwtAuthConverter**: Converts JWT tokens to Spring Security Authentication objects
-3. **CustomUserDetailsService**: Loads user details from MongoDB for authentication
-4. **SecurityConfig**: Configures security filters, authentication, and authorization rules
-
-## JWT Authentication Flow
-
-The application uses a simplified JWT authentication flow:
-
-1. **User Registration/Login**: User registers or logs in via `/api/auth/signup` or `/api/auth/signin`
-2. **Google OAuth**: Alternatively, user can log in via Google OAuth at `/oauth2/authorization/google`
+1. **User Registration/Login**: User registers or logs in via API endpoints
+2. **Google OAuth**: Alternatively, user can log in via Google OAuth
 3. **JWT Generation**: On successful authentication, a JWT token is generated
 4. **Token Usage**: Frontend stores the token and includes it in the `Authorization` header
-5. **Token Validation**: Backend validates the token using the same secret key
-
-## Environment Variables
-
-For correct authentication configuration, set these environment variables in Railway:
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `JWT_SECRET` | Secret key for JWT signing | Yes | your-very-long-secret-key-should-be-kept-safe |
-| `GOOGLE_CLIENT_ID` | Google OAuth2 client ID | For OAuth | - |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret | For OAuth | - |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | Yes | http://localhost:3000,http://localhost:19006 |
-| `FRONTEND_URL` | URL to redirect after OAuth login | Yes | http://localhost:3000 |
-
-## Testing OAuth Integration
-
-You can test OAuth integration using these endpoints:
-
-- `/api/oauth/config` - Get OAuth configuration for clients
-- `/api/oauth/test` - Test endpoint to verify OAuth integration
-- `/oauth2/authorization/google` - Start Google OAuth flow
-
-## Best Practices
-
-- Keep your JWT secret secure and different in each environment
-- Make sure the CORS configuration allows your frontend domains
-- Set appropriate token expiration (default is 24 hours)
-- Use HTTPS in production
+5. **Token Validation**: Backend validates the token
 
 

@@ -3,6 +3,7 @@ package group_3.auth_user_api.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Document(collection = "users")
@@ -17,6 +18,7 @@ public class User {
     private List<String> roles; // Example: ["USER", "ADMIN"]
     private Instant createdAt;
     private String jwtToken; // Store last issued JWT (optional)
+    private LocalDate dateOfBirth; // Added field for age verification
 
     public User() {
         this.createdAt = Instant.now();
@@ -34,6 +36,15 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.roles = roles;
+        this.createdAt = Instant.now();
+    }
+
+    public User(String username, String email, String password, LocalDate dateOfBirth, List<String> roles, boolean isPasswordEncoded) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.dateOfBirth = dateOfBirth;
         this.roles = roles;
         this.createdAt = Instant.now();
     }
@@ -108,5 +119,13 @@ public class User {
 
     public void setJwtToken(String jwtToken) {
         this.jwtToken = jwtToken;
+    }
+    
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+    
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

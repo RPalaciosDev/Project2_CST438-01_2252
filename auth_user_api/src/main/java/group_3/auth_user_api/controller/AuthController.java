@@ -170,6 +170,7 @@ public class AuthController {
             String username = signupRequest.get("username");
             String email = signupRequest.get("email");
             String password = signupRequest.get("password");
+            String dateOfBirthStr = signupRequest.get("dateOfBirth");
 
             // Check for alternate field names that the frontend might be using
             if (username == null)
@@ -180,10 +181,12 @@ public class AuthController {
                 email = signupRequest.get("userEmail");
             if (password == null)
                 password = signupRequest.get("userPassword");
+            if (dateOfBirthStr == null)
+                dateOfBirthStr = signupRequest.get("dob");
 
             // Log extracted values
-            logger.info("Extracted values - username: {}, email: {}, password length: {}",
-                    username, email, password != null ? password.length() : 0);
+            logger.info("Extracted values - username: {}, email: {}, password length: {}, dateOfBirth: {}",
+                    username, email, password != null ? password.length() : 0, dateOfBirthStr);
             logger.info("All available fields in request: {}", signupRequest.keySet());
 
             // Validate required fields
@@ -200,6 +203,26 @@ public class AuthController {
             if (password == null || password.trim().isEmpty()) {
                 logger.warn("Signup failed: password is missing");
                 return ResponseEntity.badRequest().body("Password is required");
+            }
+            
+            if (dateOfBirthStr == null || dateOfBirthStr.trim().isEmpty()) {
+                logger.warn("Signup failed: date of birth is missing");
+                return ResponseEntity.badRequest().body("Date of birth is required");
+            }
+            
+            // Validate age (18+)
+            try {
+                java.time.LocalDate dateOfBirth = java.time.LocalDate.parse(dateOfBirthStr);
+                java.time.LocalDate now = java.time.LocalDate.now();
+                java.time.Period age = java.time.Period.between(dateOfBirth, now);
+                
+                if (age.getYears() < 18) {
+                    logger.warn("Signup failed: user is under 18 years old");
+                    return ResponseEntity.badRequest().body("You must be at least 18 years old to register");
+                }
+            } catch (Exception e) {
+                logger.error("Error parsing date of birth: ", e);
+                return ResponseEntity.badRequest().body("Invalid date of birth format. Use YYYY-MM-DD format");
             }
 
             // Check if username already exists
@@ -236,6 +259,16 @@ public class AuthController {
                 String encodedPassword = passwordEncoder.encode(password);
                 user.setPassword(encodedPassword);
                 logger.info("Set password");
+                
+                // Set date of birth
+                try {
+                    java.time.LocalDate dateOfBirth = java.time.LocalDate.parse(dateOfBirthStr);
+                    user.setDateOfBirth(dateOfBirth);
+                    logger.info("Set date of birth");
+                } catch (Exception e) {
+                    logger.error("Error setting date of birth: ", e);
+                    return ResponseEntity.badRequest().body("Invalid date of birth format");
+                }
 
                 user.setRoles(List.of("ROLE_USER")); // Set default role
                 logger.info("Set roles");
