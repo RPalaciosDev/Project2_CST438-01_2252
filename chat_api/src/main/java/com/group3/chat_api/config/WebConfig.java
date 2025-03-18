@@ -34,7 +34,7 @@ public class WebConfig implements WebMvcConfigurer {
         }
 
         registry.addMapping("/**")
-                .allowedOrigins(allowedOrigins)
+//                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("Authorization", "Content-Type", "x-auth-token")
                 .exposedHeaders("x-auth-token")
