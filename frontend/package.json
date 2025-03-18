@@ -16,10 +16,12 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-native-community/datetimepicker": "^8.3.0",
     "@react-native-picker/picker": "^2.11.0",
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0",
     "axios": "^1.6.7",
+    "date-fns": "^4.1.0",
     "expo": "^52.0.37",
     "expo-auth-session": "^6.0.3",
     "expo-constants": "~17.0.7",

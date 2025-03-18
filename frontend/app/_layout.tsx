@@ -12,6 +12,9 @@ const Sidebar = () => {
       <TouchableOpacity style={styles.link} onPress={() => router.push('/tierlists')}>
         <Text style={styles.linkText}>Daily Tier</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/browse')}>
+        <Text style={styles.linkText}>Browse</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.link} onPress={() => router.push('/my-tiers')}>
         <Text style={styles.linkText}>My Tiers</Text>
       </TouchableOpacity>
@@ -30,7 +33,7 @@ const Sidebar = () => {
 
 export default function Layout() {
   const segments = useSegments();
-  const isAuthPage = segments.includes("sign-in") || segments.includes("sign-up");
+  const isAuthPage = segments.includes("sign-in") || segments.includes("sign-up") || segments.includes("startup");
 
   return (
     <StyleProvider>

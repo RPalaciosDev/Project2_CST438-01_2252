@@ -79,9 +79,10 @@ public class AuthController {
         userResponse.put("username", user.getUsername());
         userResponse.put("email", user.getEmail());
         userResponse.put("roles", user.getRoles());
-        userResponse.put("sex", user.getSex());
+        userResponse.put("gender", user.getGender());
         userResponse.put("lookingFor", user.getLookingFor());
         userResponse.put("age", user.getAge());
+        userResponse.put("picture", user.getPicture());
 
         return ResponseEntity.ok(userResponse);
     }
@@ -655,6 +656,168 @@ public class AuthController {
             result.put("error", e.getMessage());
             result.put("errorType", e.getClass().getName());
             return result;
+        }
+    }
+
+    @PostMapping("/update-profile")
+    @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:19006",
+            "https://frontend-production-c2bc.up.railway.app" }, allowCredentials = "true")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> updateRequest) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            // If not authenticated or anonymous user
+            if (authentication == null || !authentication.isAuthenticated() ||
+                    "anonymousUser".equals(authentication.getName())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+            }
+
+            // Find user by email (which we use as the principal name)
+            Optional<User> userOptional = userRepository.findByEmail(authentication.getName());
+
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            }
+
+            User user = userOptional.get();
+            
+            // Update name if provided
+            if (updateRequest.containsKey("name")) {
+                String newName = (String) updateRequest.get("name");
+                if (newName != null && !newName.trim().isEmpty()) {
+                    logger.info("Updating name for user {}: {} -> {}", user.getId(), user.getName(), newName);
+                    user.setName(newName);
+                }
+            }
+            
+            // Update age if provided
+            if (updateRequest.containsKey("age")) {
+                Object ageValue = updateRequest.get("age");
+                Integer newAge = null;
+                
+                if (ageValue instanceof Integer) {
+                    newAge = (Integer) ageValue;
+                } else if (ageValue instanceof Double) {
+                    newAge = ((Double) ageValue).intValue();
+                } else if (ageValue instanceof String) {
+                    try {
+                        newAge = Integer.parseInt((String) ageValue);
+                    } catch (NumberFormatException e) {
+                        logger.warn("Invalid age format: {}", ageValue);
+                    }
+                }
+                
+                if (newAge != null) {
+                    logger.info("Updating age for user {}: {} -> {}", user.getId(), user.getAge(), newAge);
+                    user.setAge(newAge);
+                }
+            }
+            
+            // Update gender if provided
+            if (updateRequest.containsKey("gender")) {
+                String newGender = (String) updateRequest.get("gender");
+                if (newGender != null && !newGender.trim().isEmpty()) {
+                    logger.info("Updating gender for user {}: {} -> {}", user.getId(), user.getGender(), newGender);
+                    user.setGender(newGender);
+                }
+            }
+            
+            // Update lookingFor preferences if provided
+            if (updateRequest.containsKey("lookingFor")) {
+                String newLookingFor = (String) updateRequest.get("lookingFor");
+                if (newLookingFor != null && !newLookingFor.trim().isEmpty()) {
+                    logger.info("Updating dating preferences for user {}: {} -> {}", user.getId(), user.getLookingFor(), newLookingFor);
+                    user.setLookingFor(newLookingFor);
+                }
+            }
+            
+            // Update profile picture if provided
+            if (updateRequest.containsKey("picture")) {
+                try {
+                    String newPicture = (String) updateRequest.get("picture");
+                    if (newPicture != null && !newPicture.trim().isEmpty()) {
+                        // Log a shorter version of the picture URL to avoid flooding logs
+                        String logPicture = newPicture.length() > 30 ? 
+                            newPicture.substring(0, 30) + "..." : newPicture;
+                        
+                        logger.info("Updating profile picture for user {}: {} -> {}", 
+                            user.getId(), 
+                            user.getPicture() != null ? "has picture" : "no picture", 
+                            logPicture);
+                        
+                        // For very long URLs, truncate if needed
+                        if (newPicture.length() > 2000) {
+                            logger.warn("Profile picture URL is very long ({}), truncating to 2000 chars", newPicture.length());
+                            newPicture = newPicture.substring(0, 2000);
+                        }
+                        
+                        user.setPicture(newPicture);
+                    }
+                } catch (Exception e) {
+                    // Log the error but don't fail the entire update
+                    logger.error("Error updating profile picture: {}", e.getMessage());
+                    logger.debug("Picture update error details:", e);
+                }
+            }
+            
+            // Save the updated user
+            userRepository.save(user);
+
+            // Return updated user info
+            Map<String, Object> userResponse = new HashMap<>();
+            userResponse.put("id", user.getId());
+            userResponse.put("username", user.getUsername());
+            userResponse.put("name", user.getName());
+            userResponse.put("email", user.getEmail());
+            userResponse.put("roles", user.getRoles());
+            userResponse.put("age", user.getAge());
+            userResponse.put("gender", user.getGender());
+            userResponse.put("lookingFor", user.getLookingFor());
+            userResponse.put("picture", user.getPicture());
+            
+            return ResponseEntity.ok(userResponse);
+        } catch (Exception e) {
+            logger.error("Error updating user profile: {}", e.getMessage());
+            logger.debug("Profile update error details:", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to update profile: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/delete-account")
+    @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:19006",
+            "https://frontend-production-c2bc.up.railway.app" }, allowCredentials = "true")
+    public ResponseEntity<?> deleteAccount() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // If not authenticated or anonymous user
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getName())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+
+        // Find user by email (which we use as the principal name)
+        Optional<User> userOptional = userRepository.findByEmail(authentication.getName());
+
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+
+        User user = userOptional.get();
+        
+        try {
+            // Delete the user
+            logger.info("Deleting user account: {}", user.getId());
+            userRepository.delete(user);
+            
+            // Invalidate the current authentication
+            SecurityContextHolder.clearContext();
+            
+            return ResponseEntity.ok().body(Map.of("message", "Account deleted successfully"));
+        } catch (Exception e) {
+            logger.error("Error deleting user account: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to delete account: " + e.getMessage());
         }
     }
 }

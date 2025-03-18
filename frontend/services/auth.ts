@@ -317,12 +317,13 @@ export const handleGoogleAuth = async () => {
     }
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
     isAuthenticated: false,
     isLoading: true,
     error: null,
+    isNewUser: false,
 
     login: async (email: string, password: string) => {
         try {
@@ -412,7 +413,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     await storage.setItem('user', JSON.stringify(user));
                     
                     // Update state with the new user information and token
-                    set({ token, user, isAuthenticated: true, isLoading: false });
+                    set({ token, user, isAuthenticated: true, isLoading: false, isNewUser: true });
                 } else {
                     // Fallback to the old method if token not received (backwards compatibility)
                     console.log('No token received from signup, falling back to login');
@@ -432,7 +433,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     await storage.setItem('token', token);
                     await storage.setItem('user', JSON.stringify(user));
 
-                    set({ token, user, isAuthenticated: true, isLoading: false });
+                    set({ token, user, isAuthenticated: true, isLoading: false, isNewUser: true });
                 }
             } else {
                 throw new Error('Registration failed');
@@ -581,6 +582,10 @@ export const useAuthStore = create<AuthState>((set) => ({
             // Handle the Google login flow
             const authData = await handleGoogleAuth();
             
+            // Determine if this is a new user based on the response
+            // If the response includes a field indicating this is a new user, set isNewUser to true
+            const isNewUser = authData.isNewAccount || false;
+            
             set({
                 token: authData.token,
                 user: {
@@ -590,7 +595,8 @@ export const useAuthStore = create<AuthState>((set) => ({
                     roles: authData.roles
                 },
                 isAuthenticated: true,
-                isLoading: false
+                isLoading: false,
+                isNewUser: isNewUser
             });
         } catch (error) {
             const errorMessage = error instanceof Error
@@ -617,13 +623,296 @@ export const useAuthStore = create<AuthState>((set) => ({
                 token: userData.token, 
                 user: userData.user, 
                 isAuthenticated: true, 
-                isLoading: false 
+                isLoading: false
             });
             
             return true;
         } catch (error) {
             console.error('Error setting user data:', error);
             set({ error: 'Failed to set user data', isLoading: false });
+            return false;
+        }
+    },
+    
+    setIsNewUser: (isNew: boolean) => {
+        set({ isNewUser: isNew });
+    },
+
+    // Add a new method to update the user's name
+    updateUserName: async (name: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user name to "${name}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { name },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new name
+                const updatedUser = { ...user, name: name };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user name');
+            }
+        } catch (error) {
+            console.error('Update user name error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update name',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's age
+    updateUserAge: async (age: number) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user age to ${age} at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { age },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new age
+                const updatedUser = { ...user, age };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user age');
+            }
+        } catch (error) {
+            console.error('Update user age error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update age',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+    
+    // Add method to delete user account
+    deleteUserAccount: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Deleting user account at ${API_URL}/api/auth/delete-account`);
+            
+            const response = await axiosInstance.delete(`${API_URL}/api/auth/delete-account`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.status === 200) {
+                // Clear local storage
+                await Promise.all([
+                    storage.removeItem('token'),
+                    storage.removeItem('user')
+                ]);
+                
+                // Update state
+                set({ 
+                    token: null, 
+                    user: null, 
+                    isAuthenticated: false, 
+                    isLoading: false,
+                    isNewUser: false
+                });
+                
+                return true;
+            } else {
+                throw new Error('Failed to delete user account');
+            }
+        } catch (error) {
+            console.error('Delete user account error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to delete account',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's gender
+    updateUserGender: async (gender: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user gender to "${gender}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { gender },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new gender
+                const updatedUser = { ...user, gender };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user gender');
+            }
+        } catch (error) {
+            console.error('Update user gender error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update gender',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's dating preferences
+    updateUserPreferences: async (lookingFor: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user preferences to "${lookingFor}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { lookingFor },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new preferences
+                const updatedUser = { ...user, lookingFor };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user preferences');
+            }
+        } catch (error) {
+            console.error('Update user preferences error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update preferences',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's profile picture
+    updateUserPicture: async (pictureUrl: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user profile picture to "${pictureUrl}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { picture: pictureUrl },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new picture
+                const updatedUser = { ...user, picture: pictureUrl };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user profile picture');
+            }
+        } catch (error) {
+            console.error('Update user profile picture error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update profile picture',
+                isLoading: false 
+            });
             return false;
         }
     },

@@ -93,8 +93,12 @@ export default function GoogleCallback() {
         
         console.log('Exchanged Google token for app JWT');
         
-        // Update the auth store with the user data
-        await useAuthStore.getState().setUser({
+        // Determine if this is a new account
+        const isNewAccount = authData.isNewAccount || false;
+        
+        // Update the auth store with the user data and new user status
+        const authStore = useAuthStore.getState();
+        await authStore.setUser({
           token: authData.token,
           user: {
             id: authData.id,
@@ -104,8 +108,17 @@ export default function GoogleCallback() {
           }
         });
         
-        // Redirect to home page
-        router.replace('/home');
+        // If this is a new account, set isNewUser flag
+        if (isNewAccount) {
+          authStore.setIsNewUser(true);
+        }
+        
+        // Redirect based on whether the user is new
+        if (isNewAccount) {
+          router.replace('/startup');
+        } else {
+          router.replace('/home');
+        }
       } catch (error) {
         console.error('Error in OAuth callback:', error);
         // Redirect to login page with error

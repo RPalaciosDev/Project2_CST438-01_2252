@@ -17,7 +17,7 @@ public class User {
     private List<String> roles; // Example: ["USER", "ADMIN"]
     private Instant createdAt;
     private String jwtToken; // Store last issued JWT (optional)
-    private String sex;
+    private String gender;
     private String lookingFor;
     private int age;
 
@@ -113,12 +113,12 @@ public class User {
         this.jwtToken = jwtToken;
     }
 
-    public String getSex() {
-        return sex;
+    public String getGender() {
+        return gender;
     }
 
-    public void setSex(String sex) {
-        this.sex = sex;
+    public void setGender(String gender) {
+        this.gender = gender;
     }
 
     public String getLookingFor() {

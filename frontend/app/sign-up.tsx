@@ -48,7 +48,7 @@ export default function SignUp() {
         
         try {
             await register(username, email, password);
-            router.replace('/home'); // Navigate to home on success
+            router.replace('/startup'); // Redirect to startup screen for new users
         } catch (err) {
             console.error('Sign up error:', err);
             if (axios.isAxiosError(err)) {
