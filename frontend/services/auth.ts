@@ -350,9 +350,41 @@ export const fetchUserDataFromApi = async (token?: string | null): Promise<any> 
             console.log('Full user data structure:', JSON.stringify(response.data, null, 2));
             console.log('Fields available in user data:', Object.keys(response.data));
             
-            // Check for gender and lookingFor fields explicitly
+            // Check for critical fields explicitly
             console.log('Gender field:', response.data.gender);
             console.log('LookingFor field:', response.data.lookingFor);
+            console.log('hasCompletedOnboarding field:', response.data.hasCompletedOnboarding);
+            
+            // If the user has all required fields but hasCompletedOnboarding is not set,
+            // set it retroactively to prevent future onboarding loops
+            if (
+                response.data.gender && 
+                response.data.lookingFor && 
+                (response.data.age > 0) && 
+                response.data.hasCompletedOnboarding !== true
+            ) {
+                console.log('User has all required fields but hasCompletedOnboarding is not set. Setting it now...');
+                
+                try {
+                    const updateResponse = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                        { hasCompletedOnboarding: true },
+                        {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': formattedToken
+                            }
+                        }
+                    );
+                    
+                    if (updateResponse.status === 200) {
+                        console.log('Successfully updated hasCompletedOnboarding flag');
+                        // Update the response data to reflect this change
+                        response.data.hasCompletedOnboarding = true;
+                    }
+                } catch (updateError) {
+                    console.error('Failed to update hasCompletedOnboarding flag:', updateError);
+                }
+            }
             
             // Update the local storage with the complete user data
             await storage.setItem('user', JSON.stringify(response.data));
@@ -402,33 +434,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 throw new Error('Invalid response from server');
             }
 
-            const user = { id, username, email: userEmail, roles };
-
-            await Promise.all([
-                storage.setItem('token', token),
-                storage.setItem('user', JSON.stringify(user))
-            ]);
-
-            set({ token, user, isAuthenticated: true, isLoading: false });
-        } catch (error) {
-            const errorMessage = error instanceof Error 
-                ? error.message 
-                : 'Login failed. Please try again.';
+            // Store token immediately
+            await storage.setItem('token', token);
             
-            if (axios.isAxiosError(error)) {
-                console.error('Login network error:', {
-                    message: error.message,
-                    status: error.response?.status,
-                    data: error.response?.data,
-                    url: API_URL,
-                    platform: Platform.OS
+            // Fetch complete user data to ensure we have all fields
+            const userData = await fetchUserDataFromApi(token);
+            
+            if (userData) {
+                // Use the complete user data
+                set({ 
+                    token, 
+                    user: userData, 
+                    isAuthenticated: true, 
+                    isLoading: false,
+                    error: null
                 });
+                
+                console.log('Login successful with complete user data');
             } else {
-                console.error('Login error:', errorMessage);
+                // Fallback to basic user data if complete data fetch fails
+                const basicUser = { id, username, email: userEmail, roles };
+                await storage.setItem('user', JSON.stringify(basicUser));
+                
+                set({ 
+                    token, 
+                    user: basicUser, 
+                    isAuthenticated: true, 
+                    isLoading: false,
+                    error: null
+                });
+                
+                console.log('Login successful with basic user data (complete data fetch failed)');
             }
+        } catch (error) {
+            console.error('Login error:', error);
             
-            set({ error: errorMessage, isLoading: false, isAuthenticated: false });
-            throw error;
+            const errorMessage = axios.isAxiosError(error) && error.response?.data?.message
+                ? error.response.data.message
+                : error instanceof Error
+                    ? error.message
+                    : 'Login failed. Please check your credentials and try again.';
+            
+            set({ isLoading: false, error: errorMessage, isAuthenticated: false });
+            throw error; // Re-throw to let calling code handle it
         }
     },
 

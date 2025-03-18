@@ -331,84 +331,33 @@ export default function StartupScreen() {
     }
   };
   
-  // Add function to save profile picture or use default and complete onboarding
-  const savePictureAndComplete = async (useDefault = false) => {
+  // Add picture and complete onboarding
+  const uploadPictureAndComplete = async (pictureUrl: string, useDefault: boolean = false) => {
     setIsSubmittingPicture(true);
     setPictureError('');
     
-    console.log("savePictureAndComplete: Starting with useDefault =", useDefault);
-    
     try {
-      // Use default picture if requested or if no picture was selected
-      const pictureUrl = useDefault ? DEFAULT_PROFILE_PICTURE : (profilePicture || DEFAULT_PROFILE_PICTURE);
-      
-      // In a real implementation, we would upload the image to a server here
-      // and get back a URL to use. For now, we'll just use the local URI or default URL.
-      
-      console.log("Updating profile picture with URL:", 
-        pictureUrl.length > 30 ? pictureUrl.substring(0, 30) + "..." : pictureUrl);
+      console.log("Uploading profile picture and completing onboarding");
       
       // Update user's profile picture in the database
       const success = await updateUserPicture(pictureUrl);
       console.log("Profile picture update success:", success);
       
-      if (!success) {
-        // If the update fails but we're using the default picture,
-        // let's still complete the onboarding with a fallback
-        if (useDefault || pictureUrl === DEFAULT_PROFILE_PICTURE) {
-          console.log("Using fallback approach to complete onboarding");
-          
-          // Mark user as having completed onboarding in the backend
-          try {
-            const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
-            console.log("Token for API call:", token ? "Found token" : "No token available");
-            console.log("Making API call to:", `${API_URL}/api/auth/update-profile`);
-            
-            const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
-            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
-              { hasCompletedOnboarding: true },
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': formattedToken
-                }
-              }
-            );
-            console.log("API call response status:", response.status);
-            console.log("API call response data:", JSON.stringify(response.data));
-            console.log("Marked user as having completed onboarding in the backend");
-          } catch (error) {
-            console.error("Failed to mark user as onboarded in backend:", error);
-            if (axios.isAxiosError(error)) {
-              console.error("API Error details:", {
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.message
-              });
-            }
-          }
-          
-          // Mark user as no longer new (completing onboarding)
-          setIsNewUser(false);
-          
-          // Navigate to home page
-          console.log("Navigating to home page after completion");
-          router.replace('/home');
-          return;
-        }
-        
-        throw new Error('Failed to update your profile picture. Please try again or use the default picture.');
-      }
-      
       // Mark user as having completed onboarding in the backend
       try {
         const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
-        console.log("Token for API call:", token ? "Found token" : "No token available");
-        console.log("Making API call to:", `${API_URL}/api/auth/update-profile`);
+        console.log("Making API call to mark onboarding as completed");
         
         const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
         const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
-          { hasCompletedOnboarding: true },
+          { 
+            hasCompletedOnboarding: true,
+            // Also ensure other critical fields are set for backward compatibility
+            gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
+            lookingFor: selectedPreferences.join(', '),
+            // Include other fields that might be critical
+            hasDoneInitialSetup: true
+          },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -416,9 +365,28 @@ export default function StartupScreen() {
             }
           }
         );
-        console.log("API call response status:", response.status);
-        console.log("API call response data:", JSON.stringify(response.data));
-        console.log("Marked user as having completed onboarding in the backend");
+        
+        if (response.status === 200) {
+          console.log("Successfully marked user as having completed onboarding");
+          
+          // Update local store with the updated user data
+          const authStore = useAuthStore.getState();
+          if (authStore.user) {
+            await authStore.setUser({
+              token: token || '',
+              user: {
+                ...authStore.user, 
+                hasCompletedOnboarding: true,
+                hasDoneInitialSetup: true,
+                gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
+                lookingFor: selectedPreferences.join(', '),
+                picture: pictureUrl
+              } as any
+            });
+          }
+        } else {
+          console.error("Failed to mark user as onboarded, status:", response.status);
+        }
       } catch (error) {
         console.error("Failed to mark user as onboarded in backend:", error);
         if (axios.isAxiosError(error)) {
@@ -432,6 +400,13 @@ export default function StartupScreen() {
       
       // Mark user as no longer new (completing onboarding)
       setIsNewUser(false);
+      
+      // Fetch fresh user data to ensure everything is in sync before navigating
+      try {
+        await useAuthStore.getState().checkStatus();
+      } catch (e) {
+        console.error("Error refreshing user data:", e);
+      }
       
       // Navigate to home page
       console.log("Navigating to home page after completion");
@@ -814,7 +789,7 @@ export default function StartupScreen() {
       </Text>
       
       <View style={styles.profilePictureContainer}>
-        <Image
+        <Image 
           source={{ uri: profilePicture || DEFAULT_PROFILE_PICTURE }}
           style={styles.profilePicturePreview}
         />
@@ -836,62 +811,23 @@ export default function StartupScreen() {
       
       <View style={styles.buttonRow}>
         <TouchableOpacity 
-          style={[styles.secondaryButton, isSubmittingPicture && styles.buttonDisabled]} 
-          onPress={async () => {
-            // Mark user as having completed onboarding in the backend
-            try {
-              const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
-              console.log("Skip button: Token for API call:", token ? "Found token" : "No token available");
-              console.log("Skip button: Making API call to:", `${API_URL}/api/auth/update-profile`);
-              
-              const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
-              const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
-                { hasCompletedOnboarding: true },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': formattedToken
-                  }
-                }
-              );
-              console.log("Skip button: API call response status:", response.status);
-              console.log("Skip button: API call response data:", JSON.stringify(response.data));
-              console.log("Marked user as having completed onboarding in the backend (from skip)");
-            } catch (error) {
-              console.error("Failed to mark user as onboarded in backend:", error);
-              if (axios.isAxiosError(error)) {
-                console.error("Skip button API Error details:", {
-                  status: error.response?.status,
-                  data: error.response?.data,
-                  message: error.message
-                });
-              }
-            }
-            
-            // Skip the whole picture step
-            setIsNewUser(false);
-            console.log("Skip button: Navigating to home page after skipping picture");
-            router.replace('/home');
-          }}
-          disabled={isSubmittingPicture}
-        >
-          <Text style={styles.secondaryButtonText}>Skip</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
           style={[styles.alternateButton, isSubmittingPicture && styles.buttonDisabled]} 
-          onPress={() => savePictureAndComplete(true)}
+          onPress={() => uploadPictureAndComplete(DEFAULT_PROFILE_PICTURE, true)}
           disabled={isSubmittingPicture}
         >
-          <Text style={styles.alternateButtonText}>Use Default</Text>
+          {isSubmittingPicture && true ? (
+            <ActivityIndicator color="#FF4B6E" />
+          ) : (
+            <Text style={styles.alternateButtonText}>Use Default</Text>
+          )}
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.button, isSubmittingPicture && styles.buttonDisabled]} 
-          onPress={() => savePictureAndComplete(false)}
+          onPress={() => uploadPictureAndComplete(profilePicture || DEFAULT_PROFILE_PICTURE, false)}
           disabled={isSubmittingPicture || !profilePicture}
         >
-          {isSubmittingPicture ? (
+          {isSubmittingPicture && false ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Continue</Text>

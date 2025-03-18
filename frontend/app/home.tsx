@@ -85,17 +85,17 @@ export default function Home() {
       return true;
     }
     
+    // First and most important check - if user has already completed onboarding, don't redirect
+    if (data.hasCompletedOnboarding === true) {
+      console.log("User has already completed onboarding - skipping field checks");
+      return false;
+    }
+    
     console.log("Checking user data for required fields:", {
       dataType: typeof data,
       hasDataObject: !!data,
       fields: Object.keys(data).join(', ')
     });
-    
-    // First, check if the user has already completed onboarding
-    if (data.hasCompletedOnboarding === true) {
-      console.log("User has already completed onboarding - skipping field checks");
-      return false;
-    }
     
     // Check for missing critical fields
     const hasGender = data.gender != null && data.gender !== '' && data.gender !== 'undefined';
@@ -173,72 +173,6 @@ export default function Home() {
     return false;
   };
   
-  // Immediate check on component mount
-  useEffect(() => {
-    // Check immediately if user data in store is missing required fields
-    const checkUserData = async () => {
-      if (user) {
-        await checkMissingFieldsAndRedirect(user);
-      } else {
-        // If there's no user data at all, we should probably redirect
-        console.warn("No user data available on first render");
-        // Delay this slightly to avoid race conditions
-        setTimeout(async () => {
-          const currentUser = useAuthStore.getState().user;
-          if (!currentUser) {
-            console.warn("Still no user data after timeout - redirecting to startup");
-            useAuthStore.getState().setIsNewUser(true);
-            router.replace('/startup');
-          } else {
-            await checkMissingFieldsAndRedirect(currentUser);
-          }
-        }, 500);
-      }
-    };
-    
-    checkUserData();
-  }, []);
-
-  // Function to fetch user data directly from API
-  const fetchUserDataFromApi = async () => {
-    if (!token) {
-      console.log('No token available to fetch user data');
-      return null;
-    }
-    
-    setIsLoadingUserData(true);
-    
-    try {
-      console.log(`Fetching complete user data from ${API_URL}/api/auth/me`);
-      
-      // Make sure token is properly formatted
-      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      
-      // Make the request to the /me endpoint
-      const response = await axios.get(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: formattedToken
-        }
-      });
-      
-      if (response.status === 200) {
-        console.log('Successfully fetched complete user data');
-        console.log('Full user data received:', response.data);
-        
-        setApiUserData(response.data);
-        return response.data;
-      } else {
-        console.error('Failed to fetch user data, status:', response.status);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error fetching complete user data:', error);
-      return null;
-    } finally {
-      setIsLoadingUserData(false);
-    }
-  };
-
   // Initial load of user data - runs only once
   useEffect(() => {
     const loadAndVerifyUserData = async () => {
@@ -249,58 +183,36 @@ export default function Home() {
         const apiData = await apiDataFetcher();
         
         if (apiData) {
-          console.log("API data successfully retrieved:", apiData);
+          setApiUserData(apiData);
           
-          // Directly update the auth store with the fresh data from API
-          const authStore = useAuthStore.getState();
-          const token = await authStore.token;
-          
-          if (token) {
-            // This is critical - we update the auth store with the complete data
-            // This ensures the user object in the store has all the required fields
-            await authStore.setUser({
-              token: token,
-              user: apiData // Use the complete API data object
-            });
-            
-            console.log("Auth store updated with fresh API data");
-            
-            // Check if redirection is needed due to missing fields
-            if (await checkMissingFieldsAndRedirect(apiData)) {
-              return; // Stop execution if redirected
-            }
+          // If the user has completed onboarding, no need to do further checks
+          if (apiData.hasCompletedOnboarding === true) {
+            console.log("User has completed onboarding according to API data - no redirection needed");
+            return;
           }
           
-          if (!initialLoadComplete.current) {
-            // Use API data directly rather than relying on store data
-            const genderValue = apiData.gender || '';
-            const lookingForValue = apiData.lookingFor || '';
-            
-            console.log("Setting initial values from API:", {
-              gender: genderValue,
-              lookingFor: lookingForValue
-            });
-            
-            setGender(genderValue);
-            setLookingFor(lookingForValue);
-            setApiUserData(apiData); // Store the API data in component state
-            initialLoadComplete.current = true;
-          }
+          // Check if user data is missing required fields
+          await checkMissingFieldsAndRedirect(apiData);
         } else {
-          // If API call fails, try the store's fetchCompleteUserData method
-          console.log("API direct call failed, trying auth store's fetchCompleteUserData...");
-          const userData = await useAuthStore.getState().fetchCompleteUserData();
-          
-          if (userData) {
-            console.log("Data successfully retrieved via fetchCompleteUserData");
-            // Check for redirection
-            await checkMissingFieldsAndRedirect(userData);
+          console.log("No API data available - checking store data");
+          // If no API data, check store data
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser) {
+            // If the user has completed onboarding, no need to do further checks
+            if (currentUser.hasCompletedOnboarding === true) {
+              console.log("User has completed onboarding according to store data - no redirection needed");
+              return;
+            }
+            
+            await checkMissingFieldsAndRedirect(currentUser);
           } else {
-            console.warn("All attempts to fetch user data failed!");
+            console.warn("No user data available in store either");
+            useAuthStore.getState().setIsNewUser(true);
+            router.replace('/startup');
           }
         }
       } catch (error) {
-        console.error("Error fetching API data:", error);
+        console.error("Error loading user data:", error);
       }
     };
     
