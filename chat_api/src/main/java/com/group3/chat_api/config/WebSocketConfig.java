@@ -1,31 +1,59 @@
 package com.group3.chat_api.config;
 
-import com.group3.chat_api.handler.WebSocketHandler;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.*;
+import com.group3.chat_api.controller.ConversationController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.socket.config.annotation.*;
+
+import java.util.Arrays;
 
 @Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private static final Logger log = LoggerFactory.getLogger(ConversationController.class);
 
-   public WebSocketConfig() {}
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        String allowedOriginsStr = System.getenv("ALLOWED_ORIGINS");
+        String[] allowedOrigins;
 
-   @Override
-   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-       registry.addHandler(new WebSocketHandler(), "/ws").setAllowedOrigins("*");
-   }
+        if (allowedOriginsStr != null && !allowedOriginsStr.isEmpty()) {
+            // Split comma-separated list of allowed origins
+            allowedOrigins = allowedOriginsStr.split(",");
+            log.info("CORS allowed origins set from environment: {}", allowedOriginsStr);
+        } else {
+            // Default allowed origins for local development
+            allowedOrigins = new String[] {
+                    "http://localhost:8080",
+                    "http://localhost:8081",
+                    "http://localhost:19006",
+                    "http://localhost:19000",
+                    "https://app.yourdomain.com" // Railway frontend domain
+            };
+            log.info("Using default CORS allowed origins: {}", Arrays.toString(allowedOrigins));
+        }
 
-   @Bean
-    public ServletServerContainerFactoryBean createWebSocketContainer() {
-       ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-       container.setMaxTextMessageBufferSize(8192);
-       container.setMaxBinaryMessageBufferSize(8192);
-       return container;
-   }
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:8081")
+                .withSockJS();
+    }
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry
+                .setApplicationDestinationPrefixes("/chat")
+                .enableSimpleBroker("/topic")
+                .setTaskScheduler(heartBeatScheduler())
+                .setHeartbeatValue(new long[] {10000L, 10000L});
+    }
+
+    @Bean
+    public TaskScheduler heartBeatScheduler() {
+        return new ThreadPoolTaskScheduler();
+    }
 }
