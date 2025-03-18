@@ -2,8 +2,14 @@
 export interface User {
     id: string;
     username: string;
+    name?: string;
     email: string;
     roles?: string[];
+    age?: number;
+    gender?: string;
+    lookingFor?: string;
+    picture?: string;
+    hasCompletedOnboarding?: boolean;
 }
 
 export interface AuthStatusResponse {
@@ -18,6 +24,7 @@ export interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     error: string | null;
+    isNewUser: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
@@ -25,6 +32,14 @@ export interface AuthState {
     checkStatus: () => Promise<AuthStatusResponse>;
     loginWithGoogle: () => Promise<void>;
     setUser: (userData: { token: string, user: User }) => Promise<boolean>;
+    setIsNewUser: (isNew: boolean) => void;
+    updateUserName: (name: string) => Promise<boolean>;
+    updateUserAge: (age: number) => Promise<boolean>;
+    updateUserGender: (gender: string) => Promise<boolean>;
+    updateUserPreferences: (lookingFor: string) => Promise<boolean>;
+    updateUserPicture: (pictureUrl: string) => Promise<boolean>;
+    deleteUserAccount: () => Promise<boolean>;
+    fetchCompleteUserData: () => Promise<any>;
 }
 
 // TierList Types

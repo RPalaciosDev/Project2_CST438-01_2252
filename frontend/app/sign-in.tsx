@@ -98,7 +98,13 @@ export default function SignIn() {
         
         try {
             await login(username, password);
-            router.replace('/home'); // Add navigation to home on successful login
+            // Check if this is a new user (unlikely for regular login, but possible for first-time social login)
+            const { isNewUser } = useAuthStore.getState();
+            if (isNewUser) {
+                router.replace('/startup');
+            } else {
+                router.replace('/home');
+            }
         } catch (err) {
             console.error('Sign in error:', err);
             if (axios.isAxiosError(err)) {
@@ -137,7 +143,13 @@ export default function SignIn() {
         
         try {
             await loginWithGoogle();
-            // If successful, the useEffect will redirect to home
+            // Check if this is a new user
+            const { isNewUser } = useAuthStore.getState();
+            if (isNewUser) {
+                router.replace('/startup');
+            } else {
+                router.replace('/home');
+            }
         } catch (error) {
             if (error instanceof Error) {
                 setError(error.message);

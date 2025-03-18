@@ -17,9 +17,14 @@ public class User {
     private List<String> roles; // Example: ["USER", "ADMIN"]
     private Instant createdAt;
     private String jwtToken; // Store last issued JWT (optional)
+    private String gender;
+    private String lookingFor;
+    private int age;
+    private boolean hasCompletedOnboarding;
 
     public User() {
         this.createdAt = Instant.now();
+        this.hasCompletedOnboarding = false; // Default to false for new users
     }
 
     public User(String email, String name, String picture, List<String> roles) {
@@ -108,5 +113,37 @@ public class User {
 
     public void setJwtToken(String jwtToken) {
         this.jwtToken = jwtToken;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getLookingFor() {
+        return lookingFor;
+    }
+
+    public void setLookingFor(String lookingFor) {
+        this.lookingFor = lookingFor;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public boolean getHasCompletedOnboarding() {
+        return hasCompletedOnboarding;
+    }
+
+    public void setHasCompletedOnboarding(boolean hasCompletedOnboarding) {
+        this.hasCompletedOnboarding = hasCompletedOnboarding;
     }
 }

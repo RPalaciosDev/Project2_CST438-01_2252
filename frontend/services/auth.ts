@@ -14,7 +14,7 @@ const ensureHttps = (url: string): string => {
 };
 
 // Create axios instance with better timeout and retry configuration
-const axiosInstance = axios.create({
+export const axiosInstance = axios.create({
     timeout: 30000, // 30 seconds timeout
     withCredentials: true, // Add credentials for CORS requests
     headers: {
@@ -317,12 +317,96 @@ export const handleGoogleAuth = async () => {
     }
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+// Define a helper function that's accessible outside the store
+export const fetchUserDataFromApi = async (token?: string | null): Promise<any> => {
+    try {
+        console.log(`Fetching complete user data from ${API_URL}/api/auth/me`);
+        
+        // Get token from storage if not provided
+        let accessToken = token;
+        if (!accessToken) {
+            accessToken = await storage.getItem('token');
+        }
+        
+        if (!accessToken) {
+            console.log('No token available to fetch user data');
+            return null;
+        }
+        
+        // Make sure token is properly formatted
+        const formattedToken = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`;
+        
+        // Make the request to the /me endpoint
+        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
+            headers: {
+                Authorization: formattedToken
+            }
+        });
+        
+        if (response.status === 200) {
+            console.log('Successfully fetched complete user data');
+            
+            // Log the full structure to debug
+            console.log('Full user data structure:', JSON.stringify(response.data, null, 2));
+            console.log('Fields available in user data:', Object.keys(response.data));
+            
+            // Check for critical fields explicitly
+            console.log('Gender field:', response.data.gender);
+            console.log('LookingFor field:', response.data.lookingFor);
+            console.log('hasCompletedOnboarding field:', response.data.hasCompletedOnboarding);
+            
+            // If the user has all required fields but hasCompletedOnboarding is not set,
+            // set it retroactively to prevent future onboarding loops
+            if (
+                response.data.gender && 
+                response.data.lookingFor && 
+                (response.data.age > 0) && 
+                response.data.hasCompletedOnboarding !== true
+            ) {
+                console.log('User has all required fields but hasCompletedOnboarding is not set. Setting it now...');
+                
+                try {
+                    const updateResponse = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                        { hasCompletedOnboarding: true },
+                        {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': formattedToken
+                            }
+                        }
+                    );
+                    
+                    if (updateResponse.status === 200) {
+                        console.log('Successfully updated hasCompletedOnboarding flag');
+                        // Update the response data to reflect this change
+                        response.data.hasCompletedOnboarding = true;
+                    }
+                } catch (updateError) {
+                    console.error('Failed to update hasCompletedOnboarding flag:', updateError);
+                }
+            }
+            
+            // Update the local storage with the complete user data
+            await storage.setItem('user', JSON.stringify(response.data));
+            
+            return response.data;
+        } else {
+            console.error('Failed to fetch user data, status:', response.status);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error fetching complete user data:', error);
+        return null;
+    }
+};
+
+export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
     isAuthenticated: false,
     isLoading: true,
     error: null,
+    isNewUser: false,
 
     login: async (email: string, password: string) => {
         try {
@@ -350,33 +434,49 @@ export const useAuthStore = create<AuthState>((set) => ({
                 throw new Error('Invalid response from server');
             }
 
-            const user = { id, username, email: userEmail, roles };
-
-            await Promise.all([
-                storage.setItem('token', token),
-                storage.setItem('user', JSON.stringify(user))
-            ]);
-
-            set({ token, user, isAuthenticated: true, isLoading: false });
-        } catch (error) {
-            const errorMessage = error instanceof Error 
-                ? error.message 
-                : 'Login failed. Please try again.';
+            // Store token immediately
+            await storage.setItem('token', token);
             
-            if (axios.isAxiosError(error)) {
-                console.error('Login network error:', {
-                    message: error.message,
-                    status: error.response?.status,
-                    data: error.response?.data,
-                    url: API_URL,
-                    platform: Platform.OS
+            // Fetch complete user data to ensure we have all fields
+            const userData = await fetchUserDataFromApi(token);
+            
+            if (userData) {
+                // Use the complete user data
+                set({ 
+                    token, 
+                    user: userData, 
+                    isAuthenticated: true, 
+                    isLoading: false,
+                    error: null
                 });
+                
+                console.log('Login successful with complete user data');
             } else {
-                console.error('Login error:', errorMessage);
+                // Fallback to basic user data if complete data fetch fails
+                const basicUser = { id, username, email: userEmail, roles };
+                await storage.setItem('user', JSON.stringify(basicUser));
+                
+                set({ 
+                    token, 
+                    user: basicUser, 
+                    isAuthenticated: true, 
+                    isLoading: false,
+                    error: null
+                });
+                
+                console.log('Login successful with basic user data (complete data fetch failed)');
             }
+        } catch (error) {
+            console.error('Login error:', error);
             
-            set({ error: errorMessage, isLoading: false, isAuthenticated: false });
-            throw error;
+            const errorMessage = axios.isAxiosError(error) && error.response?.data?.message
+                ? error.response.data.message
+                : error instanceof Error
+                    ? error.message
+                    : 'Login failed. Please check your credentials and try again.';
+            
+            set({ isLoading: false, error: errorMessage, isAuthenticated: false });
+            throw error; // Re-throw to let calling code handle it
         }
     },
 
@@ -412,7 +512,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     await storage.setItem('user', JSON.stringify(user));
                     
                     // Update state with the new user information and token
-                    set({ token, user, isAuthenticated: true, isLoading: false });
+                    set({ token, user, isAuthenticated: true, isLoading: false, isNewUser: true });
                 } else {
                     // Fallback to the old method if token not received (backwards compatibility)
                     console.log('No token received from signup, falling back to login');
@@ -432,7 +532,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                     await storage.setItem('token', token);
                     await storage.setItem('user', JSON.stringify(user));
 
-                    set({ token, user, isAuthenticated: true, isLoading: false });
+                    set({ token, user, isAuthenticated: true, isLoading: false, isNewUser: true });
                 }
             } else {
                 throw new Error('Registration failed');
@@ -581,6 +681,10 @@ export const useAuthStore = create<AuthState>((set) => ({
             // Handle the Google login flow
             const authData = await handleGoogleAuth();
             
+            // Determine if this is a new user based on the response
+            // If the response includes a field indicating this is a new user, set isNewUser to true
+            const isNewUser = authData.isNewAccount || false;
+            
             set({
                 token: authData.token,
                 user: {
@@ -590,7 +694,8 @@ export const useAuthStore = create<AuthState>((set) => ({
                     roles: authData.roles
                 },
                 isAuthenticated: true,
-                isLoading: false
+                isLoading: false,
+                isNewUser: isNewUser
             });
         } catch (error) {
             const errorMessage = error instanceof Error
@@ -617,7 +722,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                 token: userData.token, 
                 user: userData.user, 
                 isAuthenticated: true, 
-                isLoading: false 
+                isLoading: false
             });
             
             return true;
@@ -625,6 +730,323 @@ export const useAuthStore = create<AuthState>((set) => ({
             console.error('Error setting user data:', error);
             set({ error: 'Failed to set user data', isLoading: false });
             return false;
+        }
+    },
+    
+    setIsNewUser: (isNew: boolean) => {
+        set({ isNewUser: isNew });
+    },
+
+    // Add a new method to update the user's name
+    updateUserName: async (name: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user name to "${name}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { name },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new name
+                const updatedUser = { ...user, name: name };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user name');
+            }
+        } catch (error) {
+            console.error('Update user name error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update name',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's age
+    updateUserAge: async (age: number) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user age to ${age} at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { age },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new age
+                const updatedUser = { ...user, age };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user age');
+            }
+        } catch (error) {
+            console.error('Update user age error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update age',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+    
+    // Add method to delete user account
+    deleteUserAccount: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Deleting user account at ${API_URL}/api/auth/delete-account`);
+            
+            const response = await axiosInstance.delete(`${API_URL}/api/auth/delete-account`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.status === 200) {
+                // Clear local storage
+                await Promise.all([
+                    storage.removeItem('token'),
+                    storage.removeItem('user')
+                ]);
+                
+                // Update state
+                set({ 
+                    token: null, 
+                    user: null, 
+                    isAuthenticated: false, 
+                    isLoading: false,
+                    isNewUser: false
+                });
+                
+                return true;
+            } else {
+                throw new Error('Failed to delete user account');
+            }
+        } catch (error) {
+            console.error('Delete user account error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to delete account',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's gender
+    updateUserGender: async (gender: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user gender to "${gender}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { gender },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new gender
+                const updatedUser = { ...user, gender };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user gender');
+            }
+        } catch (error) {
+            console.error('Update user gender error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update gender',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's dating preferences
+    updateUserPreferences: async (lookingFor: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user preferences to "${lookingFor}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { lookingFor },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new preferences
+                const updatedUser = { ...user, lookingFor };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user preferences');
+            }
+        } catch (error) {
+            console.error('Update user preferences error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update preferences',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Add method to update user's profile picture
+    updateUserPicture: async (pictureUrl: string) => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            const { token, user } = get();
+            
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+            
+            console.log(`Updating user profile picture to "${pictureUrl}" at ${API_URL}/api/auth/update-profile`);
+            
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { picture: pictureUrl },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update the user in state with the new picture
+                const updatedUser = { ...user, picture: pictureUrl };
+                
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+                
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update user profile picture');
+            }
+        } catch (error) {
+            console.error('Update user profile picture error:', error);
+            set({ 
+                error: error instanceof Error ? error.message : 'Failed to update profile picture',
+                isLoading: false 
+            });
+            return false;
+        }
+    },
+
+    // Improve fetchCompleteUserData method for better debugging
+    fetchCompleteUserData: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            // Get the current token
+            const token = get().token;
+            
+            // Fetch data using the external function
+            const userData = await fetchUserDataFromApi(token);
+            
+            if (userData) {
+                // Log the data structure for debugging
+                console.log('User data to be applied to store:', JSON.stringify(userData, null, 2));
+                
+                // Update user state with the complete data
+                set({ 
+                    user: userData,
+                    isLoading: false
+                });
+                
+                console.log('User state updated with complete data');
+                return userData;
+            }
+            
+            set({ isLoading: false });
+            return null;
+        } catch (error) {
+            console.error('Error fetching complete user data:', error);
+            set({ error: 'Failed to fetch user data', isLoading: false });
+            return null;
         }
     },
 }));

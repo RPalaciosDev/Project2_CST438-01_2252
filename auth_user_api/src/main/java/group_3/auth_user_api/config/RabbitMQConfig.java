@@ -2,7 +2,6 @@ package group_3.auth_user_api.config;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,52 +9,32 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableRabbit
 public class RabbitMQConfig {
-    @Value("${spring.data.rabbitmq.host}")
-    private String host;
-
-    @Value("${spring.data.rabbitmq.username}")
-    private String username;
-
-    @Value("${spring.data.rabbitmq.password}")
-    private String password;
-
-    @Value("${spring.data.rabbitmq.port}")
-    private int port;
-
-    @Value("${spring.data.rabbitmq.exchange}")
+    @Value("${spring.rabbitmq.template.exchange}")
     private String exchange;
 
-    @Value("${spring.data.rabbitmq.auth-queue}")
-    private String authQueue;
+    @Value("${spring.rabbitmq.template.routing-key}")
+    private String routingKey;
 
-    @Value("${spring.data.rabbitmq.auth-routing-key}")
-    private String authRoutingKey;
-
-    @Bean
-    public CachingConnectionFactory connectionFactory() {
-        CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-        connectionFactory.setHost(host);
-        connectionFactory.setPort(port);
-        connectionFactory.setUsername(username);
-        connectionFactory.setPassword(password);
-        return connectionFactory;
-    }
+    // Queue name is hardcoded as it's an implementation detail
+    private final String AUTH_QUEUE = "auth_queue";
 
     @Bean
     public Queue authQueue() {
-        return new Queue(authQueue);
+        return QueueBuilder.durable(AUTH_QUEUE)
+                .build();
     }
 
     @Bean
-    public Exchange exchange() {
-        return new DirectExchange(exchange);
+    public DirectExchange exchange() {
+        return ExchangeBuilder.directExchange(exchange)
+                .durable(true)
+                .build();
     }
 
     @Bean
-    public Binding bindingAuth(Queue authQueue, Exchange exchange) {
-        return BindingBuilder.bind(authQueue)
-                .to(exchange)
-                .with(authRoutingKey)
-                .noargs();
+    public Binding bindingAuth() {
+        return BindingBuilder.bind(authQueue())
+                .to(exchange())
+                .with(routingKey);
     }
 }

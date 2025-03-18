@@ -33,7 +33,12 @@ export default function Index() {
     // Redirect based on authentication status
     if (!isLoading) {
       if (isAuthenticated) {
-        router.replace('/home');
+        const { isNewUser } = useAuthStore.getState();
+        if (isNewUser) {
+          router.replace('/startup');
+        } else {
+          router.replace('/home');
+        }
       } else {
         router.replace('/sign-in');
       }

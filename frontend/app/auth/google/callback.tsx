@@ -92,20 +92,151 @@ export default function GoogleCallback() {
         const authData = await exchangeGoogleTokenForJWT(tokenToUse, API_URL);
         
         console.log('Exchanged Google token for app JWT');
+        console.log('Received auth data:', {
+          id: authData.id,
+          username: authData.username,
+          email: authData.email,
+          isNewAccount: authData.isNewAccount,
+          hasGender: !!authData.gender,
+          hasLookingFor: !!authData.lookingFor,
+          hasAge: authData.age > 0,
+          hasPicture: !!authData.picture
+        });
         
-        // Update the auth store with the user data
-        await useAuthStore.getState().setUser({
+        // Debug: Log all available fields in authData
+        console.log('All available fields in authData:', Object.keys(authData));
+        console.log('authData.user fields:', authData.user ? Object.keys(authData.user) : 'No user object');
+        
+        // Check if data is nested under a 'user' property
+        const userData = authData.user || authData;
+        
+        // Update the auth store with the user data and new user status
+        const authStore = useAuthStore.getState();
+        await authStore.setUser({
           token: authData.token,
           user: {
-            id: authData.id,
-            username: authData.username,
-            email: authData.email,
-            roles: authData.roles
+            id: userData.id,
+            username: userData.username,
+            email: userData.email,
+            gender: userData.gender,
+            lookingFor: userData.lookingFor,
+            age: userData.age,
+            roles: userData.roles
           }
         });
         
-        // Redirect to home page
-        router.replace('/home');
+        // Set isNewUser flag correctly to ensure proper startup flow
+        if (authData.isNewAccount) {
+          authStore.setIsNewUser(true);
+        }
+        
+        // CRITICAL: Directly fetch full user data from the /me endpoint to ensure we have all fields
+        try {
+          console.log('Fetching complete user profile from /me endpoint');
+          const meResponse = await fetch(`${API_URL}/api/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${authData.token}`
+            }
+          });
+          
+          if (meResponse.ok) {
+            const fullUserData = await meResponse.json();
+            console.log('Full user profile received:', fullUserData);
+            
+            // Check if we got proper gender and lookingFor fields
+            const hasGender = fullUserData.gender != null && 
+                            fullUserData.gender !== '' && 
+                            fullUserData.gender !== 'undefined';
+                            
+            const hasLookingFor = fullUserData.lookingFor != null && 
+                                fullUserData.lookingFor !== '' && 
+                                fullUserData.lookingFor !== 'undefined';
+                                
+            const hasAge = fullUserData.age != null && fullUserData.age > 0;
+            
+            // More aggressive routing - send to onboarding if ANY required field is missing
+            const needsOnboarding = !hasGender || !hasLookingFor || !hasAge;
+            
+            console.log('User profile check from /me endpoint:', {
+              hasGender, 
+              hasLookingFor, 
+              hasAge,
+              gender: fullUserData.gender,
+              lookingFor: fullUserData.lookingFor,
+              age: fullUserData.age
+            });
+            
+            // Write a detailed log entry
+            console.warn('GOOGLE LOGIN - PROFILE CHECK - ' + new Date().toISOString() + ': ' +
+              'User ' + userData.email + ' - ' +
+              'Needs onboarding: ' + needsOnboarding + 
+              '. Fields from /me: gender=' + (fullUserData.gender || 'missing') + 
+              ', lookingFor=' + (fullUserData.lookingFor || 'missing') + 
+              ', age=' + (fullUserData.age || 0)
+            );
+            
+            if (needsOnboarding) {
+              console.log('Missing required profile fields - redirecting to startup flow');
+              authStore.setIsNewUser(true);
+              router.replace('/startup');
+              return; // Exit early
+            }
+          } else {
+            console.warn('Failed to fetch /me endpoint:', meResponse.status);
+          }
+        } catch (meError) {
+          console.error('Error checking /me endpoint:', meError);
+        }
+        
+        // Fallback to the original checks if /me endpoint fails
+        const hasGender = userData.gender != null && userData.gender !== '' && userData.gender !== 'undefined';
+        const hasLookingFor = userData.lookingFor != null && userData.lookingFor !== '' && userData.lookingFor !== 'undefined';
+        const hasAge = userData.age != null && userData.age > 0;
+        
+        // Be more aggressive about routing to onboarding - ANY missing field or ANY sign of a
+        // new account should trigger onboarding
+        const needsOnboarding = authData.isNewAccount || 
+                              !hasGender || 
+                              !hasLookingFor || 
+                              !hasAge || 
+                              typeof userData.gender === 'undefined' ||
+                              typeof userData.lookingFor === 'undefined';
+        
+        console.log('User profile completeness check:', { 
+          hasGender, 
+          hasLookingFor, 
+          hasAge,
+          needsOnboarding,
+          gender: String(userData.gender), // Convert to string for logging
+          lookingFor: String(userData.lookingFor), // Convert to string for logging
+          age: userData.age
+        });
+        
+        // Write a persistent log entry
+        console.warn('LOGIN SUCCESS LOG - ' + new Date().toISOString() + ': ' +
+          'User ' + userData.email + ' logged in via Google OAuth. ' +
+          'Needs onboarding: ' + needsOnboarding + 
+          (needsOnboarding ? (' (Reason: ' + 
+            (authData.isNewAccount ? 'New account' : 
+             !hasGender ? 'Missing gender' :
+             !hasLookingFor ? 'Missing lookingFor' :
+             !hasAge ? 'Missing age' : 'Unknown') + 
+           ')') : '') +
+          '. Fields present: gender=' + hasGender + 
+          ' (' + (String(userData.gender) || 'empty') + ')' +
+          ', lookingFor=' + hasLookingFor + 
+          ' (' + (String(userData.lookingFor) || 'empty') + ')' +
+          ', age=' + (userData.age || 0)
+        );
+        
+        if (needsOnboarding) {
+          console.log('Redirecting to startup flow...');
+          authStore.setIsNewUser(true); // Ensure new user flag is set for startup flow
+          router.replace('/startup');
+        } else {
+          console.log('Redirecting to home...');
+          router.replace('/');
+        }
       } catch (error) {
         console.error('Error in OAuth callback:', error);
         // Redirect to login page with error
