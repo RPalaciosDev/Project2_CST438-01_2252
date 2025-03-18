@@ -37,6 +37,7 @@ export interface AuthState {
     updateUserPreferences: (lookingFor: string) => Promise<boolean>;
     updateUserPicture: (pictureUrl: string) => Promise<boolean>;
     deleteUserAccount: () => Promise<boolean>;
+    fetchCompleteUserData: () => Promise<any>;
 }
 
 // TierList Types

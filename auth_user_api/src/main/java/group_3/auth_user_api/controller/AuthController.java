@@ -79,10 +79,19 @@ public class AuthController {
         userResponse.put("username", user.getUsername());
         userResponse.put("email", user.getEmail());
         userResponse.put("roles", user.getRoles());
-        userResponse.put("gender", user.getGender());
-        userResponse.put("lookingFor", user.getLookingFor());
+        
+        // Ensure consistent field names for frontend
+        userResponse.put("gender", user.getGender()); // Use getGender explicitly
+        userResponse.put("lookingFor", user.getLookingFor()); // Use getLookingFor explicitly
         userResponse.put("age", user.getAge());
         userResponse.put("picture", user.getPicture());
+
+        // Add debugging info for frontend development
+        logger.info("User data for {}: gender={}, lookingFor={}, picture={}", 
+            user.getEmail(), 
+            user.getGender(), 
+            user.getLookingFor(),
+            user.getPicture() != null ? "has picture" : "no picture");
 
         return ResponseEntity.ok(userResponse);
     }

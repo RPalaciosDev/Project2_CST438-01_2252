@@ -248,13 +248,19 @@ const exchangeGoogleTokenForJWT = async (token: string, API_URL: string) => {
         // Throw detailed error
         throw new Error(`HTTP error! status: ${response.status}, details: ${errorData}`);
       } catch (parseError) {
-        throw new Error(`HTTP error! status: ${response.status}, could not parse error details`);
+        console.error('Failed to parse error response:', parseError);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
     }
     
-    const data = await response.json();
-    console.log('Successfully exchanged token, received response with keys:', Object.keys(data));
-    return data;
+    // Parse the response data
+    const userData = await response.json();
+    
+    // Log the complete data structure for debugging
+    console.log('Full user data structure received from backend:', JSON.stringify(userData, null, 2));
+    console.log('User object fields available:', Object.keys(userData));
+    
+    return userData;
   } catch (error) {
     console.error('Error exchanging Google token for JWT:', error);
     console.error('API URL used:', API_URL);

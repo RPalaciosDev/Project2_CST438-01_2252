@@ -317,6 +317,57 @@ export const handleGoogleAuth = async () => {
     }
 };
 
+// Define a helper function that's accessible outside the store
+export const fetchUserDataFromApi = async (token?: string | null): Promise<any> => {
+    try {
+        console.log(`Fetching complete user data from ${API_URL}/api/auth/me`);
+        
+        // Get token from storage if not provided
+        let accessToken = token;
+        if (!accessToken) {
+            accessToken = await storage.getItem('token');
+        }
+        
+        if (!accessToken) {
+            console.log('No token available to fetch user data');
+            return null;
+        }
+        
+        // Make sure token is properly formatted
+        const formattedToken = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`;
+        
+        // Make the request to the /me endpoint
+        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
+            headers: {
+                Authorization: formattedToken
+            }
+        });
+        
+        if (response.status === 200) {
+            console.log('Successfully fetched complete user data');
+            
+            // Log the full structure to debug
+            console.log('Full user data structure:', JSON.stringify(response.data, null, 2));
+            console.log('Fields available in user data:', Object.keys(response.data));
+            
+            // Check for gender and lookingFor fields explicitly
+            console.log('Gender field:', response.data.gender);
+            console.log('LookingFor field:', response.data.lookingFor);
+            
+            // Update the local storage with the complete user data
+            await storage.setItem('user', JSON.stringify(response.data));
+            
+            return response.data;
+        } else {
+            console.error('Failed to fetch user data, status:', response.status);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error fetching complete user data:', error);
+        return null;
+    }
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
@@ -914,6 +965,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isLoading: false 
             });
             return false;
+        }
+    },
+
+    // Improve fetchCompleteUserData method for better debugging
+    fetchCompleteUserData: async () => {
+        try {
+            set({ isLoading: true, error: null });
+            
+            // Get the current token
+            const token = get().token;
+            
+            // Fetch data using the external function
+            const userData = await fetchUserDataFromApi(token);
+            
+            if (userData) {
+                // Log the data structure for debugging
+                console.log('User data to be applied to store:', JSON.stringify(userData, null, 2));
+                
+                // Update user state with the complete data
+                set({ 
+                    user: userData,
+                    isLoading: false
+                });
+                
+                console.log('User state updated with complete data');
+                return userData;
+            }
+            
+            set({ isLoading: false });
+            return null;
+        } catch (error) {
+            console.error('Error fetching complete user data:', error);
+            set({ error: 'Failed to fetch user data', isLoading: false });
+            return null;
         }
     },
 }));

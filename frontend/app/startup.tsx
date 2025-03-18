@@ -335,6 +335,7 @@ export default function StartupScreen() {
           console.log("Using fallback approach to complete onboarding");
           // Mark user as no longer new (completing onboarding)
           setIsNewUser(false);
+          
           // Navigate to home page
           router.replace('/home');
           return;
@@ -749,7 +750,7 @@ export default function StartupScreen() {
       <View style={styles.buttonRow}>
         <TouchableOpacity 
           style={[styles.secondaryButton, isSubmittingPicture && styles.buttonDisabled]} 
-          onPress={() => {
+          onPress={async () => {
             // Skip the whole picture step
             setIsNewUser(false);
             router.replace('/home');
