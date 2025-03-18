@@ -7,3 +7,5 @@ gunicorn
 apscheduler
 pika
 python-dotenv
+pymongo
+dnspython

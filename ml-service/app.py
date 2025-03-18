@@ -8,11 +8,19 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from dotenv import load_dotenv
 from rabbitmq import RabbitMQConnection
+from pymongo import MongoClient
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://centerbeam.proxy.rlwy.net:10551/auth_db")
+client = MongoClient(MONGO_URI)
+
+# Connect to the specific database and collection
+db = client["auth_db"]
+users_collection = db["users"]
 
 # Connect to RabbitMQ
 rabbitmq_connection = RabbitMQConnection(
@@ -124,8 +132,58 @@ def schedule_daily_matching():
 
     print("Daily matching completed!")
 
+def get_user_info(user_id):
+    """Retrieve user info from MongoDB by user_id."""
+    user = users_collection.find_one({"user_id": user_id})  
+    if user:
+        return {
+            "sex": user.get("sex", "unknown"), 
+            "lookingFor": user.get("lookingFor", "both")
+        }
+    return None
+
+def is_match_compatible(user_sex, user_looking_for, other_sex, other_looking_for):
+    """Checks if two users are compatible based on their sex and lookingFor preferences."""
+    
+    # Male looking for female → Match with female looking for male or both
+    if user_sex == "male" and user_looking_for == "female":
+        return other_sex == "female" and other_looking_for in ["male", "both"]
+
+    # Female looking for male → Match with male looking for female or both
+    elif user_sex == "female" and user_looking_for == "male":
+        return other_sex == "male" and other_looking_for in ["female", "both"]
+
+    # Male looking for both → Match with:
+    # 1. Other males looking for both
+    # 2. Females looking for male
+    elif user_sex == "male" and user_looking_for == "both":
+        return (other_sex == "male" and other_looking_for in ["both", "male"]) or (other_sex == "female" and other_looking_for == "male")
+
+    # Female looking for both → Match with:
+    # 1. Other females looking for both
+    # 2. Males looking for female
+    elif user_sex == "female" and user_looking_for == "both":
+        return (other_sex == "female" and other_looking_for in ["both", "female"]) or (other_sex == "male" and other_looking_for == "female")
+
+    # Male looking for male → Match with:
+    # 1. Other males looking for male
+    # 2. Other males looking for both
+    elif user_sex == "male" and user_looking_for == "male":
+        return other_sex == "male" and other_looking_for in ["male", "both"]
+
+    # Female looking for female → Match with:
+    # 1. Other females looking for female
+    # 2. Other females looking for both
+    elif user_sex == "female" and user_looking_for == "female":
+        return other_sex == "female" and other_looking_for in ["female", "both"]
+
+    # If none of the conditions match, return False
+    return False
+
+
+
 def find_top_matches(user_id, top_n=5):
-    """Finds the closest users to a given user based on Agglomerative Clustering."""
+    """Finds the closest users to a given user based on Agglomerative Clustering while considering sex and lookingFor preferences."""
     if user_id not in user_embeddings:
         print(f"User {user_id} not found in embeddings!")
         return []
@@ -142,18 +200,31 @@ def find_top_matches(user_id, top_n=5):
     user_index = user_ids.index(user_id)
     user_cluster = cluster_labels[user_index]
 
-    # Find users in the same cluster
-    cluster_members = [user_ids[i] for i in range(len(user_ids)) if cluster_labels[i] == user_cluster and user_ids[i] != user_id]
+    # Retrieve user info
+    user_info = get_user_info(user_id)
+    if not user_info:
+        print(f"User info not found for {user_id}")
+        return []
 
+    user_sex = user_info.get("sex")
+    user_looking_for = user_info.get("lookingFor")
+
+    # Find users in the same cluster
     matches = []
-    for other_id in cluster_members:
-        matches.append({"user_id": other_id})
+    for i, other_id in enumerate(user_ids):
+        if cluster_labels[i] == user_cluster and other_id != user_id:
+            other_user_info = get_user_info(other_id)
+
+            # Check if the match is compatible based on sex/lookingFor preferences
+            if other_user_info and is_match_compatible(user_sex, user_looking_for, other_user_info["sex"], other_user_info["lookingFor"]):
+                matches.append({"user_id": other_id})
 
     return matches[:top_n]
 
+
 # Schedule the daily matching at 5 PM
 scheduler = BackgroundScheduler()
-scheduler.add_job(schedule_daily_matching, 'cron', hour=17, minute=00)  # 17:00 = 5 PM
+scheduler.add_job(schedule_daily_matching, 'cron', hour=17, minute=58)  # 17:00 = 5 PM
 scheduler.start()
 
 if __name__ == "__main__":

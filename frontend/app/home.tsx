@@ -12,11 +12,13 @@ export default function Home() {
   const { selectedStyle, setSelectedStyle } = useStyle();
   const [loading, setLoading] = useState(false);
 
-  // local state to force re render when selected style updates
+  // Local state for dropdowns
   const [pickerValue, setPickerValue] = useState(selectedStyle);
+  const [sex, setSex] = useState('');
+  const [lookingFor, setLookingFor] = useState('');
+  const [age, setAge] = useState('18');
 
   useEffect(() => {
-    // Verify token is valid on component mount
     const verifyToken = async () => {
       if (!token) {
         router.replace('/sign-in');
@@ -24,7 +26,6 @@ export default function Home() {
       }
       
       try {
-        // Use the new checkStatus method instead of direct API call
         const status = await useAuthStore.getState().checkStatus();
         
         if (!status.isAuthenticated) {
@@ -36,14 +37,6 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Token validation error:', error);
-        // If token is invalid, logout and redirect
-        if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-          Alert.alert(
-            "Session Expired",
-            "Your session has expired. Please sign in again.",
-            [{ text: "OK", onPress: () => handleLogout() }]
-          );
-        }
       }
     };
     
@@ -55,34 +48,16 @@ export default function Home() {
     if (itemValue) {
       console.log("Selected Style:", itemValue);
       setSelectedStyle(itemValue);
-      setPickerValue(itemValue);  // Ensure Picker reflects the change
+      setPickerValue(itemValue);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      setLoading(true);
-      await logout();
-      router.replace('/sign-in');
-    } catch (error) {
-      console.error('Logout error:', error);
-      Alert.alert(
-        "Logout Error",
-        "There was a problem logging out. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    await logout();
+    router.replace('/sign-in');
+    setLoading(false);
   };
-
-  if (!user) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF4B6E" />
-        <Text>Loading profile...</Text>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,31 +80,55 @@ export default function Home() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tier List Style</Text>
+          <Text style={styles.cardTitle}>Sex</Text>
           <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={pickerValue}  // Use local state
-              onValueChange={handleSelection}
-              style={styles.picker}
-              dropdownIconColor="#fff"
-              mode="dropdown"
-            >
-              <Picker.Item label="Style Options" value="" style={styles.pickerItem} />
-              <Picker.Item label="Default (White Tiers)" value="default" style={styles.pickerItem} />
-              <Picker.Item label="Vibrant (Colorful Tiers)" value="vibrant" style={styles.pickerItem} />
-              <Picker.Item label="PinkLove (Shades of Pink)" value="pinklove" style={styles.pickerItem} />
+            <Picker selectedValue={sex} onValueChange={setSex} style={styles.picker}>
+              <Picker.Item label="Select your sex" value="" />
+              <Picker.Item label="Male" value="male" />
+              <Picker.Item label="Female" value="female" />
+              <Picker.Item label="Other" value="other" />
             </Picker>
           </View>
-          <Text style={styles.selectedStyle}>
-            Selected Style: {selectedStyle}
-          </Text>
         </View>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.logoutButton]} 
-          onPress={handleLogout}
-          disabled={loading}
-        >
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Looking For</Text>
+          <View style={styles.pickerContainer}>
+            <Picker selectedValue={lookingFor} onValueChange={setLookingFor} style={styles.picker}>
+              <Picker.Item label="Looking for" value="" />
+              <Picker.Item label="Men" value="men" />
+              <Picker.Item label="Women" value="women" />
+              <Picker.Item label="Both" value="both" />
+              <Picker.Item label="Other" value="other" />
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Age</Text>
+          <View style={styles.pickerContainer}>
+            <Picker selectedValue={age} onValueChange={setAge} style={styles.picker}>
+              {[...Array(83)].map((_, i) => (
+                <Picker.Item key={i} label={`${i + 18}`} value={`${i + 18}`} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tier List Style</Text>
+          <View style={styles.pickerContainer}>
+            <Picker selectedValue={pickerValue} onValueChange={handleSelection} style={styles.picker}>
+              <Picker.Item label="Style Options" value="" />
+              <Picker.Item label="Default (White Tiers)" value="default" />
+              <Picker.Item label="Vibrant (Colorful Tiers)" value="vibrant" />
+              <Picker.Item label="PinkLove (Shades of Pink)" value="pinklove" />
+            </Picker>
+          </View>
+          <Text style={styles.selectedStyle}>Selected Style: {selectedStyle}</Text>
+        </View>
+
+        <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout} disabled={loading}>
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
