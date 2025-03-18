@@ -2,16 +2,17 @@ package com.group3.chat_api.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.group3.chat_api.controller.ConversationController;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import javax.imageio.IIOException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,8 +27,6 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
     // CONVERT TO ENUM LATER
     private final String USER_CONNECT = "USER_CONNECT";
     private final String USER_DISCONNECT = "USER_DISCONNECT";
-
-    public WebSocketHandler() {}
 
     private TextMessage createTextMessage(String messageType, Integer connectionCount) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -70,6 +69,7 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         log.info("WebSocket Message Received {}", message);
+        log.info(message.getPayload());
         sessions.forEach(conn -> {
             try {
                 if (!conn.getId().equals(session.getId())) {
@@ -81,6 +81,4 @@ public class WebSocketHandler extends AbstractWebSocketHandler {
             }
         });
     }
-
-
 }
