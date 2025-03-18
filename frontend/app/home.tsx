@@ -19,6 +19,9 @@ import { useStyle } from './context/StyleContext';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
+// Import axiosInstance from auth service
+import { axiosInstance } from '../services/auth';
+
 // Define API URL
 const API_URL = (() => {
   // For Railway deployment - ensure HTTPS for production
@@ -88,6 +91,12 @@ export default function Home() {
       fields: Object.keys(data).join(', ')
     });
     
+    // First, check if the user has already completed onboarding
+    if (data.hasCompletedOnboarding === true) {
+      console.log("User has already completed onboarding - skipping field checks");
+      return false;
+    }
+    
     // Check for missing critical fields
     const hasGender = data.gender != null && data.gender !== '' && data.gender !== 'undefined';
     const hasLookingFor = data.lookingFor != null && data.lookingFor !== '' && data.lookingFor !== 'undefined';
@@ -110,6 +119,54 @@ export default function Home() {
       useAuthStore.getState().setIsNewUser(true);
       router.replace('/startup');
       return true;
+    }
+    
+    // If they have all required fields but haven't been marked as completed onboarding,
+    // mark them as having completed onboarding
+    try {
+      console.log("Making API call to update hasCompletedOnboarding at:", `${API_URL}/api/auth/update-profile`);
+      
+      const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
+      const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      
+      const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+        { hasCompletedOnboarding: true },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': formattedToken
+          }
+        }
+      );
+      
+      console.log("API response for hasCompletedOnboarding update:", {
+        status: response.status,
+        data: response.data,
+        hasCompletedOnboarding: response.data?.hasCompletedOnboarding
+      });
+      
+      // Also explicitly update the local user data
+      if (response.data && response.status === 200) {
+        const authStore = useAuthStore.getState();
+        if (authStore.user) {
+          await authStore.setUser({
+            token: token || '',
+            user: {...authStore.user, hasCompletedOnboarding: true} as any
+          });
+          console.log("Auth store also updated with hasCompletedOnboarding=true");
+        }
+      }
+      
+      console.log("Marked user as having completed onboarding in the backend (retroactively)");
+    } catch (error) {
+      console.error("Failed to mark user as onboarded in backend:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("API Error details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+      }
     }
     
     console.log("All required fields present - no redirection needed");

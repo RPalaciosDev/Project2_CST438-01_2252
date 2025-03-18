@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../services/auth';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, parse } from 'date-fns';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
+import { axiosInstance } from '../services/auth';
 
 // Conditionally import ImagePicker to handle web/mobile compatibility issues
 let ImagePicker: any = null;
@@ -28,6 +31,19 @@ if (Platform.OS !== 'web') {
     console.warn('expo-image-picker not available:', e);
   }
 }
+
+// Define API URL - same as in home.tsx
+const API_URL = (() => {
+  // For Railway deployment - ensure HTTPS for production
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://auth-user-service-production.up.railway.app';
+  }
+  
+  // For local development
+  return Platform.OS === 'web' 
+      ? 'http://localhost:8080' 
+      : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
+})();
 
 enum OnboardingStep {
   NAME = 0,
@@ -83,6 +99,11 @@ export default function StartupScreen() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isSubmittingPicture, setIsSubmittingPicture] = useState(false);
   const [pictureError, setPictureError] = useState('');
+  
+  // Log API URL on component mount
+  useEffect(() => {
+    console.log("StartupScreen: Using API URL:", API_URL);
+  }, []);
   
   const saveNameAndContinue = async () => {
     if (!name.trim()) {
@@ -315,6 +336,8 @@ export default function StartupScreen() {
     setIsSubmittingPicture(true);
     setPictureError('');
     
+    console.log("savePictureAndComplete: Starting with useDefault =", useDefault);
+    
     try {
       // Use default picture if requested or if no picture was selected
       const pictureUrl = useDefault ? DEFAULT_PROFILE_PICTURE : (profilePicture || DEFAULT_PROFILE_PICTURE);
@@ -327,16 +350,49 @@ export default function StartupScreen() {
       
       // Update user's profile picture in the database
       const success = await updateUserPicture(pictureUrl);
+      console.log("Profile picture update success:", success);
       
       if (!success) {
         // If the update fails but we're using the default picture,
         // let's still complete the onboarding with a fallback
         if (useDefault || pictureUrl === DEFAULT_PROFILE_PICTURE) {
           console.log("Using fallback approach to complete onboarding");
+          
+          // Mark user as having completed onboarding in the backend
+          try {
+            const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
+            console.log("Token for API call:", token ? "Found token" : "No token available");
+            console.log("Making API call to:", `${API_URL}/api/auth/update-profile`);
+            
+            const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+              { hasCompletedOnboarding: true },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': formattedToken
+                }
+              }
+            );
+            console.log("API call response status:", response.status);
+            console.log("API call response data:", JSON.stringify(response.data));
+            console.log("Marked user as having completed onboarding in the backend");
+          } catch (error) {
+            console.error("Failed to mark user as onboarded in backend:", error);
+            if (axios.isAxiosError(error)) {
+              console.error("API Error details:", {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+              });
+            }
+          }
+          
           // Mark user as no longer new (completing onboarding)
           setIsNewUser(false);
           
           // Navigate to home page
+          console.log("Navigating to home page after completion");
           router.replace('/home');
           return;
         }
@@ -344,10 +400,41 @@ export default function StartupScreen() {
         throw new Error('Failed to update your profile picture. Please try again or use the default picture.');
       }
       
+      // Mark user as having completed onboarding in the backend
+      try {
+        const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
+        console.log("Token for API call:", token ? "Found token" : "No token available");
+        console.log("Making API call to:", `${API_URL}/api/auth/update-profile`);
+        
+        const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+        const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+          { hasCompletedOnboarding: true },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': formattedToken
+            }
+          }
+        );
+        console.log("API call response status:", response.status);
+        console.log("API call response data:", JSON.stringify(response.data));
+        console.log("Marked user as having completed onboarding in the backend");
+      } catch (error) {
+        console.error("Failed to mark user as onboarded in backend:", error);
+        if (axios.isAxiosError(error)) {
+          console.error("API Error details:", {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message
+          });
+        }
+      }
+      
       // Mark user as no longer new (completing onboarding)
       setIsNewUser(false);
       
       // Navigate to home page
+      console.log("Navigating to home page after completion");
       router.replace('/home');
     } catch (err) {
       setPictureError(err instanceof Error ? err.message : 'An error occurred. Please try again or use the default picture.');
@@ -751,8 +838,39 @@ export default function StartupScreen() {
         <TouchableOpacity 
           style={[styles.secondaryButton, isSubmittingPicture && styles.buttonDisabled]} 
           onPress={async () => {
+            // Mark user as having completed onboarding in the backend
+            try {
+              const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
+              console.log("Skip button: Token for API call:", token ? "Found token" : "No token available");
+              console.log("Skip button: Making API call to:", `${API_URL}/api/auth/update-profile`);
+              
+              const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
+              const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+                { hasCompletedOnboarding: true },
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': formattedToken
+                  }
+                }
+              );
+              console.log("Skip button: API call response status:", response.status);
+              console.log("Skip button: API call response data:", JSON.stringify(response.data));
+              console.log("Marked user as having completed onboarding in the backend (from skip)");
+            } catch (error) {
+              console.error("Failed to mark user as onboarded in backend:", error);
+              if (axios.isAxiosError(error)) {
+                console.error("Skip button API Error details:", {
+                  status: error.response?.status,
+                  data: error.response?.data,
+                  message: error.message
+                });
+              }
+            }
+            
             // Skip the whole picture step
             setIsNewUser(false);
+            console.log("Skip button: Navigating to home page after skipping picture");
             router.replace('/home');
           }}
           disabled={isSubmittingPicture}

@@ -14,7 +14,7 @@ const ensureHttps = (url: string): string => {
 };
 
 // Create axios instance with better timeout and retry configuration
-const axiosInstance = axios.create({
+export const axiosInstance = axios.create({
     timeout: 30000, // 30 seconds timeout
     withCredentials: true, // Add credentials for CORS requests
     headers: {

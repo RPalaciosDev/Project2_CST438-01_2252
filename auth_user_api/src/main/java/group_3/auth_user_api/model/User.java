@@ -20,9 +20,11 @@ public class User {
     private String gender;
     private String lookingFor;
     private int age;
+    private boolean hasCompletedOnboarding;
 
     public User() {
         this.createdAt = Instant.now();
+        this.hasCompletedOnboarding = false; // Default to false for new users
     }
 
     public User(String email, String name, String picture, List<String> roles) {
@@ -135,5 +137,13 @@ public class User {
 
     public void setAge(int age) {
         this.age = age;
+    }
+
+    public boolean getHasCompletedOnboarding() {
+        return hasCompletedOnboarding;
+    }
+
+    public void setHasCompletedOnboarding(boolean hasCompletedOnboarding) {
+        this.hasCompletedOnboarding = hasCompletedOnboarding;
     }
 }

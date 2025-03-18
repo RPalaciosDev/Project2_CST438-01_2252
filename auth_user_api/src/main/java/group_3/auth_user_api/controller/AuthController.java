@@ -85,13 +85,15 @@ public class AuthController {
         userResponse.put("lookingFor", user.getLookingFor()); // Use getLookingFor explicitly
         userResponse.put("age", user.getAge());
         userResponse.put("picture", user.getPicture());
+        userResponse.put("hasCompletedOnboarding", user.getHasCompletedOnboarding());
 
         // Add debugging info for frontend development
-        logger.info("User data for {}: gender={}, lookingFor={}, picture={}", 
+        logger.info("User data for {}: gender={}, lookingFor={}, picture={}, hasCompletedOnboarding={}", 
             user.getEmail(), 
             user.getGender(), 
             user.getLookingFor(),
-            user.getPicture() != null ? "has picture" : "no picture");
+            user.getPicture() != null ? "has picture" : "no picture",
+            user.getHasCompletedOnboarding());
 
         return ResponseEntity.ok(userResponse);
     }
@@ -740,6 +742,24 @@ public class AuthController {
                 }
             }
             
+            // Update hasCompletedOnboarding if provided
+            if (updateRequest.containsKey("hasCompletedOnboarding")) {
+                Object onboardingValue = updateRequest.get("hasCompletedOnboarding");
+                Boolean newHasCompletedOnboarding = null;
+                
+                if (onboardingValue instanceof Boolean) {
+                    newHasCompletedOnboarding = (Boolean) onboardingValue;
+                } else if (onboardingValue instanceof String) {
+                    newHasCompletedOnboarding = Boolean.parseBoolean((String) onboardingValue);
+                }
+                
+                if (newHasCompletedOnboarding != null) {
+                    logger.info("Updating onboarding status for user {}: {} -> {}", 
+                        user.getId(), user.getHasCompletedOnboarding(), newHasCompletedOnboarding);
+                    user.setHasCompletedOnboarding(newHasCompletedOnboarding);
+                }
+            }
+            
             // Update profile picture if provided
             if (updateRequest.containsKey("picture")) {
                 try {
@@ -783,6 +803,7 @@ public class AuthController {
             userResponse.put("gender", user.getGender());
             userResponse.put("lookingFor", user.getLookingFor());
             userResponse.put("picture", user.getPicture());
+            userResponse.put("hasCompletedOnboarding", user.getHasCompletedOnboarding());
             
             return ResponseEntity.ok(userResponse);
         } catch (Exception e) {

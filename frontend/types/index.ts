@@ -8,6 +8,8 @@ export interface User {
     age?: number;
     gender?: string;
     lookingFor?: string;
+    picture?: string;
+    hasCompletedOnboarding?: boolean;
 }
 
 export interface AuthStatusResponse {
