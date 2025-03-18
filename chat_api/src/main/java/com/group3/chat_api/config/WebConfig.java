@@ -26,6 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
         } else {
             // Default allowed origins for local development
             allowedOrigins = new String[] {
+                    "http://localhost:8080",
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "https://app.yourdomain.com" // Railway frontend domain
@@ -34,7 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
         }
 
         registry.addMapping("/**")
-//                .allowedOrigins(allowedOrigins)
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("Authorization", "Content-Type", "x-auth-token")
                 .exposedHeaders("x-auth-token")
