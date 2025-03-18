@@ -22,6 +22,13 @@ client = MongoClient(MONGO_URI)
 db = client["auth_db"]
 users_collection = db["users"]
 
+# Log MongoDB connection status
+try:
+    db.command("ping")  # Test connection
+    print("✅ Successfully connected to MongoDB!", flush=True) 
+except Exception as e:
+    print(f"❌ MongoDB Connection Failed: {e}", flush=True)
+
 # Connect to RabbitMQ
 rabbitmq_connection = RabbitMQConnection(
     host=os.getenv("RABBITMQ_HOST", "localhost"),
@@ -133,14 +140,30 @@ def schedule_daily_matching():
     print("Daily matching completed!")
 
 def get_user_info(user_id):
-    """Retrieve user info from MongoDB by user_id."""
-    user = users_collection.find_one({"user_id": user_id})  
+    """Retrieve user info from MongoDB by _id or username."""
+    
+    # Check if user_id is an ObjectId
+    query = {"_id": ObjectId(user_id)} if ObjectId.is_valid(user_id) else {"username": user_id}
+
+    user = users_collection.find_one(query)
     if user:
         return {
-            "sex": user.get("sex", "unknown"), 
-            "lookingFor": user.get("lookingFor", "both")
+            "sex": user.get("gender", "unknown"),  # MongoDB uses "gender" instead of "sex"
+            "lookingFor": user.get("lookingFor", "both"),
+            "username": user.get("username"),
+            "email": user.get("email"),
+            "age": user.get("age"),
         }
     return None
+
+@app.route("/get_all_users", methods=["GET"])
+def get_all_users():
+    """Fetches all users from MongoDB."""
+    users = list(users_collection.find({}, {"password": 0}))  # Exclude password for security
+    for user in users:
+        user["_id"] = str(user["_id"])  # Convert ObjectId to string for JSON
+    return jsonify(users)
+
 
 def is_match_compatible(user_sex, user_looking_for, other_sex, other_looking_for):
     """Checks if two users are compatible based on their sex and lookingFor preferences."""
