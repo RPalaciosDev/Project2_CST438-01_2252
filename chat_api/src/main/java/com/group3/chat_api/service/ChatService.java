@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -16,7 +17,7 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
 
-    public List<Chat> getChats(String conversationId) {
+    public List<Chat> getChats(UUID conversationId) {
         return chatRepository.findByConversationId(conversationId);
     }
 }

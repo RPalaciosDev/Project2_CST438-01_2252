@@ -22,10 +22,10 @@ import java.util.UUID;
 @Setter
 public class Chat {
     private UUID chatId;
-    @PrimaryKeyColumn(name = "conversationId", ordinal = 0, type = PrimaryKeyType.CLUSTERED) private UUID conversationId;
+    @PrimaryKeyColumn(name = "conversationid", ordinal = 0, type = PrimaryKeyType.CLUSTERED) private UUID conversationId;
     private UUID senderId;
     private String message;
-    @PrimaryKeyColumn(name = "sent_at", ordinal = 1, type = PrimaryKeyType.PARTITIONED, ordering = Ordering.DESCENDING) private LocalDateTime sentAt;
+    @PrimaryKeyColumn(name = "sentat", ordinal = 1, type = PrimaryKeyType.PARTITIONED, ordering = Ordering.DESCENDING) private LocalDateTime sentAt;
 
     @Override
     public String toString() {

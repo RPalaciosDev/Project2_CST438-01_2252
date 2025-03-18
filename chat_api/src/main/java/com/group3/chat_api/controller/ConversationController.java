@@ -66,7 +66,6 @@ public class ConversationController {
     public ResponseEntity<ConversationResponse> getConversation(@PathVariable UUID conversationId,
                                                                 @RequestHeader("X-User-Id") UUID userId) {
         try {
-//            UUID convoID = UUID.fromString(conversationId);
             Conversation conversation = conversationService.getConversation(conversationId);
             if (conversation == null) {
                 return ResponseEntity.notFound().build();
