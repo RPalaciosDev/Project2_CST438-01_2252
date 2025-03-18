@@ -14,8 +14,6 @@ public class ConversationMapper {
     public Conversation toEntity(ConversationRequest conversationRequest) {
         return Conversation.builder()
                 .conversationId(UUID.randomUUID())
-                .participant1(UUID.fromString(conversationRequest.getParticipant1()))
-                .participant2(UUID.fromString(conversationRequest.getParticipant2()))
                 .createdAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now())
                 .locked(false)
@@ -25,8 +23,6 @@ public class ConversationMapper {
     public ConversationResponse toResponse(Conversation conversation) {
         return ConversationResponse.builder()
                 .conversationId(conversation.getConversationId())
-                .participant1(conversation.getParticipant1())
-                .participant2(conversation.getParticipant2())
                 .createdAt(conversation.getCreatedAt())
                 .expiresAt(conversation.getExpiresAt())
                 .locked(conversation.getLocked())

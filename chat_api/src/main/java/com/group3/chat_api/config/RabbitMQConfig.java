@@ -55,8 +55,18 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue chatQueue() {
+        return new Queue("chat-queue");
+    }
+
+    @Bean
     public Exchange exchange() {
         return new DirectExchange("proj2");
+    }
+
+    @Bean
+    public TopicExchange chatExchange() {
+        return new TopicExchange("proj2.chat");
     }
 
     @Bean
@@ -73,5 +83,12 @@ public class RabbitMQConfig {
                 .to(exchange)
                 .with(authRoutingKey)
                 .noargs();
+    }
+
+    @Bean
+    public Binding bindingChat(Queue chatQueue, TopicExchange chatExchange) {
+        return BindingBuilder.bind(chatQueue)
+                .to(chatExchange)
+                .with("#");
     }
 }

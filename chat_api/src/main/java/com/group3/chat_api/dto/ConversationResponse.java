@@ -11,8 +11,6 @@ import java.util.UUID;
 @Builder
 public class ConversationResponse {
     private UUID conversationId;
-    private UUID participant1;
-    private UUID participant2;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private Boolean locked;

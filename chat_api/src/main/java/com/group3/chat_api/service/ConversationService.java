@@ -8,13 +8,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConversationService {
-
     private final ConversationRepository conversationRepository;
 
     public Conversation createConversation(Conversation conversation) {
@@ -27,11 +28,29 @@ public class ConversationService {
         return conversationRepository.save(conversation);
     }
 
-    public List<Conversation> getAllConversations(String userId) {
-        return conversationRepository.findByParticipant1OrParticipant2(userId);
+    public List<Conversation> getAllConversations(List<UUID> conversationIds) {
+        try {
+            List<Conversation> conversationList = new ArrayList<>();
+            for (UUID convoId : conversationIds) {
+                Conversation convo = conversationRepository.findByConversationId(convoId);
+
+                if (convo != null) {
+                    conversationList.add(convo);
+                }
+            }
+            return conversationList;
+        } catch (Exception e) {
+            log.error("Error retrieving conversations: ", e);
+            throw new RuntimeException(e);
+        }
     }
 
-    public Conversation getConversation(String conversationId) {
-       return conversationRepository.findByConversationId(conversationId);
+    public Conversation getConversation(UUID conversationId) {
+        try {
+            return conversationRepository.findByConversationId(conversationId);
+        } catch (Exception e) {
+            log.error("Error retrieving conversation by id: ", e);
+            throw new RuntimeException(e);
+        }
     }
 }

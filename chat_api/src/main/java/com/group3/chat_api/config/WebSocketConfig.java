@@ -1,45 +1,59 @@
 package com.group3.chat_api.config;
 
-import com.group3.chat_api.handler.WebSocketHandler;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import com.group3.chat_api.controller.ConversationController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.socket.config.annotation.*;
 
 import java.util.Arrays;
 
 @Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
-
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private static final Logger log = LoggerFactory.getLogger(ConversationController.class);
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Get allowed origins from environment variable or use defaults
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
         String allowedOriginsStr = System.getenv("ALLOWED_ORIGINS");
         String[] allowedOrigins;
 
         if (allowedOriginsStr != null && !allowedOriginsStr.isEmpty()) {
             // Split comma-separated list of allowed origins
             allowedOrigins = allowedOriginsStr.split(",");
-            logger.info("WebSocket allowed origins set from environment: {}", allowedOriginsStr);
+            log.info("CORS allowed origins set from environment: {}", allowedOriginsStr);
         } else {
             // Default allowed origins for local development
             allowedOrigins = new String[] {
-                    "ws://localhost:19006",
-                    "ws://localhost:19000",
-                    "ws://app.yourdomain.com" // Railway frontend domain
+                    "http://localhost:8080",
+                    "http://localhost:8081",
+                    "http://localhost:19006",
+                    "http://localhost:19000",
+                    "https://app.yourdomain.com" // Railway frontend domain
             };
-            logger.info("Using default WebSocket allowed origins: {}", Arrays.toString(allowedOrigins));
+            log.info("Using default CORS allowed origins: {}", Arrays.toString(allowedOrigins));
         }
 
-        registry.addHandler(new WebSocketHandler(), "/ws")
-                .setAllowedOrigins(allowedOrigins);
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins("http://localhost:8081")
+                .withSockJS();
+    }
 
-        logger.info("WebSocket handler registered with CORS configuration");
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry
+                .setApplicationDestinationPrefixes("/chat")
+                .enableSimpleBroker("/topic")
+                .setTaskScheduler(heartBeatScheduler())
+                .setHeartbeatValue(new long[] {10000L, 10000L});
+    }
+
+    @Bean
+    public TaskScheduler heartBeatScheduler() {
+        return new ThreadPoolTaskScheduler();
     }
 }

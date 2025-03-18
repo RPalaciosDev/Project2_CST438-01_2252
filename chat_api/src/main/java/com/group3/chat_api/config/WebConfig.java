@@ -26,6 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
         } else {
             // Default allowed origins for local development
             allowedOrigins = new String[] {
+                    "http://localhost:8080",
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "https://app.yourdomain.com" // Railway frontend domain
