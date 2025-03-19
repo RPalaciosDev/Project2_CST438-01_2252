@@ -3,18 +3,18 @@ package group_3.tierlistservice.config;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.NoOpDbRefResolver;
+import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
-import org.springframework.context.annotation.Bean;
-import org.springframework.core.convert.converter.Converter;
-import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 
 @Configuration
 @EnableMongoRepositories(basePackages = "group_3.tierlistservice.repository")
@@ -61,42 +61,25 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     }
 
     /**
-     * Configure custom conversions to handle ID formats properly
+     * Override the default MappingMongoConverter to fix conversion issues
      */
     @Bean
-    @Override
-    public MongoCustomConversions customConversions() {
-        List<Converter<?, ?>> converters = new ArrayList<>();
-        // Add converters for String to ObjectId and vice versa
-        converters.add(new StringToObjectIdConverter());
-        converters.add(new ObjectIdToStringConverter());
-        return new MongoCustomConversions(converters);
-    }
-
-    /**
-     * Converter to transform String to ObjectId
-     */
-    private static class StringToObjectIdConverter implements Converter<String, ObjectId> {
-        @Override
-        public ObjectId convert(String source) {
-            try {
-                return new ObjectId(source);
-            } catch (Exception e) {
-                // Log the error but don't throw it
-                LoggerFactory.getLogger(StringToObjectIdConverter.class)
-                        .error("Failed to convert String to ObjectId: {}", source);
-                return null;
-            }
-        }
-    }
-
-    /**
-     * Converter to transform ObjectId to String
-     */
-    private static class ObjectIdToStringConverter implements Converter<ObjectId, String> {
-        @Override
-        public String convert(ObjectId source) {
-            return source.toString();
-        }
+    public MappingMongoConverter mappingMongoConverter() {
+        logger.info("Creating custom MappingMongoConverter without ObjectId conversion for strings");
+        MongoMappingContext mappingContext = new MongoMappingContext();
+        mappingContext.setAutoIndexCreation(true);
+        
+        // Create a converter that doesn't try to convert strings to ObjectId
+        MappingMongoConverter converter = new MappingMongoConverter(
+                NoOpDbRefResolver.INSTANCE, mappingContext);
+        
+        // Don't convert underscore to dot in map keys
+        converter.setMapKeyDotReplacement("_");
+        
+        // Use empty custom conversions to prevent automatic conversions
+        converter.setCustomConversions(new MongoCustomConversions(Collections.emptyList()));
+        converter.afterPropertiesSet();
+        
+        return converter;
     }
 }

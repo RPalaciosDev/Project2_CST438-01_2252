@@ -38,11 +38,11 @@ const API_URL = (() => {
   if (process.env.NODE_ENV === 'production') {
     return 'https://auth-user-service-production.up.railway.app';
   }
-  
+
   // For local development
-  return Platform.OS === 'web' 
-      ? 'http://localhost:8080' 
-      : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
+  return Platform.OS === 'web'
+    ? 'http://localhost:8080'
+    : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
 })();
 
 enum OnboardingStep {
@@ -66,45 +66,45 @@ export default function StartupScreen() {
   const router = useRouter();
   const { user, updateUserName, updateUserAge, updateUserGender, updateUserPreferences, updateUserPicture, logout, deleteUserAccount, setIsNewUser } = useAuthStore();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.NAME);
-  
+
   // Name step state
   const [name, setName] = useState(user?.name || user?.username || '');
   const [isSubmittingName, setIsSubmittingName] = useState(false);
   const [nameError, setNameError] = useState('');
-  
+
   // Age verification step state
   const [dateOfBirth, setDateOfBirth] = useState(new Date(2000, 0, 1));
   const [isSubmittingAge, setIsSubmittingAge] = useState(false);
   const [ageError, setAgeError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  
+
   // Add a state for showing the custom alert modal
   const [showAgeAlert, setShowAgeAlert] = useState(false);
-  
+
   // Add gender selection state
   const [selectedGender, setSelectedGender] = useState<Gender | null>(null);
   const [isSubmittingGender, setIsSubmittingGender] = useState(false);
   const [genderError, setGenderError] = useState('');
   const [customGender, setCustomGender] = useState('');
   const [showCustomGenderInput, setShowCustomGenderInput] = useState(false);
-  
+
   // Add dating preferences state
   const [selectedPreferences, setSelectedPreferences] = useState<DatingPreference[]>([]);
   const [isSubmittingPreferences, setIsSubmittingPreferences] = useState(false);
   const [preferencesError, setPreferencesError] = useState('');
   const [customPreference, setCustomPreference] = useState('');
   const [showCustomPreferenceInput, setShowCustomPreferenceInput] = useState(false);
-  
+
   // Add profile picture state
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isSubmittingPicture, setIsSubmittingPicture] = useState(false);
   const [pictureError, setPictureError] = useState('');
-  
+
   // Log API URL on component mount
   useEffect(() => {
     console.log("StartupScreen: Using API URL:", API_URL);
   }, []);
-  
+
   const saveNameAndContinue = async () => {
     if (!name.trim()) {
       setNameError('Please enter your name');
@@ -113,7 +113,7 @@ export default function StartupScreen() {
 
     setIsSubmittingName(true);
     setNameError('');
-    
+
     try {
       // Update user's name
       if (name !== user?.name) {
@@ -122,7 +122,7 @@ export default function StartupScreen() {
           throw new Error('Failed to update your name. Please try again.');
         }
       }
-      
+
       // Advance to age verification step
       setCurrentStep(OnboardingStep.AGE_VERIFICATION);
     } catch (err) {
@@ -131,32 +131,32 @@ export default function StartupScreen() {
       setIsSubmittingName(false);
     }
   };
-  
+
   const calculateAge = (birthDate: Date) => {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDifference = today.getMonth() - birthDate.getMonth();
-    
+
     // If birthday hasn't occurred yet this year, subtract a year
     if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   };
-  
+
   const handleDatePickerChange = (event: any, selectedDate?: Date) => {
     // Dismiss the picker on Android after selection
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-    
+
     // Only update if a date was actually selected
     if (selectedDate && event.type !== 'dismissed') {
       setDateOfBirth(selectedDate);
     }
   };
-  
+
   const handleUnderageUser = async () => {
     if (Platform.OS === 'web') {
       // For web, show our custom modal instead of Alert
@@ -177,7 +177,7 @@ export default function StartupScreen() {
       );
     }
   };
-  
+
   const handleAccountDeletion = async () => {
     try {
       // Delete user account
@@ -186,7 +186,7 @@ export default function StartupScreen() {
       if (!deleteSuccess) {
         console.error("Failed to delete account");
       }
-      
+
       // Log out and redirect to login
       await logout();
       router.replace('/sign-in');
@@ -197,26 +197,26 @@ export default function StartupScreen() {
       router.replace('/sign-in');
     }
   };
-  
+
   const saveAgeAndContinue = async () => {
     setIsSubmittingAge(true);
     setAgeError('');
-    
+
     try {
       const age = calculateAge(dateOfBirth);
-      
+
       // Check if user is underage
       if (age < 18) {
         handleUnderageUser();
         return;
       }
-      
+
       // Update user's age in the database
       const success = await updateUserAge(age);
       if (!success) {
         throw new Error('Failed to update your age information. Please try again.');
       }
-      
+
       // Advance to gender selection instead of completing
       setCurrentStep(OnboardingStep.GENDER_SELECTION);
     } catch (err) {
@@ -225,7 +225,7 @@ export default function StartupScreen() {
       setIsSubmittingAge(false);
     }
   };
-  
+
   // Add function to save gender and continue to preferences
   const saveGenderAndContinue = async () => {
     if (!selectedGender) {
@@ -235,19 +235,19 @@ export default function StartupScreen() {
 
     setIsSubmittingGender(true);
     setGenderError('');
-    
+
     try {
       // Get final gender value (which might be custom)
-      const finalGender = selectedGender === 'Other' && customGender.trim() 
-        ? customGender.trim() 
+      const finalGender = selectedGender === 'Other' && customGender.trim()
+        ? customGender.trim()
         : selectedGender;
-      
+
       // Update user's gender in the database
       const success = await updateUserGender(finalGender);
       if (!success) {
         throw new Error('Failed to update your gender information. Please try again.');
       }
-      
+
       // Advance to dating preferences step
       setCurrentStep(OnboardingStep.DATING_PREFERENCES);
     } catch (err) {
@@ -256,7 +256,7 @@ export default function StartupScreen() {
       setIsSubmittingGender(false);
     }
   };
-  
+
   // Update function to save preferences and continue to profile picture step
   const savePreferencesAndComplete = async () => {
     if (selectedPreferences.length === 0) {
@@ -266,23 +266,23 @@ export default function StartupScreen() {
 
     setIsSubmittingPreferences(true);
     setPreferencesError('');
-    
+
     try {
       // Format preferences as comma-separated string
       let preferencesString = selectedPreferences.join(', ');
-      
+
       // Add custom preference if provided
       if (selectedPreferences.includes('Other') && customPreference.trim()) {
         // Replace "Other" with the actual custom value
         preferencesString = preferencesString.replace('Other', customPreference.trim());
       }
-      
+
       // Update user's preferences in the database
       const success = await updateUserPreferences(preferencesString);
       if (!success) {
         throw new Error('Failed to update your preferences. Please try again.');
       }
-      
+
       // Advance to profile picture step instead of completing
       setCurrentStep(OnboardingStep.PROFILE_PICTURE);
     } catch (err) {
@@ -291,7 +291,7 @@ export default function StartupScreen() {
       setIsSubmittingPreferences(false);
     }
   };
-  
+
   // Add function to pick an image from the gallery
   const pickImage = async () => {
     try {
@@ -303,12 +303,12 @@ export default function StartupScreen() {
         // Native implementation using expo-image-picker
         // Request permission to access the media library
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
+
         if (status !== 'granted') {
           setPictureError('We need permission to access your photos to set a profile picture.');
           return;
         }
-        
+
         // Launch the image picker
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -316,7 +316,7 @@ export default function StartupScreen() {
           aspect: [1, 1],
           quality: 0.7,
         });
-        
+
         if (!result.canceled && result.assets && result.assets.length > 0) {
           // Set the selected image URI
           setProfilePicture(result.assets[0].uri);
@@ -330,27 +330,27 @@ export default function StartupScreen() {
       console.error('Image picking error:', error);
     }
   };
-  
+
   // Add picture and complete onboarding
   const uploadPictureAndComplete = async (pictureUrl: string, useDefault: boolean = false) => {
     setIsSubmittingPicture(true);
     setPictureError('');
-    
+
     try {
       console.log("Uploading profile picture and completing onboarding");
-      
+
       // Update user's profile picture in the database
       const success = await updateUserPicture(pictureUrl);
       console.log("Profile picture update success:", success);
-      
+
       // Mark user as having completed onboarding in the backend
       try {
         const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
         console.log("Making API call to mark onboarding as completed");
-        
+
         const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
-          { 
+        const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`,
+          {
             hasCompletedOnboarding: true,
             // Also ensure other critical fields are set for backward compatibility
             gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
@@ -365,17 +365,17 @@ export default function StartupScreen() {
             }
           }
         );
-        
+
         if (response.status === 200) {
           console.log("Successfully marked user as having completed onboarding");
-          
+
           // Update local store with the updated user data
           const authStore = useAuthStore.getState();
           if (authStore.user) {
             await authStore.setUser({
               token: token || '',
               user: {
-                ...authStore.user, 
+                ...authStore.user,
                 hasCompletedOnboarding: true,
                 hasDoneInitialSetup: true,
                 gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
@@ -397,17 +397,17 @@ export default function StartupScreen() {
           });
         }
       }
-      
+
       // Mark user as no longer new (completing onboarding)
       setIsNewUser(false);
-      
+
       // Fetch fresh user data to ensure everything is in sync before navigating
       try {
         await useAuthStore.getState().checkStatus();
       } catch (e) {
         console.error("Error refreshing user data:", e);
       }
-      
+
       // Navigate to home page
       console.log("Navigating to home page after completion");
       router.replace('/home');
@@ -417,7 +417,7 @@ export default function StartupScreen() {
       setIsSubmittingPicture(false);
     }
   };
-  
+
   const renderNameStep = () => (
     <View style={styles.card}>
       <Text style={styles.title}>Getting Started</Text>
@@ -425,7 +425,7 @@ export default function StartupScreen() {
         LoveTiers helps you create and share tier lists for anything you love.
         Rate, organize, and discover new content with our easy-to-use platform.
       </Text>
-      
+
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>First, tell us your name:</Text>
         <TextInput
@@ -439,24 +439,24 @@ export default function StartupScreen() {
         />
         {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
       </View>
-      
+
       <View style={styles.featureContainer}>
-        <FeatureItem 
-          title="Create Tier Lists" 
+        <FeatureItem
+          title="Create Tier Lists"
           description="Build personalized tier lists for games, movies, music, and more"
         />
-        <FeatureItem 
-          title="Share with Friends" 
+        <FeatureItem
+          title="Share with Friends"
           description="Share your tier lists and see what others are ranking"
         />
-        <FeatureItem 
-          title="Join Discussions" 
+        <FeatureItem
+          title="Join Discussions"
           description="Chat about your favorite topics and discover new perspectives"
         />
       </View>
-      
-      <TouchableOpacity 
-        style={[styles.button, isSubmittingName && styles.buttonDisabled]} 
+
+      <TouchableOpacity
+        style={[styles.button, isSubmittingName && styles.buttonDisabled]}
         onPress={saveNameAndContinue}
         disabled={isSubmittingName}
       >
@@ -468,22 +468,22 @@ export default function StartupScreen() {
       </TouchableOpacity>
     </View>
   );
-  
+
   const renderAgeVerificationStep = () => (
     <View style={styles.card}>
       <Text style={styles.title}>Age Verification</Text>
       <Text style={styles.description}>
         Please enter your date of birth. You must be at least 18 years old to use LoveTiers.
       </Text>
-      
+
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Your date of birth:</Text>
-        
+
         {Platform.OS === 'web' ? (
           // Always show the web version on web platforms
           <View style={styles.webPickerContainer}>
             <View style={styles.webPickerRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -493,10 +493,10 @@ export default function StartupScreen() {
               >
                 <Text style={styles.webPickerButtonText}>- Year</Text>
               </TouchableOpacity>
-              
+
               <Text style={styles.webPickerValue}>{format(dateOfBirth, 'yyyy')}</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -508,9 +508,9 @@ export default function StartupScreen() {
                 <Text style={styles.webPickerButtonText}>+ Year</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.webPickerRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -520,10 +520,10 @@ export default function StartupScreen() {
               >
                 <Text style={styles.webPickerButtonText}>- Month</Text>
               </TouchableOpacity>
-              
+
               <Text style={styles.webPickerValue}>{format(dateOfBirth, 'MMMM')}</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -534,9 +534,9 @@ export default function StartupScreen() {
                 <Text style={styles.webPickerButtonText}>+ Month</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.webPickerRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -546,10 +546,10 @@ export default function StartupScreen() {
               >
                 <Text style={styles.webPickerButtonText}>- Day</Text>
               </TouchableOpacity>
-              
+
               <Text style={styles.webPickerValue}>{format(dateOfBirth, 'd')}</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.webPickerButton}
                 onPress={() => {
                   const newDate = new Date(dateOfBirth);
@@ -564,15 +564,15 @@ export default function StartupScreen() {
         ) : (
           // For mobile platforms
           <>
-            <TouchableOpacity 
-              style={styles.datePickerButton} 
+            <TouchableOpacity
+              style={styles.datePickerButton}
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={styles.datePickerButtonText}>
                 {format(dateOfBirth, 'MMMM d, yyyy')}
               </Text>
             </TouchableOpacity>
-            
+
             {showDatePicker && (
               <View>
                 {Platform.OS === 'ios' ? (
@@ -597,21 +597,21 @@ export default function StartupScreen() {
             )}
           </>
         )}
-        
+
         {ageError ? <Text style={styles.errorText}>{ageError}</Text> : null}
       </View>
-      
+
       <Text style={styles.ageText}>
         Your age: <Text style={styles.ageBold}>{calculateAge(dateOfBirth)}</Text> years old
       </Text>
-      
+
       <Text style={styles.disclaimer}>
-        By continuing, you confirm that the date of birth you entered is accurate. 
+        By continuing, you confirm that the date of birth you entered is accurate.
         Users under 18 years old are not permitted to use this application.
       </Text>
-      
-      <TouchableOpacity 
-        style={[styles.button, isSubmittingAge && styles.buttonDisabled]} 
+
+      <TouchableOpacity
+        style={[styles.button, isSubmittingAge && styles.buttonDisabled]}
         onPress={saveAgeAndContinue}
         disabled={isSubmittingAge}
       >
@@ -623,7 +623,7 @@ export default function StartupScreen() {
       </TouchableOpacity>
     </View>
   );
-  
+
   // Add function to render gender selection step
   const renderGenderSelectionStep = () => (
     <View style={styles.card}>
@@ -631,7 +631,7 @@ export default function StartupScreen() {
       <Text style={styles.description}>
         Select your gender to help us personalize your experience.
       </Text>
-      
+
       <View style={styles.genderOptionsContainer}>
         {['Male', 'Female', 'Non-Binary', 'Transgender Male', 'Transgender Female', 'Other', 'Prefer not to say'].map((gender) => (
           <TouchableOpacity
@@ -645,7 +645,7 @@ export default function StartupScreen() {
               setShowCustomGenderInput(gender === 'Other');
             }}
           >
-            <Text 
+            <Text
               style={[
                 styles.genderOptionText,
                 selectedGender === gender && styles.genderOptionTextSelected
@@ -656,7 +656,7 @@ export default function StartupScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      
+
       {showCustomGenderInput && (
         <View style={styles.customGenderContainer}>
           <Text style={styles.inputLabel}>Please specify:</Text>
@@ -671,15 +671,15 @@ export default function StartupScreen() {
           />
         </View>
       )}
-      
+
       {genderError ? <Text style={styles.errorText}>{genderError}</Text> : null}
-      
+
       <Text style={styles.disclaimer}>
         Your information is private and will only be used to enhance your experience.
       </Text>
-      
-      <TouchableOpacity 
-        style={[styles.button, isSubmittingGender && styles.buttonDisabled]} 
+
+      <TouchableOpacity
+        style={[styles.button, isSubmittingGender && styles.buttonDisabled]}
         onPress={saveGenderAndContinue}
         disabled={isSubmittingGender}
       >
@@ -691,7 +691,7 @@ export default function StartupScreen() {
       </TouchableOpacity>
     </View>
   );
-  
+
   // Add function to render dating preferences step
   const renderDatingPreferencesStep = () => {
     // Helper function to toggle preference selection
@@ -710,14 +710,14 @@ export default function StartupScreen() {
         }
       }
     };
-    
+
     return (
       <View style={styles.card}>
         <Text style={styles.title}>Dating Preferences</Text>
         <Text style={styles.description}>
           Select all genders you're interested in dating. Your selection helps us match you with compatible people.
         </Text>
-        
+
         <View style={styles.preferencesContainer}>
           {['Male', 'Female', 'Non-Binary', 'Transgender Male', 'Transgender Female', 'Other'].map((preference) => (
             <TouchableOpacity
@@ -728,7 +728,7 @@ export default function StartupScreen() {
               ]}
               onPress={() => togglePreference(preference as DatingPreference)}
             >
-              <Text 
+              <Text
                 style={[
                   styles.preferenceOptionText,
                   selectedPreferences.includes(preference as DatingPreference) && styles.preferenceOptionTextSelected
@@ -744,7 +744,7 @@ export default function StartupScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        
+
         {showCustomPreferenceInput && (
           <View style={styles.customPreferenceContainer}>
             <Text style={styles.inputLabel}>Please specify:</Text>
@@ -758,15 +758,15 @@ export default function StartupScreen() {
             />
           </View>
         )}
-        
+
         {preferencesError ? <Text style={styles.errorText}>{preferencesError}</Text> : null}
-        
+
         <Text style={styles.disclaimer}>
           You can always change your preferences later in your profile settings.
         </Text>
-        
-        <TouchableOpacity 
-          style={[styles.button, isSubmittingPreferences && styles.buttonDisabled]} 
+
+        <TouchableOpacity
+          style={[styles.button, isSubmittingPreferences && styles.buttonDisabled]}
           onPress={savePreferencesAndComplete}
           disabled={isSubmittingPreferences}
         >
@@ -779,7 +779,7 @@ export default function StartupScreen() {
       </View>
     );
   };
-  
+
   // Add function to render profile picture step
   const renderProfilePictureStep = () => (
     <View style={styles.card}>
@@ -787,14 +787,14 @@ export default function StartupScreen() {
       <Text style={styles.description}>
         Upload a profile picture or use our default option. This step is optional and can be skipped.
       </Text>
-      
+
       <View style={styles.profilePictureContainer}>
-        <Image 
+        <Image
           source={{ uri: profilePicture || DEFAULT_PROFILE_PICTURE }}
           style={styles.profilePicturePreview}
         />
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.pictureButton}
           onPress={pickImage}
           disabled={isSubmittingPicture}
@@ -802,16 +802,16 @@ export default function StartupScreen() {
           <Text style={styles.pictureButtonText}>Choose from Gallery</Text>
         </TouchableOpacity>
       </View>
-      
+
       {pictureError ? <Text style={styles.errorText}>{pictureError}</Text> : null}
-      
+
       <Text style={styles.disclaimer}>
         Your profile picture will be visible to other users.
       </Text>
-      
+
       <View style={styles.buttonRow}>
-        <TouchableOpacity 
-          style={[styles.alternateButton, isSubmittingPicture && styles.buttonDisabled]} 
+        <TouchableOpacity
+          style={[styles.alternateButton, isSubmittingPicture && styles.buttonDisabled]}
           onPress={() => uploadPictureAndComplete(DEFAULT_PROFILE_PICTURE, true)}
           disabled={isSubmittingPicture}
         >
@@ -821,9 +821,9 @@ export default function StartupScreen() {
             <Text style={styles.alternateButtonText}>Use Default</Text>
           )}
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, isSubmittingPicture && styles.buttonDisabled]} 
+
+        <TouchableOpacity
+          style={[styles.button, isSubmittingPicture && styles.buttonDisabled]}
           onPress={() => uploadPictureAndComplete(profilePicture || DEFAULT_PROFILE_PICTURE, false)}
           disabled={isSubmittingPicture || !profilePicture}
         >
@@ -836,7 +836,7 @@ export default function StartupScreen() {
       </View>
     </View>
   );
-  
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -847,7 +847,7 @@ export default function StartupScreen() {
           <Text style={styles.welcomeText}>
             Welcome to LoveTiers{user?.name ? `, ${user.name}` : ''}!
           </Text>
-          
+
           {currentStep === OnboardingStep.NAME && renderNameStep()}
           {currentStep === OnboardingStep.AGE_VERIFICATION && renderAgeVerificationStep()}
           {currentStep === OnboardingStep.GENDER_SELECTION && renderGenderSelectionStep()}
@@ -855,7 +855,7 @@ export default function StartupScreen() {
           {currentStep === OnboardingStep.PROFILE_PICTURE && renderProfilePictureStep()}
         </View>
       </ScrollView>
-      
+
       {/* Custom alert modal for web */}
       {Platform.OS === 'web' && (
         <Modal

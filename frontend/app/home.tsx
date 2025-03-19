@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  ScrollView, 
-  ActivityIndicator, 
-  Alert, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Platform
@@ -28,11 +28,11 @@ const API_URL = (() => {
   if (process.env.NODE_ENV === 'production') {
     return 'https://auth-user-service-production.up.railway.app';
   }
-  
+
   // For local development
-  return Platform.OS === 'web' 
-      ? 'http://localhost:8080' 
-      : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
+  return Platform.OS === 'web'
+    ? 'http://localhost:8080'
+    : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
 })();
 
 // Define a styled component for the home page
@@ -61,17 +61,17 @@ export default function Home() {
   const [pickerValue, setPickerValue] = useState(selectedStyle);
   const [gender, setGender] = useState('');
   const [lookingFor, setLookingFor] = useState('');
-  
+
   // Add state for complete user data from API
   const [apiUserData, setApiUserData] = useState<any>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
-  
+
   // State to track if there are unsaved changes
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // Flag to prevent resetting state from user object after initial load
   const initialLoadComplete = useRef(false);
-  
+
   // Animated value for slide-up button - start at -100 to be hidden initially
   const slideAnim = useRef(new Animated.Value(-100)).current;
 
@@ -84,24 +84,24 @@ export default function Home() {
       router.replace('/startup');
       return true;
     }
-    
+
     // First and most important check - if user has already completed onboarding, don't redirect
     if (data.hasCompletedOnboarding === true) {
       console.log("User has already completed onboarding - skipping field checks");
       return false;
     }
-    
+
     console.log("Checking user data for required fields:", {
       dataType: typeof data,
       hasDataObject: !!data,
       fields: Object.keys(data).join(', ')
     });
-    
+
     // Check for missing critical fields
     const hasGender = data.gender != null && data.gender !== '' && data.gender !== 'undefined';
     const hasLookingFor = data.lookingFor != null && data.lookingFor !== '' && data.lookingFor !== 'undefined';
     const hasAge = data.age != null && data.age > 0;
-    
+
     console.log("Field values:", {
       gender: String(data.gender || ''),
       lookingFor: String(data.lookingFor || ''),
@@ -110,9 +110,9 @@ export default function Home() {
       hasLookingFor,
       hasAge
     });
-    
+
     const needsOnboarding = !hasGender || !hasLookingFor || !hasAge;
-    
+
     if (needsOnboarding) {
       console.warn(`REDIRECTING TO STARTUP: Missing required fields - Gender: ${hasGender}, LookingFor: ${hasLookingFor}, Age: ${hasAge}`);
       // Set isNewUser flag to ensure proper startup flow
@@ -120,16 +120,16 @@ export default function Home() {
       router.replace('/startup');
       return true;
     }
-    
+
     // If they have all required fields but haven't been marked as completed onboarding,
     // mark them as having completed onboarding
     try {
       console.log("Making API call to update hasCompletedOnboarding at:", `${API_URL}/api/auth/update-profile`);
-      
+
       const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
       const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      
-      const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`, 
+
+      const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`,
         { hasCompletedOnboarding: true },
         {
           headers: {
@@ -138,25 +138,25 @@ export default function Home() {
           }
         }
       );
-      
+
       console.log("API response for hasCompletedOnboarding update:", {
         status: response.status,
         data: response.data,
         hasCompletedOnboarding: response.data?.hasCompletedOnboarding
       });
-      
+
       // Also explicitly update the local user data
       if (response.data && response.status === 200) {
         const authStore = useAuthStore.getState();
         if (authStore.user) {
           await authStore.setUser({
             token: token || '',
-            user: {...authStore.user, hasCompletedOnboarding: true} as any
+            user: { ...authStore.user, hasCompletedOnboarding: true } as any
           });
           console.log("Auth store also updated with hasCompletedOnboarding=true");
         }
       }
-      
+
       console.log("Marked user as having completed onboarding in the backend (retroactively)");
     } catch (error) {
       console.error("Failed to mark user as onboarded in backend:", error);
@@ -168,29 +168,29 @@ export default function Home() {
         });
       }
     }
-    
+
     console.log("All required fields present - no redirection needed");
     return false;
   };
-  
+
   // Initial load of user data - runs only once
   useEffect(() => {
     const loadAndVerifyUserData = async () => {
       console.log("Home screen mounted, checking user data...");
-      
+
       // First, try to immediately refresh the user data from the backend API
       try {
         const apiData = await apiDataFetcher();
-        
+
         if (apiData) {
           setApiUserData(apiData);
-          
+
           // If the user has completed onboarding, no need to do further checks
           if (apiData.hasCompletedOnboarding === true) {
             console.log("User has completed onboarding according to API data - no redirection needed");
             return;
           }
-          
+
           // Check if user data is missing required fields
           await checkMissingFieldsAndRedirect(apiData);
         } else {
@@ -203,7 +203,7 @@ export default function Home() {
               console.log("User has completed onboarding according to store data - no redirection needed");
               return;
             }
-            
+
             await checkMissingFieldsAndRedirect(currentUser);
           } else {
             console.warn("No user data available in store either");
@@ -215,7 +215,7 @@ export default function Home() {
         console.error("Error loading user data:", error);
       }
     };
-    
+
     loadAndVerifyUserData();
   }, []);
 
@@ -225,10 +225,10 @@ export default function Home() {
         router.replace('/sign-in');
         return;
       }
-      
+
       try {
         const status = await useAuthStore.getState().checkStatus();
-        
+
         if (!status.isAuthenticated) {
           Alert.alert(
             "Session Expired",
@@ -240,29 +240,29 @@ export default function Home() {
         console.error('Token validation error:', error);
       }
     };
-    
+
     verifyToken();
     setPickerValue(selectedStyle);
   }, [selectedStyle, token]);
-  
+
   // Check for changes and animate save button accordingly
   useEffect(() => {
     const userGender = user?.gender || '';
     const userLookingFor = user?.lookingFor || '';
-    
+
     const hasGenderChanged = gender !== userGender && gender !== '';
     const hasPreferencesChanged = lookingFor !== userLookingFor && lookingFor !== '';
-    
+
     const newHasChanges = hasGenderChanged || hasPreferencesChanged;
     setHasChanges(newHasChanges);
-    
+
     // Animate the save button
     Animated.timing(slideAnim, {
       toValue: newHasChanges ? 0 : -100,
       duration: 300,
       useNativeDriver: true,
     }).start();
-    
+
   }, [gender, lookingFor, user]);
 
   const handleSelection = (itemValue: string) => {
@@ -279,30 +279,30 @@ export default function Home() {
     router.replace('/sign-in');
     setLoading(false);
   };
-  
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    
+
     try {
       const userGender = user?.gender || '';
       const userLookingFor = user?.lookingFor || '';
-      
+
       // Save gender if changed
       if (gender !== userGender && gender !== '') {
         await updateUserGender(gender);
       }
-      
+
       // Save preferences if changed
       if (lookingFor !== userLookingFor && lookingFor !== '') {
         await updateUserPreferences(lookingFor);
       }
-      
+
       // Clear the hasChanges flag since we've saved
       setHasChanges(false);
-      
+
       // Force a refresh of user data
       await useAuthStore.getState().checkStatus();
-      
+
       Alert.alert(
         "Changes Saved",
         "Your profile has been updated successfully."
@@ -330,14 +330,14 @@ export default function Home() {
     }
     return require('../assets/default-profile.jpg');
   };
-  
+
   // Helper function to get gender value with fallbacks
   const getUserGender = () => {
     // First try to get data from direct API call (most accurate)
     if (apiUserData && apiUserData.gender) {
       return apiUserData.gender;
     }
-    
+
     // Fall back to store data
     if (user) {
       // Attempt to log the object in a way that won't be truncated
@@ -348,15 +348,15 @@ export default function Home() {
         hasGender: !!user.gender,
         allUserKeys: Object.keys(user)
       });
-      
+
       // Check for all possible field names and cases
-      const genderValue = 
-        user.gender || 
-        (user as any).Gender || 
-        (user as any).gender_value || 
-        (user as any).genderValue || 
+      const genderValue =
+        user.gender ||
+        (user as any).Gender ||
+        (user as any).gender_value ||
+        (user as any).genderValue ||
         ((user as any).user && (user as any).user.gender);
-      
+
       // Additional logging if not found
       if (!genderValue) {
         // Instead of just warning, refresh API data as a last resort
@@ -369,19 +369,19 @@ export default function Home() {
           }
         });
       }
-      
+
       return genderValue || 'Not set';
     }
     return 'Not set';
   };
-  
+
   // Helper function to get lookingFor value with fallbacks
   const getUserLookingFor = () => {
     // First try to get data from direct API call (most accurate)
     if (apiUserData && apiUserData.lookingFor) {
       return apiUserData.lookingFor;
     }
-    
+
     // Fall back to store data
     if (user) {
       // Attempt to log the object in a way that won't be truncated
@@ -392,18 +392,18 @@ export default function Home() {
         hasLookingFor: !!user.lookingFor,
         allUserKeys: Object.keys(user)
       });
-      
+
       // Check for all possible field names and cases
-      const lookingForValue = 
-        user.lookingFor || 
-        (user as any).LookingFor || 
-        (user as any).looking_for || 
-        (user as any).lookingfor || 
-        (user as any).interestedIn || 
-        (user as any).interested_in || 
+      const lookingForValue =
+        user.lookingFor ||
+        (user as any).LookingFor ||
+        (user as any).looking_for ||
+        (user as any).lookingfor ||
+        (user as any).interestedIn ||
+        (user as any).interested_in ||
         (user as any).preferences ||
         ((user as any).user && (user as any).user.lookingFor);
-      
+
       // Additional logging if not found
       if (!lookingForValue) {
         // Instead of just warning, refresh API data as a last resort
@@ -416,7 +416,7 @@ export default function Home() {
           }
         });
       }
-      
+
       return lookingForValue || 'Not set';
     }
     return 'Not set';
@@ -427,9 +427,9 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
-            <Image 
-              source={getProfilePicture()} 
-              style={styles.profileImage} 
+            <Image
+              source={getProfilePicture()}
+              style={styles.profileImage}
             />
           </View>
           <Text style={styles.title}>Welcome, {user?.name || user?.username || 'User'}!</Text>
@@ -443,7 +443,7 @@ export default function Home() {
               <Text style={styles.cardIconText}>👤</Text>
             </View>
           </View>
-          
+
           <View style={styles.userInfo}>
             <Text style={styles.label}>Username:</Text>
             <Text style={styles.value}>{user?.username || 'Not available'}</Text>
@@ -452,16 +452,16 @@ export default function Home() {
             <Text style={styles.label}>Email:</Text>
             <Text style={styles.value}>{user?.email || 'Not available'}</Text>
           </View>
-          
+
           <View style={styles.divider} />
-          
+
           <View style={styles.userInfo}>
             <Text style={styles.label}>Gender:</Text>
             <Text style={styles.value}>
               {getUserGender()}
             </Text>
           </View>
-          
+
           <View style={styles.userInfo}>
             <Text style={styles.label}>Looking For:</Text>
             <Text style={styles.value}>
@@ -477,12 +477,12 @@ export default function Home() {
               <Text style={styles.cardIconText}>❤️</Text>
             </View>
           </View>
-          
+
           <Text style={styles.sectionLabel}>Your Gender</Text>
           <View style={styles.pickerContainer}>
-            <Picker 
-              selectedValue={gender} 
-              onValueChange={setGender} 
+            <Picker
+              selectedValue={gender}
+              onValueChange={setGender}
               style={styles.picker}
               dropdownIconColor="#FF4B6E"
             >
@@ -496,12 +496,12 @@ export default function Home() {
               <Picker.Item label="Prefer not to say" value="Prefer not to say" />
             </Picker>
           </View>
-          
+
           <Text style={styles.sectionLabel}>Looking For</Text>
           <View style={styles.pickerContainer}>
-            <Picker 
-              selectedValue={lookingFor} 
-              onValueChange={setLookingFor} 
+            <Picker
+              selectedValue={lookingFor}
+              onValueChange={setLookingFor}
               style={styles.picker}
               dropdownIconColor="#FF4B6E"
             >
@@ -524,12 +524,12 @@ export default function Home() {
               <Text style={styles.cardIconText}>⚙️</Text>
             </View>
           </View>
-          
+
           <Text style={styles.sectionLabel}>Tier List Theme</Text>
           <View style={styles.pickerContainer}>
-            <Picker 
-              selectedValue={pickerValue} 
-              onValueChange={handleSelection} 
+            <Picker
+              selectedValue={pickerValue}
+              onValueChange={handleSelection}
               style={styles.picker}
               dropdownIconColor="#FF4B6E"
             >
@@ -539,16 +539,16 @@ export default function Home() {
               <Picker.Item label="PinkLove (Shades of Pink)" value="pinklove" />
             </Picker>
           </View>
-          
+
           {selectedStyle && (
             <View style={styles.selectedStyleContainer}>
               <Text style={styles.selectedStyleLabel}>Current Theme:</Text>
               <View style={[
-                styles.stylePreview, 
+                styles.stylePreview,
                 // Use a conditional to avoid type issues
-                selectedStyle === 'default' ? styles.defaultPreview : 
-                selectedStyle === 'vibrant' ? styles.vibrantPreview : 
-                selectedStyle === 'pinklove' ? styles.pinklovePreview : null
+                selectedStyle === 'default' ? styles.defaultPreview :
+                  selectedStyle === 'vibrant' ? styles.vibrantPreview :
+                    selectedStyle === 'pinklove' ? styles.pinklovePreview : null
               ]}>
                 <Text style={styles.stylePreviewText}>{selectedStyle}</Text>
               </View>
@@ -572,17 +572,17 @@ export default function Home() {
           )}
         </TouchableOpacity>
       </ScrollView>
-      
+
       {/* Slide-up save button - only render when there are changes */}
       {hasChanges && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.saveButtonContainer,
             { transform: [{ translateY: slideAnim }] }
           ]}
         >
-          <TouchableOpacity 
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSaveChanges}
             disabled={isSaving || !hasChanges}
           >

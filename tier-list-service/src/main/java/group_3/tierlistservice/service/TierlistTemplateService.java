@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Collections;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -29,19 +30,56 @@ public class TierlistTemplateService {
 
         public TierlistTemplateResponse createTemplate(TierlistTemplateRequest request, String userId) {
                 // Create and save the template
-                TierlistTemplate template = TierlistTemplate.builder()
-                                .title(request.getTitle())
-                                .description(request.getDescription())
-                                .tags(request.getTags())
-                                .imageIds(request.getImageIds())
-                                .viewCount(0)
-                                .userId(userId)
-                                .createdAt(LocalDateTime.now())
-                                .updatedAt(LocalDateTime.now())
-                                .build();
+                log.info("Starting createTemplate service method with userId: {}", userId);
+                log.info("Request details - title: {}, description: {}", request.getTitle(), request.getDescription());
+                log.info("Request details - tags: {}",
+                                request.getTags() == null ? "null" : request.getTags().toString());
+                log.info("Request details - imageIds: {}",
+                                request.getImageIds() == null ? "null" : request.getImageIds().size());
+                log.info("Request details - thumbnailUrl: {}", request.getThumbnailUrl());
+
+                // Initialize tags properly if null
+                List<String> tags = request.getTags();
+                if (tags == null) {
+                        tags = new ArrayList<>();
+                        log.info("Tags were null, initialized to empty list");
+                } else {
+                        // Remove any null values
+                        tags = tags.stream()
+                                        .filter(tag -> tag != null)
+                                        .collect(Collectors.toList());
+                        log.info("Filtered tags to remove nulls, new size: {}", tags.size());
+                }
+
+                // Skip the default MongoDB conversion and manually handle direct field
+                // assignment
+                TierlistTemplate template = new TierlistTemplate();
+                template.setUserId(userId);
+                template.setTitle(request.getTitle());
+                template.setDescription(request.getDescription());
+                template.setTags(tags);
+                template.setImageIds(request.getImageIds());
+                template.setThumbnailUrl(request.getThumbnailUrl());
+                template.setViewCount(0);
+                template.setCreatedAt(LocalDateTime.now());
+                template.setUpdatedAt(LocalDateTime.now());
+
+                log.info("PRE-SAVE Template details - all fields log dump: title={}, description={}, tags={}, imageIds size={}, thumbnailUrl={}",
+                                template.getTitle(), template.getDescription(), template.getTags(),
+                                template.getImageIds().size(), template.getThumbnailUrl());
 
                 TierlistTemplate savedTemplate = templateRepository.save(template);
-                log.info("Created template with ID: {}", savedTemplate.getId());
+
+                log.info("POST-SAVE Template details - all fields log dump: title={}, description={}, tags={}, imageIds size={}, thumbnailUrl={}",
+                                savedTemplate.getTitle(), savedTemplate.getDescription(), savedTemplate.getTags(),
+                                savedTemplate.getImageIds().size(), savedTemplate.getThumbnailUrl());
+
+                log.info("Saved template with ID: {}", savedTemplate.getId());
+                log.info("Saved template - title: {}", savedTemplate.getTitle());
+                log.info("Saved template - description: {}", savedTemplate.getDescription());
+                log.info("Saved template - tags: {}",
+                                savedTemplate.getTags() == null ? "null" : savedTemplate.getTags().toString());
+                log.info("Saved template - thumbnailUrl: {}", savedTemplate.getThumbnailUrl());
 
                 return buildTemplateResponse(savedTemplate);
         }
@@ -177,7 +215,13 @@ public class TierlistTemplateService {
                 template.setDescription(request.getDescription());
                 template.setTags(request.getTags());
                 template.setImageIds(request.getImageIds());
+                template.setThumbnailUrl(request.getThumbnailUrl());
                 template.setUpdatedAt(LocalDateTime.now());
+
+                // Set default thumbnail URL if none provided but images are present
+                if (template.getThumbnailUrl() == null && !template.getImageIds().isEmpty()) {
+                        template = setDefaultThumbnail(template);
+                }
 
                 TierlistTemplate updatedTemplate = templateRepository.save(template);
                 log.info("Updated template with ID: {}", updatedTemplate.getId());
@@ -208,9 +252,15 @@ public class TierlistTemplateService {
                 return templates.stream().map(this::buildTemplateResponse).collect(Collectors.toList());
         }
 
-        // Helper method to build template response
+        /**
+         * Build a response object from the template entity.
+         * Ensures all fields are correctly extracted from the saved entity,
+         * with fallbacks to the original values if necessary.
+         */
         private TierlistTemplateResponse buildTemplateResponse(TierlistTemplate template) {
-                return TierlistTemplateResponse.builder()
+                log.info("Building template response for template ID: {}", template.getId());
+
+                TierlistTemplateResponse response = TierlistTemplateResponse.builder()
                                 .id(template.getId())
                                 .title(template.getTitle())
                                 .description(template.getDescription())
@@ -218,7 +268,13 @@ public class TierlistTemplateService {
                                 .createdAt(template.getCreatedAt())
                                 .updatedAt(template.getUpdatedAt())
                                 .tags(template.getTags())
+                                .thumbnailUrl(template.getThumbnailUrl())
                                 .build();
+
+                log.info("Built response with title: {}, description: {}, tags: {}",
+                                response.getTitle(), response.getDescription(), response.getTags());
+
+                return response;
         }
 
         // Helper method to build template response with images
@@ -236,6 +292,40 @@ public class TierlistTemplateService {
                                 .updatedAt(template.getUpdatedAt())
                                 .tags(template.getTags())
                                 .images(images)
+                                .thumbnailUrl(template.getThumbnailUrl())
                                 .build();
+        }
+
+        /**
+         * Sets a default thumbnail URL for a template by using the first image in the
+         * template's imageIds
+         * 
+         * @param template The template to set a thumbnail for
+         * @return The updated template with a thumbnail URL
+         */
+        private TierlistTemplate setDefaultThumbnail(TierlistTemplate template) {
+                if (template.getImageIds() == null || template.getImageIds().isEmpty()) {
+                        return template;
+                }
+
+                try {
+                        // Get the first image ID
+                        String firstImageId = template.getImageIds().get(0);
+
+                        // Fetch the image metadata from the image service
+                        List<TierlistTemplateWithImagesResponse.ImageMetadata> images = imageServiceClient
+                                        .getImagesByIds(List.of(firstImageId));
+
+                        if (!images.isEmpty()) {
+                                // Set the thumbnail URL to the S3 URL of the first image
+                                template.setThumbnailUrl(images.get(0).getS3Url());
+                                log.info("Default thumbnail set for template using image ID: {}", firstImageId);
+                        }
+                } catch (Exception e) {
+                        log.error("Failed to set default thumbnail: {}", e.getMessage());
+                        // Continue without setting a thumbnail
+                }
+
+                return template;
         }
 }

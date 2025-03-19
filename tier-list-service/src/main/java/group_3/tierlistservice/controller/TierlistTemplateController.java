@@ -3,6 +3,7 @@ package group_3.tierlistservice.controller;
 import group_3.tierlistservice.dto.TierlistTemplateRequest;
 import group_3.tierlistservice.dto.TierlistTemplateResponse;
 import group_3.tierlistservice.dto.TierlistTemplateWithImagesResponse;
+import group_3.tierlistservice.model.TierlistTemplate;
 import group_3.tierlistservice.service.TierlistTemplateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,14 @@ public class TierlistTemplateController {
     public ResponseEntity<TierlistTemplateResponse> createTemplate(
             @Valid @RequestBody TierlistTemplateRequest request,
             @RequestHeader("X-User-ID") String userId) {
+        log.info("Received createTemplate request with userId: {}", userId);
+        log.info("Request details - title: {}, description: {}", request.getTitle(), request.getDescription());
+        log.info("Request details - tags: {}", request.getTags() == null ? "null" : request.getTags().toString());
+        log.info("Request details - imageIds: {}", request.getImageIds() == null ? "null" : request.getImageIds().size());
+        log.info("Request details - thumbnailUrl: {}", request.getThumbnailUrl());
+        
         TierlistTemplateResponse response = templateService.createTemplate(request, userId);
+        log.info("Created template with ID: {}", response.getId());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

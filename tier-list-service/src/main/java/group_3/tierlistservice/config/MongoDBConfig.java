@@ -24,4 +24,6 @@ public class MongoDBConfig {
     public LocalValidatorFactoryBean validator() {
         return new LocalValidatorFactoryBean();
     }
+    
+    // Removed mappingMongoConverter bean to avoid conflict with MongoConfig
 }
