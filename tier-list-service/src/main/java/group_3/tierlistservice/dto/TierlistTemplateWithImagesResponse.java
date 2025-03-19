@@ -17,6 +17,7 @@ public class TierlistTemplateWithImagesResponse {
     private LocalDateTime updatedAt;
     private List<String> tags;
     private List<ImageMetadata> images;
+    private String thumbnailUrl;
 
     @Data
     @Builder

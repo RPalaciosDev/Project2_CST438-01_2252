@@ -9,6 +9,8 @@ spring:
       authentication-database: admin
       username: ${MONGODB_USERNAME:root}
       password: ${MONGODB_PASSWORD:example}
+  main:
+    allow-bean-definition-overriding: true
     
 server:
   port: ${SERVER_PORT:8082}

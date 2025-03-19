@@ -15,4 +15,5 @@ public class TierlistTemplateResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> tags;
+    private String thumbnailUrl;
 }
