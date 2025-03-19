@@ -253,6 +253,20 @@ public class TierlistTemplateService {
         }
 
         /**
+         * Get all templates in the database
+         * 
+         * @return List of all templates as response objects
+         */
+        public List<TierlistTemplateResponse> getAllTemplates() {
+                log.info("Fetching all templates from database");
+                List<TierlistTemplate> templates = templateRepository.findAll();
+                log.info("Found {} templates in total", templates.size());
+                return templates.stream()
+                                .map(this::buildTemplateResponse)
+                                .collect(Collectors.toList());
+        }
+
+        /**
          * Build a response object from the template entity.
          * Ensures all fields are correctly extracted from the saved entity,
          * with fallbacks to the original values if necessary.

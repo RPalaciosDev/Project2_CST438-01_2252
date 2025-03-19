@@ -32,9 +32,10 @@ public class TierlistTemplateController {
         log.info("Received createTemplate request with userId: {}", userId);
         log.info("Request details - title: {}, description: {}", request.getTitle(), request.getDescription());
         log.info("Request details - tags: {}", request.getTags() == null ? "null" : request.getTags().toString());
-        log.info("Request details - imageIds: {}", request.getImageIds() == null ? "null" : request.getImageIds().size());
+        log.info("Request details - imageIds: {}",
+                request.getImageIds() == null ? "null" : request.getImageIds().size());
         log.info("Request details - thumbnailUrl: {}", request.getThumbnailUrl());
-        
+
         TierlistTemplateResponse response = templateService.createTemplate(request, userId);
         log.info("Created template with ID: {}", response.getId());
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -136,5 +137,22 @@ public class TierlistTemplateController {
         }
 
         return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * Get all templates from the database
+     * This is a public endpoint and does not require authentication
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<TierlistTemplateResponse>> getAllTemplates() {
+        log.info("Request received to fetch all templates");
+        try {
+            List<TierlistTemplateResponse> responses = templateService.getAllTemplates();
+            log.info("Successfully retrieved {} templates", responses.size());
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            log.error("Error retrieving all templates: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
