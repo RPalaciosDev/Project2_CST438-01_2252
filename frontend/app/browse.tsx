@@ -69,10 +69,26 @@ export default function Browse() {
     }
   };
 
+  // Handle template selection - increment view count and navigate
+  const handleTemplatePress = async (template: Template) => {
+    try {
+      // Call the API to increment view count
+      // We're using the existing getTemplateById endpoint which already increments the view
+      await axios.get(`${TIERLIST_API_URL}/api/templates/${template.id}`);
+
+      // Navigate to the tierlists page with the template ID
+      router.push(`/tierlists?templateId=${template.id}`);
+    } catch (err) {
+      console.error('Error updating view count or navigating:', err);
+      // Still navigate even if the view count update fails
+      router.push(`/tierlists?templateId=${template.id}`);
+    }
+  };
+
   const renderTemplateItem = ({ item }: { item: Template }) => (
     <TouchableOpacity
       style={styles.templateCard}
-      onPress={() => router.push(`/template/${item.id}`)}
+      onPress={() => handleTemplatePress(item)}
     >
       <Image
         source={{
@@ -125,11 +141,13 @@ export default function Browse() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Browse Tier Lists</Text>
-      </View>
+      <Text style={styles.title}>Browse Tier Lists</Text>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+      <ScrollView
+        showsVerticalScrollIndicator={true}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Top viewed templates section - always first */}
         {renderSection('Most Popular', topTemplates)}
 
@@ -161,7 +179,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF5F5',
-    padding: 20,
+    padding: 15,
   },
   centered: {
     justifyContent: 'center',
@@ -170,15 +188,14 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
-  header: {
-    marginBottom: 20,
-    alignItems: 'center',
+  scrollContent: {
+    paddingBottom: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#FF4B6E',
-    marginBottom: 8,
+    marginVertical: 15,
     textAlign: 'center',
   },
   sectionContainer: {
@@ -226,7 +243,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 15,
     alignItems: 'center',
-    marginVertical: 10,
+    marginTop: 10,
     shadowColor: '#FF4B6E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
