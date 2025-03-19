@@ -10,12 +10,20 @@ from dotenv import load_dotenv
 from rabbitmq import RabbitMQConnection
 from pymongo import MongoClient
 
+
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://centerbeam.proxy.rlwy.net:10551/auth_db")
+MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
+MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
+MONGO_HOST = "centerbeam.proxy.rlwy.net"
+MONGO_PORT = "10551"
+MONGO_DB = "auth_db"
+
+MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource=admin"
+
 client = MongoClient(MONGO_URI)
 
 # Connect to the specific database and collection
@@ -29,18 +37,25 @@ try:
 except Exception as e:
     print(f"❌ MongoDB Connection Failed: {e}", flush=True)
 
-# Connect to RabbitMQ
+# Debugging logs for RabbitMQ connection
+print(f"🐇 Attempting to connect to RabbitMQ at {os.getenv('RABBITMQ_HOST')}:{os.getenv('RABBITMQ_PORT')} "
+      f"with user '{os.getenv('RABBITMQ_USERNAME')}'")
+
+# Initialize RabbitMQ Connection
 rabbitmq_connection = RabbitMQConnection(
-    host=os.getenv("RABBITMQ_HOST", "localhost"),
-    port=os.getenv("RABBITMQ_PORT", 5672),
-    username=os.getenv("RABBITMQ_USERNAME", "guest"),
-    password=os.getenv("RABBITMQ_PASSWORD", "guest")
+    host=os.getenv("RABBITMQ_HOST"),
+    port=int(os.getenv("RABBITMQ_PORT")), 
+    username=os.getenv("RABBITMQ_USERNAME"),
+    password=os.getenv("RABBITMQ_PASSWORD")
 )
+
 
 try:
     rabbitmq_connection.connect()
+    print("✅ RabbitMQ Connection Successful!")
 except Exception as e:
-    print(f"Error connecting to RabbitMQ: {e}")
+    print(f"❌ Error connecting to RabbitMQ: {e}")
+
 
 # Define tier categories and weight mapping
 tiers = ["S", "A", "B", "C", "D", "E", "F"]
