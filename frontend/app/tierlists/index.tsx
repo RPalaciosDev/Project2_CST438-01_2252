@@ -58,6 +58,7 @@ export default function TierList() {
     const { templateId } = useLocalSearchParams();
     const router = useRouter();
     const { selectedStyle } = useStyle();
+    const { user } = useAuthStore();
     const [theme, setTheme] = useState(stylesMap[selectedStyle] || stylesMap["default"]);
     const [tierItems, setTierItems] = useState<TierItem[]>([]);
     const [availableItems, setAvailableItems] = useState<TierItem[]>([]);
@@ -556,8 +557,6 @@ export default function TierList() {
 
     // Handle match button press - send data to ML service
     const handleMatchPress = async () => {
-        const { user } = useAuthStore();
-
         if (!user?.id) {
             Alert.alert("Error", "You must be logged in to match");
             return;
@@ -604,12 +603,9 @@ export default function TierList() {
 
             console.log("ML service response:", response.data);
 
-            // Show success message and redirect back
-            Alert.alert(
-                "Tier List Submitted",
-                "Your tier list has been submitted successfully!",
-                [{ text: "OK", onPress: () => router.back() }]
-            );
+            // Successfully submitted - navigate directly to browse
+            console.log("Submission successful, redirecting to browse page");
+            router.replace('browse');
         } catch (error) {
             console.error("Error submitting tier list:", error);
             Alert.alert("Error", "Failed to submit your tier list. Please try again.");
