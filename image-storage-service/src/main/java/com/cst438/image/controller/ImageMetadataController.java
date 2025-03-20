@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Collections;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/images")
@@ -52,7 +54,36 @@ public class ImageMetadataController {
         if (ids == null || ids.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+
+        System.out.println("Received request for image IDs: " + ids);
+
         List<ImageMetadataDocument> images = metadataService.getImagesByIds(ids);
+
+        System.out.println("Found " + images.size() + " images out of " + ids.size() + " requested IDs");
+
+        // If we didn't find all the images, log individual checks
+        if (images.size() < ids.size()) {
+            for (String id : ids) {
+                Optional<ImageMetadataDocument> image = metadataService.getImageById(id);
+                System.out.println("Individual check - ID: " + id + " - Found: " + image.isPresent());
+            }
+        }
+
         return ResponseEntity.ok(images);
+    }
+
+    // Debug endpoint to check a single image by ID
+    @GetMapping("/debug/{id}")
+    public ResponseEntity<Object> debugImageById(@PathVariable String id) {
+        try {
+            Optional<ImageMetadataDocument> image = metadataService.getImageById(id);
+            if (image.isPresent()) {
+                return ResponseEntity.ok(image.get());
+            } else {
+                return ResponseEntity.ok(Collections.singletonMap("message", "Image not found with ID: " + id));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.ok(Collections.singletonMap("error", "Error finding image: " + e.getMessage()));
+        }
     }
 }

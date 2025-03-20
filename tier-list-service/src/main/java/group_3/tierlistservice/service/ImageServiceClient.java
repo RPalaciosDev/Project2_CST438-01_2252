@@ -38,8 +38,22 @@ public class ImageServiceClient {
             return Collections.emptyList();
         }
 
-        log.info("Fetching {} images from image service at URL: {}",
-                imageIds.size(), webClient.toString());
+        // Get the client's base URL as a string
+        WebClient.Builder builder = webClient.mutate();
+        String baseUrl = builder.build().toString();
+        // Extract actual URL from the toString representation
+        if (baseUrl.contains("@")) {
+            baseUrl = baseUrl.substring(baseUrl.indexOf("@") + 1);
+        }
+        // Add protocol if missing
+        if (!baseUrl.startsWith("http")) {
+            baseUrl = "https://" + baseUrl;
+        }
+        String fullUrl = baseUrl + "/api/images/bulk";
+
+        log.info("Fetching {} images from image service", imageIds.size());
+        log.info("Base URL: {}", baseUrl);
+        log.info("Full request URL: {}", fullUrl);
         log.info("Image IDs to fetch: {}", imageIds);
 
         try {

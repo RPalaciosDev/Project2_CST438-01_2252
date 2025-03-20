@@ -4,6 +4,7 @@ import com.cst438.image.model.ImageMetadataDocument;
 import com.cst438.image.repository.ImageMetadataRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ImageMetadataService {
@@ -28,6 +29,23 @@ public class ImageMetadataService {
     }
 
     public List<ImageMetadataDocument> getImagesByIds(List<String> ids) {
-        return metadataRepository.findByIdIn(ids);
+        System.out.println("getImagesByIds called with IDs: " + ids);
+
+        // Try with the standard method first
+        List<ImageMetadataDocument> results = metadataRepository.findByIdIn(ids);
+        System.out.println("findByIdIn found " + results.size() + " images");
+
+        // If that didn't work, try with our custom query
+        if (results.isEmpty() && !ids.isEmpty()) {
+            List<ImageMetadataDocument> customResults = metadataRepository.findByStringIds(ids);
+            System.out.println("findByStringIds found " + customResults.size() + " images");
+            return customResults;
+        }
+
+        return results;
+    }
+
+    public Optional<ImageMetadataDocument> getImageById(String id) {
+        return metadataRepository.findById(id);
     }
 }
