@@ -1,14 +1,15 @@
 import pika
+import json
 
 class RabbitMQConnection:
-    def __init__(self, host, port, username
-                 , password):
+    def __init__(self, host, port, username, password):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.connection = None
-        
+        self.channel = None
+
     def connect(self):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(
@@ -20,16 +21,26 @@ class RabbitMQConnection:
                 )
             )
         )
-        
+        self.channel = self.connection.channel()
+        self.channel.queue_declare(queue="match", durable=True)  
+
     def send_match(self, user_id, match):
-        channel = self.connection.channel()
-        body = {'user_id': user_id, 'match': match}
-        channel.basic_publish(
-            exchange="proj2",
+        """Send match data to RabbitMQ"""
+        if not self.channel:
+            raise RuntimeError("RabbitMQ channel is not initialized. Call connect() first.")
+
+        body = json.dumps({"user_id": user_id, "match": match})  # Fix: Use json.dumps instead of pika.SimpleQueue
+        self.channel.basic_publish(
+            exchange="",
             routing_key="match",
-            body=pika.SimpleQueue.dumps(body)
+            body=body,
+            properties=pika.BasicProperties(
+                delivery_mode=2  # Makes message persistent
+            )
         )
-        
+        print(f"📤 Sent match {user_id} -> {match} to RabbitMQ", flush=True)
+
     def close_connection(self):
         if self.connection:
             self.connection.close()
+            print("🔌 RabbitMQ connection closed.", flush=True)
