@@ -18,7 +18,18 @@ from bson import ObjectId
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS to allow requests from all frontend domains
+CORS(app, resources={r"/*": {"origins": [
+    "https://frontend-production-c2bc.up.railway.app",
+    "https://frontend-production.up.railway.app",
+    "https://ml-matching.up.railway.app",
+    "https://ml-service-production.up.railway.app",
+    "http://localhost:8081",
+    "http://localhost:3000",
+    "http://localhost:19006",
+    "http://localhost:19000",
+    "exp://localhost:19000"
+], "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
 MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
 MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")

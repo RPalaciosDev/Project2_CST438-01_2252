@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 @RestController
 @RequestMapping("/api/templates")
@@ -153,6 +157,53 @@ public class TierlistTemplateController {
         } catch (Exception e) {
             log.error("Error retrieving all templates: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/test-image-service")
+    public ResponseEntity<Map<String, Object>> testImageServiceConnection(
+            @RequestParam(required = false) String imageId) {
+        Map<String, Object> result = new HashMap<>();
+
+        String testUrl = "https://imageapi-production-af11.up.railway.app/api/images";
+        if (imageId != null && !imageId.isEmpty()) {
+            testUrl = "https://imageapi-production-af11.up.railway.app/api/images/debug/" + imageId;
+        }
+
+        log.info("Testing direct connection to image service at URL: {}", testUrl);
+
+        try {
+            URL url = new URL(testUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+
+            int status = connection.getResponseCode();
+            log.info("Image service connection test status code: {}", status);
+
+            result.put("statusCode", status);
+
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                StringBuilder content = new StringBuilder();
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                result.put("content", content.toString());
+                log.info("Image service connection test response: {}", content.toString());
+            }
+
+            result.put("success", true);
+            result.put("message", "Successfully connected to image service");
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error testing image service connection: {}", e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            result.put("errorType", e.getClass().getName());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
     }
 }

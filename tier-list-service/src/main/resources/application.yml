@@ -24,4 +24,4 @@ management:
 # External Services
 services:
   image-storage:
-    url: ${IMAGE_SERVICE_URL:http://localhost:8080} 
+    url: ${IMAGE_SERVICE_URL:https://imageapi-production-af11.up.railway.app} 
