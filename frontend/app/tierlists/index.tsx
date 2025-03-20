@@ -71,6 +71,13 @@ export default function TierList() {
             const response = await axios.get(`${TIERLIST_API_URL}/api/templates/${id}/with-images`);
             setTemplate(response.data);
 
+            // Enhanced logging for debugging
+            console.log('Template data received:', JSON.stringify(response.data, null, 2));
+            console.log('Template imageIds check:', response.data.imageIds ?
+                `Has ${response.data.imageIds.length} imageIds` : 'No imageIds field found');
+            console.log('Template images check:', response.data.images ?
+                `Has ${response.data.images.length} images` : 'No images field found');
+
             // Convert template images to tier items
             if (response.data.images && response.data.images.length > 0) {
                 const newTierItems = response.data.images.map((img: any) => ({

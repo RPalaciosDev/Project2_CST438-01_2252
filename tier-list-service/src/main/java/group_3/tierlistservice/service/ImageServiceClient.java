@@ -3,11 +3,11 @@ package group_3.tierlistservice.service;
 import group_3.tierlistservice.dto.TierlistTemplateWithImagesResponse.ImageMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.util.Collections;
@@ -20,9 +20,10 @@ public class ImageServiceClient {
     private static final Logger log = LoggerFactory.getLogger(ImageServiceClient.class);
     private final WebClient webClient;
 
-    @Autowired
     public ImageServiceClient(@Qualifier("imageServiceWebClient") WebClient webClient) {
         this.webClient = webClient;
+        log.info("ImageServiceClient initialized with WebClient baseUrl: {}",
+                webClient.toString());
     }
 
     /**
@@ -55,9 +56,14 @@ public class ImageServiceClient {
                     .doOnNext(img -> log.info("Mapped to ImageMetadata: id={}, url={}", img.getId(), img.getS3Url()))
                     .collectList()
                     .doOnError(e -> {
-                        log.error("Error fetching images from image service: {}", e.getMessage(), e);
-                        if (e instanceof WebClientException) {
-                            log.error("WebClient error details: {}", e.toString());
+                        if (e instanceof WebClientResponseException) {
+                            WebClientResponseException wcre = (WebClientResponseException) e;
+                            log.error("HTTP Error response from image service: Status: {}, Body: {}",
+                                    wcre.getStatusCode(), wcre.getResponseBodyAsString(), e);
+                        } else if (e instanceof WebClientException) {
+                            log.error("WebClient error details: {}", e.toString(), e);
+                        } else {
+                            log.error("Error fetching images from image service: {}", e.getMessage(), e);
                         }
                     })
                     .onErrorResume(e -> {
@@ -65,6 +71,10 @@ public class ImageServiceClient {
                         return Mono.just(Collections.emptyList());
                     })
                     .block();
+        } catch (WebClientResponseException e) {
+            log.error("HTTP Error response: Status: {}, Body: {}",
+                    e.getStatusCode(), e.getResponseBodyAsString(), e);
+            return Collections.emptyList();
         } catch (WebClientException e) {
             log.error("WebClient exception: {}", e.getMessage(), e);
             log.error("WebClient exception class: {}", e.getClass().getName());
@@ -79,12 +89,17 @@ public class ImageServiceClient {
      * Maps a response from the image service to our internal ImageMetadata model
      */
     private ImageMetadata mapToImageMetadata(Map<String, Object> response) {
-        return ImageMetadata.builder()
-                .id((String) response.get("id"))
-                .fileName((String) response.get("fileName"))
-                .s3Url((String) response.get("s3Url"))
-                .uploadedBy((String) response.get("uploadedBy"))
-                .folder((String) response.get("folder"))
-                .build();
+        try {
+            return ImageMetadata.builder()
+                    .id((String) response.get("id"))
+                    .fileName((String) response.get("fileName"))
+                    .s3Url((String) response.get("s3Url"))
+                    .uploadedBy((String) response.get("uploadedBy"))
+                    .folder((String) response.get("folder"))
+                    .build();
+        } catch (Exception e) {
+            log.error("Error mapping image metadata: {} - Response data: {}", e.getMessage(), response, e);
+            throw e;
+        }
     }
 }

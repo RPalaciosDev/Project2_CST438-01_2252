@@ -165,10 +165,17 @@ public class TierlistTemplateService {
 
                         // Fetch images from the image service
                         log.info("Preparing to fetch images. Template has {} image IDs", template.getImageIds().size());
+                        log.info("Image IDs to fetch: {}", template.getImageIds());
                         List<TierlistTemplateWithImagesResponse.ImageMetadata> images = null;
                         try {
                                 images = imageServiceClient.getImagesByIds(template.getImageIds());
                                 log.info("Successfully retrieved {} images from image service", images.size());
+                                if (images.isEmpty()) {
+                                        log.warn("No images found for the provided imageIds: {}",
+                                                        template.getImageIds());
+                                } else {
+                                        log.info("First image retrieved: {}", images.get(0));
+                                }
                         } catch (Exception e) {
                                 log.error("Error while fetching images from image service: {}", e.getMessage(), e);
                                 // Continue with empty images rather than failing completely
