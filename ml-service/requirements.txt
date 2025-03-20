@@ -1,12 +1,11 @@
 flask
 flask-cors
+gunicorn
 numpy
 scikit-learn
 gensim
-gunicorn
-apscheduler
 pika
+apscheduler
 python-dotenv
 pymongo
-dnspython
 requests
