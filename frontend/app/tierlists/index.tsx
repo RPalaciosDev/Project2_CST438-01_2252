@@ -12,8 +12,7 @@ import { useStyle } from "../context/StyleContext";
 import stylesMap from "../../styles/index";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
-import { TIERLIST_API_URL } from '../../services/auth';
-import { useAuthStore } from '../../services/auth';
+import { TIERLIST_API_URL, useAuthStore } from '../../services/auth';
 
 // Template type definition
 type Template = {
@@ -59,7 +58,6 @@ export default function TierList() {
     const { templateId } = useLocalSearchParams();
     const router = useRouter();
     const { selectedStyle } = useStyle();
-    const { user } = useAuthStore();
     const [theme, setTheme] = useState(stylesMap[selectedStyle] || stylesMap["default"]);
     const [tierItems, setTierItems] = useState<TierItem[]>([]);
     const [availableItems, setAvailableItems] = useState<TierItem[]>([]);
@@ -558,6 +556,8 @@ export default function TierList() {
 
     // Handle match button press - send data to ML service
     const handleMatchPress = async () => {
+        const { user } = useAuthStore();
+
         if (!user?.id) {
             Alert.alert("Error", "You must be logged in to match");
             return;
@@ -596,7 +596,7 @@ export default function TierList() {
             });
 
             // Send the tier list to the ML service
-            const ML_SERVICE_URL = "https://ml-service-production.up.railway.app";
+            const ML_SERVICE_URL = "https://ml-matching.up.railway.app";
             const response = await axios.post(`${ML_SERVICE_URL}/submit_tier_list`, {
                 user_id: user.id,
                 tier_list: tierListData
@@ -604,32 +604,12 @@ export default function TierList() {
 
             console.log("ML service response:", response.data);
 
-            // Get immediate matches if available
-            try {
-                const matchesResponse = await axios.get(`${ML_SERVICE_URL}/get_matches/${user.id}`);
-                setMatchResult(matchesResponse.data);
-
-                if (matchesResponse.data?.matches?.length > 0) {
-                    Alert.alert(
-                        "Match Success!",
-                        `You matched with ${matchesResponse.data.matches.length} profiles. Check your matches to connect!`,
-                        [{ text: "OK", onPress: () => router.back() }]
-                    );
-                } else {
-                    Alert.alert(
-                        "Match Pending",
-                        "Your tier list has been submitted! Check back soon for matches.",
-                        [{ text: "OK", onPress: () => router.back() }]
-                    );
-                }
-            } catch (matchError) {
-                console.error("Error fetching matches:", matchError);
-                Alert.alert(
-                    "Match Submitted",
-                    "Your tier list has been submitted! Check back soon for matches.",
-                    [{ text: "OK", onPress: () => router.back() }]
-                );
-            }
+            // Show success message and redirect back
+            Alert.alert(
+                "Tier List Submitted",
+                "Your tier list has been submitted successfully!",
+                [{ text: "OK", onPress: () => router.back() }]
+            );
         } catch (error) {
             console.error("Error submitting tier list:", error);
             Alert.alert("Error", "Failed to submit your tier list. Please try again.");

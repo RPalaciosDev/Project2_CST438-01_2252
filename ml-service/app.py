@@ -22,6 +22,8 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": [
     "https://frontend-production-c2bc.up.railway.app",
     "https://frontend-production.up.railway.app",
+    "https://ml-matching.up.railway.app",
+    "https://ml-service-production.up.railway.app",
     "http://localhost:8081",
     "http://localhost:3000",
     "http://localhost:19006",
