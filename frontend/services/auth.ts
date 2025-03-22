@@ -1049,6 +1049,80 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return null;
         }
     },
+
+    // Daily Tierlist API methods
+    fetchDailyTierlist: async () => {
+        try {
+            // Get user from state instead of storage
+            const { user } = get();
+            const userId = user?.id;
+
+            if (!userId) {
+                console.warn('No user ID available when fetching daily tierlist');
+                return { available: false, message: "User not authenticated" };
+            }
+
+            const response = await axiosInstance.get(`${TIERLIST_API_URL}/api/daily`, {
+                headers: {
+                    'X-User-ID': userId
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching daily tierlist:', error);
+            if (axios.isAxiosError(error) && error.response?.status === 404) {
+                // No daily tierlist available is an expected response
+                return { available: false };
+            }
+            throw error;
+        }
+    },
+
+    markDailyTierlistCompleted: async () => {
+        try {
+            // Get user from state instead of storage
+            const { user } = get();
+            const userId = user?.id;
+
+            if (!userId) {
+                console.warn('No user ID available when marking daily tierlist completed');
+                return { success: false, message: "User not authenticated" };
+            }
+
+            const response = await axiosInstance.post(`${TIERLIST_API_URL}/api/daily/complete`, {}, {
+                headers: {
+                    'X-User-ID': userId
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error marking daily tierlist completed:', error);
+            throw error;
+        }
+    },
+
+    setDailyTierlist: async (templateId: string) => {
+        try {
+            // Get user from state instead of storage
+            const { user } = get();
+            const userId = user?.id;
+
+            if (!userId) {
+                console.warn('No user ID available when setting daily tierlist');
+                return { success: false, message: "User not authenticated" };
+            }
+
+            const response = await axiosInstance.post(`${TIERLIST_API_URL}/api/daily/${templateId}`, {}, {
+                headers: {
+                    'X-User-ID': userId
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error setting daily tierlist:', error);
+            throw error;
+        }
+    },
 }));
 
 export default useAuthStore; 

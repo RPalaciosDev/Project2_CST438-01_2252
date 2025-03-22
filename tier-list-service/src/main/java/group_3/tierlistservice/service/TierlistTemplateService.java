@@ -290,6 +290,8 @@ public class TierlistTemplateService {
                                 .updatedAt(template.getUpdatedAt())
                                 .tags(template.getTags())
                                 .thumbnailUrl(template.getThumbnailUrl())
+                                .wasDailyList(template.getWasDailyList())
+                                .isCurrentDailyList(template.isCurrentDailyList())
                                 .build();
 
                 log.info("Built response with title: {}, description: {}, tags: {}",
@@ -314,6 +316,8 @@ public class TierlistTemplateService {
                                 .tags(template.getTags())
                                 .images(images)
                                 .thumbnailUrl(template.getThumbnailUrl())
+                                .wasDailyList(template.getWasDailyList())
+                                .isCurrentDailyList(template.isCurrentDailyList())
                                 .build();
         }
 

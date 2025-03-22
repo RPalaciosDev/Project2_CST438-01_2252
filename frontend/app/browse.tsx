@@ -14,6 +14,8 @@ type Template = {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  wasDailyList?: string; // ISO date string
+  isCurrentDailyList?: boolean;
 };
 
 type TemplatesByTag = {
