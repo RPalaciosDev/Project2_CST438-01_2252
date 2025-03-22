@@ -50,7 +50,7 @@ export default function MyTiers() {
       // For debugging, let's try fetching without images first to isolate the issue
       const baseApiUrl = 'https://tier-list-service-production.up.railway.app';
       const templateId = '67d6584e6999d45c678ba23c';
-      
+
       // First try to get just the template without images
       try {
         console.log('Attempting to fetch template without images first');
@@ -68,12 +68,12 @@ export default function MyTiers() {
       } catch (basicError) {
         console.error('Failed to fetch basic template:', basicError);
       }
-      
+
       // Now try with images
       console.log('Now attempting to fetch template with images');
       const apiUrl = `${baseApiUrl}/api/templates/${templateId}/with-images`;
       console.log('Making request to:', apiUrl);
-      
+
       const response = await axios.get(
         apiUrl,
         {

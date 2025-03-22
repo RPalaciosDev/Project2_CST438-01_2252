@@ -1,17 +1,71 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, Slot, useSegments } from 'expo-router';
-import { StyleProvider } from './context/StyleContext'; 
+import { StyleProvider } from './context/StyleContext';
+import { useAuthStore } from '../services/auth';
 
 const Sidebar = () => {
   const router = useRouter();
+  const fetchDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
+  const [dailyTierAvailable, setDailyTierAvailable] = useState<boolean | null>(null);
+  const [dailyTierCompleted, setDailyTierCompleted] = useState<boolean>(false);
+
+  useEffect(() => {
+    async function checkDailyTierlist() {
+      try {
+        const dailyData = await fetchDailyTierlist();
+        setDailyTierAvailable(dailyData?.available || false);
+        setDailyTierCompleted(dailyData?.completed || false);
+      } catch (error) {
+        console.error('Error checking daily tierlist:', error);
+        setDailyTierAvailable(false);
+      }
+    }
+
+    checkDailyTierlist();
+  }, []);
+
+  const handleDailyTierClick = () => {
+    if (dailyTierAvailable && !dailyTierCompleted) {
+      router.push('/tierlists');
+    } else {
+      console.log('Daily Tier not available or already completed');
+    }
+  };
 
   return (
     <View style={styles.sidebar}>
       <Text style={styles.logo}>Love Tiers</Text>
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/tierlists')}>
-        <Text style={styles.linkText}>Daily Tier</Text>
+
+      {/* Daily Tier Link with conditional styling */}
+      <TouchableOpacity
+        style={[
+          styles.link,
+          !dailyTierAvailable || dailyTierCompleted ? styles.disabledLink : {}
+        ]}
+        onPress={handleDailyTierClick}
+        disabled={!dailyTierAvailable || dailyTierCompleted}
+      >
+        {dailyTierAvailable === null ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <View style={styles.linkInner}>
+            <Text style={[
+              styles.linkText,
+              !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
+            ]}>
+              Daily Tier
+            </Text>
+            {dailyTierCompleted && (
+              <Text style={styles.completedTag}>Completed</Text>
+            )}
+            {!dailyTierAvailable && !dailyTierCompleted && (
+              <Text style={styles.unavailableTag}>Unavailable</Text>
+            )}
+          </View>
+        )}
       </TouchableOpacity>
+
       <TouchableOpacity style={styles.link} onPress={() => router.push('/browse')}>
         <Text style={styles.linkText}>Browse</Text>
       </TouchableOpacity>
@@ -38,9 +92,9 @@ export default function Layout() {
   return (
     <StyleProvider>
       <View style={styles.container}>
-        {!isAuthPage && <Sidebar />}  
+        {!isAuthPage && <Sidebar />}
         <View style={styles.content}>
-          <Slot /> 
+          <Slot />
         </View>
       </View>
     </StyleProvider>
@@ -69,9 +123,36 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 10,
   },
+  disabledLink: {
+    opacity: 0.7,
+  },
+  linkInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   linkText: {
     color: '#FFF',
     fontSize: 18,
+  },
+  disabledText: {
+    color: '#DDD',
+  },
+  completedTag: {
+    fontSize: 10,
+    color: '#8DF',
+    backgroundColor: 'rgba(0, 100, 255, 0.3)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  unavailableTag: {
+    fontSize: 10,
+    color: '#FDD',
+    backgroundColor: 'rgba(255, 0, 0, 0.3)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   content: {
     flex: 1,

@@ -40,6 +40,9 @@ export interface AuthState {
     updateUserPicture: (pictureUrl: string) => Promise<boolean>;
     deleteUserAccount: () => Promise<boolean>;
     fetchCompleteUserData: () => Promise<any>;
+    fetchDailyTierlist: () => Promise<any>;
+    markDailyTierlistCompleted: () => Promise<any>;
+    setDailyTierlist: (templateId: string) => Promise<any>;
 }
 
 // TierList Types

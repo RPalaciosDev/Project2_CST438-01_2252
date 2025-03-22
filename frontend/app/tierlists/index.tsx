@@ -26,6 +26,7 @@ type Template = {
     }[];
     tags: string[];
     viewCount: number;
+    isCurrentDailyList: boolean;
 };
 
 // Local image imports as fallback
@@ -602,6 +603,21 @@ export default function TierList() {
             });
 
             console.log("ML service response:", response.data);
+
+            // Check if this is the daily tierlist
+            if (template?.isCurrentDailyList) {
+                try {
+                    // Access function directly from the auth store
+                    const markDailyTierlistCompleted = useAuthStore.getState().markDailyTierlistCompleted;
+
+                    // Mark the daily tierlist as completed
+                    const completionResponse = await markDailyTierlistCompleted();
+                    console.log("Daily tierlist marked as completed:", completionResponse);
+                } catch (completionError) {
+                    console.error("Error marking daily tierlist as completed:", completionError);
+                    // Continue navigation even if marking as completed fails
+                }
+            }
 
             // Successfully submitted - navigate directly to browse
             console.log("Submission successful, redirecting to browse page");
