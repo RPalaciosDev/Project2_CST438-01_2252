@@ -1,35 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, Slot, useSegments } from 'expo-router';
 import { StyleProvider } from './context/StyleContext';
 import { useAuthStore } from '../services/auth';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const Sidebar = () => {
   const router = useRouter();
   const fetchDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
   const [dailyTierAvailable, setDailyTierAvailable] = useState<boolean | null>(null);
   const [dailyTierCompleted, setDailyTierCompleted] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [dailyTemplateId, setDailyTemplateId] = useState<string | null>(null);
+
+  const checkDailyTierlist = async () => {
+    try {
+      setIsRefreshing(true);
+      const dailyData = await fetchDailyTierlist();
+
+      console.log("Daily tierlist check result:", dailyData);
+
+      // Update all state in one place
+      setDailyTierAvailable(dailyData?.available || false);
+      setDailyTierCompleted(dailyData?.completed || false);
+      setDailyTemplateId(dailyData?.templateId || null);
+
+      setIsRefreshing(false);
+    } catch (error) {
+      console.error('Error checking daily tierlist:', error);
+      setDailyTierAvailable(false);
+      setDailyTierCompleted(false);
+      setDailyTemplateId(null);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    async function checkDailyTierlist() {
-      try {
-        const dailyData = await fetchDailyTierlist();
-        setDailyTierAvailable(dailyData?.available || false);
-        setDailyTierCompleted(dailyData?.completed || false);
-      } catch (error) {
-        console.error('Error checking daily tierlist:', error);
-        setDailyTierAvailable(false);
-      }
-    }
-
     checkDailyTierlist();
   }, []);
 
   const handleDailyTierClick = () => {
-    if (dailyTierAvailable && !dailyTierCompleted) {
-      router.push('/tierlists');
+    if (dailyTierAvailable && !dailyTierCompleted && dailyTemplateId) {
+      // Pass the templateId to the tierlists screen
+      router.push({
+        pathname: '/tierlists',
+        params: { dailyTemplateId }
+      });
     } else {
-      console.log('Daily Tier not available or already completed');
+      if (dailyTierCompleted) {
+        Alert.alert(
+          "Already Completed",
+          "You have already completed today's daily tier list."
+        );
+      } else {
+        console.log('Daily Tier not available or already completed');
+      }
     }
   };
 
@@ -37,18 +62,17 @@ const Sidebar = () => {
     <View style={styles.sidebar}>
       <Text style={styles.logo}>Love Tiers</Text>
 
-      {/* Daily Tier Link with conditional styling */}
-      <TouchableOpacity
-        style={[
-          styles.link,
-          !dailyTierAvailable || dailyTierCompleted ? styles.disabledLink : {}
-        ]}
-        onPress={handleDailyTierClick}
-        disabled={!dailyTierAvailable || dailyTierCompleted}
-      >
-        {dailyTierAvailable === null ? (
-          <ActivityIndicator size="small" color="#FFF" />
-        ) : (
+      {/* Daily Tier Link with conditional styling and refresh button */}
+      <View style={styles.dailyTierContainer}>
+        <TouchableOpacity
+          style={[
+            styles.link,
+            styles.dailyTierLink,
+            !dailyTierAvailable || dailyTierCompleted ? styles.disabledLink : {}
+          ]}
+          onPress={handleDailyTierClick}
+          disabled={!dailyTierAvailable || dailyTierCompleted}
+        >
           <View style={styles.linkInner}>
             <Text style={[
               styles.linkText,
@@ -63,8 +87,19 @@ const Sidebar = () => {
               <Text style={styles.unavailableTag}>Unavailable</Text>
             )}
           </View>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={checkDailyTierlist}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <MaterialIcons name="refresh" size={20} color="#FFF" />
+          )}
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity style={styles.link} onPress={() => router.push('/browse')}>
         <Text style={styles.linkText}>Browse</Text>
@@ -119,6 +154,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  dailyTierContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dailyTierLink: {
+    flex: 1,
+  },
   link: {
     paddingVertical: 15,
     paddingHorizontal: 10,
@@ -158,6 +200,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
     padding: 20,
+  },
+  refreshButton: {
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

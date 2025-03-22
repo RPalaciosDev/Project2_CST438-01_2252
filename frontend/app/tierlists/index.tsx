@@ -56,7 +56,7 @@ interface TierZone {
 }
 
 export default function TierList() {
-    const { templateId } = useLocalSearchParams();
+    const { templateId, dailyTemplateId } = useLocalSearchParams();
     const router = useRouter();
     const { selectedStyle } = useStyle();
     const { user } = useAuthStore();
@@ -101,9 +101,17 @@ export default function TierList() {
     }, [selectedStyle]);
 
     useEffect(() => {
-        // Fetch template data if templateId is provided
-        if (templateId) {
-            fetchTemplateData(templateId as string);
+        // Fetch template data if a template ID is provided
+        // Priority: dailyTemplateId (from sidebar) > templateId (from browse)
+        const selectedTemplateId = dailyTemplateId || templateId;
+
+        if (selectedTemplateId) {
+            fetchTemplateData(selectedTemplateId as string);
+
+            // If this is a daily tier list, check if the user has already completed it
+            if (dailyTemplateId) {
+                checkDailyCompletionStatus();
+            }
         } else {
             // If no templateId, just use local images and stop loading
             const items = localImages.map(img => ({
@@ -114,7 +122,7 @@ export default function TierList() {
             setAvailableItems(items);
             setLoading(false);
         }
-    }, [templateId]);
+    }, [templateId, dailyTemplateId]);
 
     useEffect(() => {
         // Set up the pulsing animation for the heart
@@ -604,17 +612,27 @@ export default function TierList() {
 
             console.log("ML service response:", response.data);
 
-            // Check if this is the daily tierlist
-            if (template?.isCurrentDailyList) {
+            // Check if this is the daily tierlist (either by template field or by dailyTemplateId param)
+            const isDailyTierlist = template?.isCurrentDailyList || !!dailyTemplateId;
+
+            if (isDailyTierlist) {
                 try {
+                    console.log("Marking daily tierlist as completed for user:", user.id);
+
                     // Access function directly from the auth store
                     const markDailyTierlistCompleted = useAuthStore.getState().markDailyTierlistCompleted;
 
                     // Mark the daily tierlist as completed
                     const completionResponse = await markDailyTierlistCompleted();
                     console.log("Daily tierlist marked as completed:", completionResponse);
+
+                    if (!completionResponse || !completionResponse.success) {
+                        console.error("Failed to mark daily tierlist as completed:", completionResponse);
+                        Alert.alert("Warning", "Your rankings were saved, but we couldn't mark the daily tierlist as completed. You may be able to complete it again.");
+                    }
                 } catch (completionError) {
                     console.error("Error marking daily tierlist as completed:", completionError);
+                    Alert.alert("Warning", "Your rankings were saved, but we couldn't mark the daily tierlist as completed. You may be able to complete it again.");
                     // Continue navigation even if marking as completed fails
                 }
             }
@@ -627,6 +645,32 @@ export default function TierList() {
             Alert.alert("Error", "Failed to submit your tier list. Please try again.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Add this new function to check if the user has already completed this daily tier list
+    const checkDailyCompletionStatus = async () => {
+        try {
+            // Get the fetchDailyTierlist function from auth store
+            const fetchDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
+
+            // Fetch the latest daily tier list data
+            const dailyData = await fetchDailyTierlist();
+
+            console.log("Daily tierlist status check:", dailyData);
+
+            // If the user has already completed this daily tier list
+            if (dailyData?.completed) {
+                Alert.alert(
+                    "Already Completed",
+                    "You have already completed today's daily tier list!",
+                    [
+                        { text: "Return to Browse", onPress: () => router.replace('/browse') }
+                    ]
+                );
+            }
+        } catch (error) {
+            console.error("Error checking daily tier list completion status:", error);
         }
     };
 

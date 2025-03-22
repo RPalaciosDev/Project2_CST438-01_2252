@@ -33,6 +33,8 @@ interface TemplateWithImages {
   updatedAt: string;
   tags: string[];
   images: ImageMetadata[];
+  wasDailyList?: string; // ISO date string
+  isCurrentDailyList?: boolean;
 }
 
 export default function MyTiers() {
