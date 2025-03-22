@@ -67,6 +67,8 @@ public class DailyTierlistService {
      */
     public TierlistTemplate setDailyTierlist(String templateId, String adminUserId) {
         // TODO: Add admin role check here
+        // TEMPORARILY DISABLED FOR TESTING - ADMIN CHECK SHOULD BE IMPLEMENTED BEFORE
+        // PRODUCTION
 
         // Get today's date
         LocalDate today = LocalDate.now();

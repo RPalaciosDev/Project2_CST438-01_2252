@@ -65,6 +65,38 @@ public class DailyTierlistController {
     }
 
     /**
+     * TEMPORARY UNSECURED ENDPOINT FOR TESTING ONLY
+     * Set a template as the daily tierlist without requiring auth
+     * Usage example: curl -X POST http://localhost:8082/api/daily/test/{templateId}
+     * REMOVE THIS IN PRODUCTION
+     */
+    @PostMapping("/test/{templateId}")
+    public ResponseEntity<?> setDailyTierlistUnsecured(
+            @PathVariable String templateId) {
+        log.info("TESTING ONLY: Received unsecured setDailyTierlist request for templateId: {}", templateId);
+
+        try {
+            // Using a placeholder admin ID for testing
+            String testAdminId = "test-admin-user";
+            TierlistTemplate updatedTemplate = dailyTierlistService.setDailyTierlist(templateId, testAdminId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Template set as daily tierlist successfully (TEST MODE)");
+            response.put("templateId", updatedTemplate.getId());
+            response.put("date", updatedTemplate.getWasDailyList());
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+    }
+
+    /**
      * Mark the daily tierlist as completed by a user
      */
     @PostMapping("/complete")
