@@ -63,6 +63,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
+                        .requestMatchers("/api/tags/**").permitAll()
                         .requestMatchers("/api/info").permitAll()
                         .requestMatchers("/service-info").permitAll()
                         .requestMatchers("/service-info/**").permitAll()

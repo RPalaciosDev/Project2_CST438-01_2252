@@ -47,11 +47,14 @@ public class ServiceInfoController {
         endpoints.put("POST /api/images/store",
                 "Stores metadata for an image (requires fileName, s3Url, uploadedBy parameters)");
         endpoints.put("POST /api/images/sync", "Synchronizes S3 images with MongoDB storage");
+        endpoints.put("GET /api/tags/frequencies", "Returns a pre-calculated map of tags and their frequencies");
+        endpoints.put("POST /api/tags/refresh", "Force recalculation of tag frequencies");
 
         Map<String, String> capabilities = new HashMap<>();
         capabilities.put("storage", "Amazon S3 for image files");
         capabilities.put("metadata", "MongoDB for image metadata");
         capabilities.put("thumbnails", "Automatic thumbnail generation");
+        capabilities.put("tag_analysis", "Pre-calculation of tag frequencies for optimized client performance");
 
         serviceInfo.put("endpoints", endpoints);
         serviceInfo.put("capabilities", capabilities);
@@ -109,6 +112,8 @@ public class ServiceInfoController {
         endpoints.put("GET /api/images", "Returns metadata for all stored images");
         endpoints.put("POST /api/images/store", "Stores metadata for an image");
         endpoints.put("POST /api/images/sync", "Synchronizes S3 images with MongoDB storage");
+        endpoints.put("GET /api/tags/frequencies", "Returns a pre-calculated map of tags and their frequencies");
+        endpoints.put("POST /api/tags/refresh", "Force recalculation of tag frequencies");
 
         // Add all sections to the response
         info.put("system", systemInfo);
