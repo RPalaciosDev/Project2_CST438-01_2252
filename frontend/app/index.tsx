@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../services/auth';
@@ -9,15 +9,34 @@ export default function Index() {
   const { isAuthenticated, isLoading, loadStoredAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const isMounted = useRef(false);
+
+  // Set mounted ref after first render
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Load stored authentication on component mount
     const loadAuth = async () => {
       try {
+        console.log('Index: Loading stored authentication...');
         setError(null);
         await loadStoredAuth();
+
+        // Check and log the current auth state after loading
+        const currentState = useAuthStore.getState();
+        console.log('Index: Auth state after loading:', {
+          isAuthenticated: currentState.isAuthenticated,
+          hasUser: !!currentState.user,
+          userId: currentState.user?.id,
+          hasCompletedOnboarding: currentState.user?.hasCompletedOnboarding === true ? 'true' : 'false/undefined'
+        });
       } catch (err) {
-        console.error('Auth loading error:', err);
+        console.error('Index: Auth loading error:', err);
         if (axios.isAxiosError(err)) {
           setError(`Authentication error: ${err.message}. Please check your connection.`);
         } else {
@@ -25,28 +44,40 @@ export default function Index() {
         }
       }
     };
-    
-    loadAuth();
+
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      loadAuth();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [loadStoredAuth, retrying]);
 
   useEffect(() => {
-    // Redirect based on authentication status
-    if (!isLoading) {
-      if (isAuthenticated) {
-        const { isNewUser } = useAuthStore.getState();
-        if (isNewUser) {
-          router.replace('/startup');
+    // Redirect to auth-check which will handle all authentication and onboarding routing
+    if (!isLoading && isMounted.current) {
+      console.log('Index: Ready to navigate, isAuthenticated:', isAuthenticated);
+
+      // Use setTimeout to ensure navigation happens after mounting
+      const timer = setTimeout(() => {
+        if (!isMounted.current) return;
+
+        if (isAuthenticated) {
+          console.log('Index: Redirecting to auth-check for authenticated user');
+          router.replace('/auth-check');
         } else {
-          router.replace('/home');
+          console.log('Index: Redirecting to sign-in for unauthenticated user');
+          router.replace('/sign-in');
         }
-      } else {
-        router.replace('/sign-in');
-      }
+      }, 50);
+
+      return () => clearTimeout(timer);
     }
   }, [isLoading, isAuthenticated, router]);
 
   // Handle retry
   const handleRetry = () => {
+    console.log('Index: Retrying authentication load...');
     setRetrying(true);
     // Reset retry flag after a short delay to prevent rapid retries
     setTimeout(() => setRetrying(false), 500);
@@ -57,7 +88,7 @@ export default function Index() {
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#FF4B6E" />
       <Text style={styles.loadingText}>Loading...</Text>
-      
+
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>

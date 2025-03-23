@@ -47,12 +47,12 @@ export default function SignIn() {
         setApiStatus('Checking API connection...');
         try {
             // Use Railway deployed URL for production, fallback to local for development
-            const baseUrl = process.env.NODE_ENV === 'production' 
+            const baseUrl = process.env.NODE_ENV === 'production'
                 ? 'https://auth-user-service-production.up.railway.app'  // Ensure HTTPS
-                : Platform.OS === 'web' 
-                    ? 'http://localhost:8080' 
+                : Platform.OS === 'web'
+                    ? 'http://localhost:8080'
                     : 'http://10.0.2.2:8080';
-            
+
             // Try to get a simple response from the API to verify connection
             try {
                 // Try actuator/health first (Spring Boot standard endpoint)
@@ -83,7 +83,7 @@ export default function SignIn() {
     // Check if user is already authenticated and redirect if needed
     useEffect(() => {
         if (isAuthenticated && token) {
-            router.replace('/home');
+            router.replace('/auth-check');
         }
     }, [isAuthenticated, token, router]);
 
@@ -92,19 +92,14 @@ export default function SignIn() {
             setError('Username and password are required');
             return;
         }
-        
+
         setIsLoading(true);
         setError('');
-        
+
         try {
             await login(username, password);
-            // Check if this is a new user (unlikely for regular login, but possible for first-time social login)
-            const { isNewUser } = useAuthStore.getState();
-            if (isNewUser) {
-                router.replace('/startup');
-            } else {
-                router.replace('/home');
-            }
+            // Redirect to auth-check page which will handle further routing
+            router.replace('/auth-check');
         } catch (err) {
             console.error('Sign in error:', err);
             if (axios.isAxiosError(err)) {
@@ -140,19 +135,20 @@ export default function SignIn() {
     const handleGoogleLogin = async () => {
         setError('');
         setIsLoading(true);
-        
+
         try {
+            console.log('Starting Google login process from sign-in page');
             await loginWithGoogle();
-            // Check if this is a new user
-            const { isNewUser } = useAuthStore.getState();
-            if (isNewUser) {
-                router.replace('/startup');
-            } else {
-                router.replace('/home');
-            }
-        } catch (error) {
-            if (error instanceof Error) {
-                setError(error.message);
+            console.log('Google login successful, redirecting to auth-check');
+
+            // Add a small delay to ensure local storage is updated before redirect
+            setTimeout(() => {
+                router.replace('/auth-check');
+            }, 100);
+        } catch (err) {
+            console.error('Google login error in sign-in page:', err);
+            if (err instanceof Error) {
+                setError(err.message);
             } else {
                 setError('Failed to sign in with Google');
             }
@@ -166,9 +162,9 @@ export default function SignIn() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <Text style={styles.title}>Sign In</Text>
-            
+
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            
+
             <View style={styles.form}>
                 <Text style={styles.label}>Username or Email</Text>
                 <TextInput
@@ -179,7 +175,7 @@ export default function SignIn() {
                     autoCapitalize="none"
                     editable={!isLoading}
                 />
-                
+
                 <Text style={styles.label}>Password</Text>
                 <TextInput
                     style={styles.input}
@@ -189,7 +185,7 @@ export default function SignIn() {
                     secureTextEntry
                     editable={!isLoading}
                 />
-                
+
                 <TouchableOpacity
                     style={[styles.button, isLoading && styles.buttonDisabled]}
                     onPress={handleSubmit}
@@ -201,13 +197,13 @@ export default function SignIn() {
                         <Text style={styles.buttonText}>Sign In</Text>
                     )}
                 </TouchableOpacity>
-                
+
                 <View style={styles.divider}>
                     <View style={styles.dividerLine} />
                     <Text style={styles.dividerText}>OR</Text>
                     <View style={styles.dividerLine} />
                 </View>
-                
+
                 <TouchableOpacity
                     style={[styles.googleButton, isLoading && styles.buttonDisabled]}
                     onPress={handleGoogleLogin}
@@ -215,14 +211,14 @@ export default function SignIn() {
                 >
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
-                
+
                 <Link href="/sign-up" asChild>
                     <TouchableOpacity style={styles.linkButton}>
                         <Text style={styles.linkText}>Don't have an account? Sign Up</Text>
                     </TouchableOpacity>
                 </Link>
             </View>
-            
+
             {apiStatus ? (
                 <View style={styles.apiStatus}>
                     <Text style={styles.apiStatusText}>{apiStatus}</Text>

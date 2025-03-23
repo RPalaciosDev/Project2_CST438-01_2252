@@ -1,120 +1,145 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, Slot, useSegments } from 'expo-router';
 import { StyleProvider } from './context/StyleContext';
 import { useAuthStore } from '../services/auth';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 
-const Sidebar = () => {
+// Auth protection component to check if user is authenticated
+const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { token, isAuthenticated, checkStatus, isLoading } = useAuthStore();
+  const segments = useSegments();
   const router = useRouter();
-  const fetchDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
-  const [dailyTierAvailable, setDailyTierAvailable] = useState<boolean | null>(null);
-  const [dailyTierCompleted, setDailyTierCompleted] = useState<boolean>(false);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [dailyTemplateId, setDailyTemplateId] = useState<string | null>(null);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const isMounted = useRef(false);
 
-  const checkDailyTierlist = async () => {
-    try {
-      setIsRefreshing(true);
-      const dailyData = await fetchDailyTierlist();
+  // Public routes that don't require authentication
+  const publicRoutes = ['sign-in', 'sign-up', 'auth-check', '(auth)', 'startup'];
+  const isPublicRoute = publicRoutes.some(route => segments.includes(route));
 
-      console.log("Daily tierlist check result:", dailyData);
-
-      // Update all state in one place
-      setDailyTierAvailable(dailyData?.available || false);
-      setDailyTierCompleted(dailyData?.completed || false);
-      setDailyTemplateId(dailyData?.templateId || null);
-
-      setIsRefreshing(false);
-    } catch (error) {
-      console.error('Error checking daily tierlist:', error);
-      setDailyTierAvailable(false);
-      setDailyTierCompleted(false);
-      setDailyTemplateId(null);
-      setIsRefreshing(false);
-    }
-  };
-
+  // Set mounted ref after first render
   useEffect(() => {
-    checkDailyTierlist();
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
-  const handleDailyTierClick = () => {
-    if (dailyTierAvailable && !dailyTierCompleted && dailyTemplateId) {
-      // Pass the templateId to the tierlists screen
-      router.push({
-        pathname: '/tierlists',
-        params: { dailyTemplateId }
-      });
-    } else {
-      if (dailyTierCompleted) {
-        Alert.alert(
-          "Already Completed",
-          "You have already completed today's daily tier list."
-        );
-      } else {
-        console.log('Daily Tier not available or already completed');
+  // Check authentication status
+  useEffect(() => {
+    console.log("Current route segments:", segments);
+
+    const checkAuth = async () => {
+      if (!hasCheckedAuth) {
+        try {
+          const status = await checkStatus();
+          console.log("Auth check in layout:", status);
+          if (isMounted.current) {
+            setHasCheckedAuth(true);
+          }
+        } catch (err) {
+          console.error("Error checking auth:", err);
+          if (isMounted.current) {
+            setHasCheckedAuth(true); // Still set to true to avoid infinite loop
+          }
+        }
       }
+    };
+
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [segments]);
+
+  // Handle redirects after auth check is complete
+  useEffect(() => {
+    if (hasCheckedAuth && isMounted.current) {
+      // Don't redirect if we're already on a public route
+      if (!isAuthenticated && !isPublicRoute) {
+        console.log("Not authenticated, redirecting to sign-in");
+        // Use setTimeout to ensure navigation happens after mounting
+        setTimeout(() => {
+          if (isMounted.current) {
+            router.replace('/sign-in');
+          }
+        }, 50);
+      }
+    }
+  }, [isAuthenticated, hasCheckedAuth, isPublicRoute, segments]);
+
+  if (!hasCheckedAuth && !isPublicRoute) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF4B6E" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// Sidebar component
+const Sidebar = () => {
+  const router = useRouter();
+  const { logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/sign-in');
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Logout Failed', 'There was an error logging out. Please try again.');
     }
   };
 
   return (
     <View style={styles.sidebar}>
-      <Text style={styles.logo}>Love Tiers</Text>
+      <TouchableOpacity
+        style={styles.sidebarItem}
+        onPress={() => router.push('/')}
+      >
+        <MaterialIcons name="home" size={24} color="#333" />
+        <Text style={styles.sidebarText}>Home</Text>
+      </TouchableOpacity>
 
-      {/* Daily Tier Link with conditional styling and refresh button */}
-      <View style={styles.dailyTierContainer}>
-        <TouchableOpacity
-          style={[
-            styles.link,
-            styles.dailyTierLink,
-            !dailyTierAvailable || dailyTierCompleted ? styles.disabledLink : {}
-          ]}
-          onPress={handleDailyTierClick}
-          disabled={!dailyTierAvailable || dailyTierCompleted}
-        >
-          <View style={styles.linkInner}>
-            <Text style={[
-              styles.linkText,
-              !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
-            ]}>
-              Daily Tier
-            </Text>
-            {dailyTierCompleted && (
-              <Text style={styles.completedTag}>Completed</Text>
-            )}
-            {!dailyTierAvailable && !dailyTierCompleted && (
-              <Text style={styles.unavailableTag}>Unavailable</Text>
-            )}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={checkDailyTierlist}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <MaterialIcons name="refresh" size={20} color="#FFF" />
-          )}
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.sidebarItem}
+        onPress={() => router.push('/tierlist')}
+      >
+        <MaterialIcons name="list" size={24} color="#333" />
+        <Text style={styles.sidebarText}>Your Tierlists</Text>
+      </TouchableOpacity>
 
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/browse')}>
-        <Text style={styles.linkText}>Browse</Text>
+      <TouchableOpacity
+        style={styles.sidebarItem}
+        onPress={() => router.push('/discover')}
+      >
+        <MaterialIcons name="explore" size={24} color="#333" />
+        <Text style={styles.sidebarText}>Discover</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/my-tiers')}>
-        <Text style={styles.linkText}>My Tiers</Text>
+
+      <TouchableOpacity
+        style={styles.sidebarItem}
+        onPress={() => router.push('/profile')}
+      >
+        <MaterialIcons name="person" size={24} color="#333" />
+        <Text style={styles.sidebarText}>Profile</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/tier-builder')}>
-        <Text style={styles.linkText}>Tier Builder</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/chats')}>
-        <Text style={styles.linkText}>Chats</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/home')}>
-        <Text style={styles.linkText}>Profile</Text>
+
+      <View style={styles.spacer} />
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleLogout}
+      >
+        <MaterialIcons name="logout" size={24} color="#FF4B6E" />
+        <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
     </View>
   );
@@ -124,14 +149,21 @@ export default function Layout() {
   const segments = useSegments();
   const isAuthPage = segments.includes("sign-in") || segments.includes("sign-up") || segments.includes("startup");
 
+  // Register WebBrowser handler to ensure Google OAuth callback works
+  useEffect(() => {
+    WebBrowser.maybeCompleteAuthSession();
+  }, []);
+
   return (
     <StyleProvider>
-      <View style={styles.container}>
-        {!isAuthPage && <Sidebar />}
-        <View style={styles.content}>
-          <Slot />
+      <AuthWrapper>
+        <View style={styles.container}>
+          {!isAuthPage && <Sidebar />}
+          <View style={styles.content}>
+            <Slot />
+          </View>
         </View>
-      </View>
+      </AuthWrapper>
     </StyleProvider>
   );
 }
@@ -142,69 +174,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 200,
-    backgroundColor: '#C76FA4',
-    paddingVertical: 20,
-    paddingHorizontal: 10,
+    width: 220,
+    backgroundColor: '#FFF9FA',
+    borderRightWidth: 1,
+    borderRightColor: '#FFE4E8',
+    padding: 16,
+    paddingTop: 40,
   },
-  logo: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  dailyTierContainer: {
+  sidebarItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  dailyTierLink: {
-    flex: 1,
-  },
-  link: {
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-  },
-  disabledLink: {
-    opacity: 0.7,
-  },
-  linkInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  linkText: {
-    color: '#FFF',
-    fontSize: 18,
-  },
-  disabledText: {
-    color: '#DDD',
-  },
-  completedTag: {
-    fontSize: 10,
-    color: '#8DF',
-    backgroundColor: 'rgba(0, 100, 255, 0.3)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  unavailableTag: {
-    fontSize: 10,
-    color: '#FDD',
-    backgroundColor: 'rgba(255, 0, 0, 0.3)',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
+  sidebarText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333',
   },
   content: {
     flex: 1,
-    backgroundColor: '#FFF',
-    padding: 20,
   },
-  refreshButton: {
-    padding: 10,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  spacer: {
+    flex: 1,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFE4E8',
+  },
+  logoutText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#FF4B6E',
+  },
 });
+
 

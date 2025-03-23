@@ -38,6 +38,7 @@ export interface AuthState {
     updateUserGender: (gender: string) => Promise<boolean>;
     updateUserPreferences: (lookingFor: string) => Promise<boolean>;
     updateUserPicture: (pictureUrl: string) => Promise<boolean>;
+    updateOnboardingStatus: (completed: boolean) => Promise<boolean>;
     deleteUserAccount: () => Promise<boolean>;
     fetchCompleteUserData: () => Promise<any>;
     fetchDailyTierlist: () => Promise<any>;
