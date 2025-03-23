@@ -629,6 +629,10 @@ export default function TierList() {
                     if (!completionResponse || !completionResponse.success) {
                         console.error("Failed to mark daily tierlist as completed:", completionResponse);
                         Alert.alert("Warning", "Your rankings were saved, but we couldn't mark the daily tierlist as completed. You may be able to complete it again.");
+                    } else {
+                        // Explicitly update the daily tierlist status in the sidebar
+                        const checkDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
+                        await checkDailyTierlist();
                     }
                 } catch (completionError) {
                     console.error("Error marking daily tierlist as completed:", completionError);

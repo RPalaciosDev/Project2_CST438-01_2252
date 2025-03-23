@@ -1071,35 +1071,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Daily Tierlist API methods
     fetchDailyTierlist: async () => {
         try {
-            const token = await storage.getItem('token');
+            // Log the API URL being used
+            console.log("Fetching daily tierlist from:", TIERLIST_API_URL);
 
-            if (!token) {
-                console.log('No token found for fetchDailyTierlist');
-                return { available: false, completed: false, templateId: null };
+            // Check if user is authenticated
+            if (!get().token) {
+                console.log("User not authenticated, cannot fetch daily tierlist");
+                return { available: false, message: "Not authenticated" };
             }
 
-            const response = await axiosInstance.get(`${TIERLIST_API_URL}/api/tierlists/daily`, {
+            const response = await axios.get(`${TIERLIST_API_URL}/api/daily`, {
                 headers: {
-                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
+                    'X-User-ID': get().user?.id
                 }
             });
 
-            if (response.status !== 200) {
-                console.log('Error fetching daily tierlist:', response.status);
-                return { available: false, completed: false, templateId: null };
+            // Log successful response
+            console.log("Daily tierlist fetch successful:", response.status);
+
+            return response.data;
+        } catch (err) {
+            console.error("Error in fetchDailyTierlist:", err);
+
+            // Enhanced error logging
+            if (axios.isAxiosError(err)) {
+                console.log("Status:", err.response?.status);
+                console.log("Response data:", err.response?.data);
             }
 
-            const data = response.data;
-            console.log('Daily tierlist data:', data);
-
+            // Return a valid default response
             return {
-                available: data.available || false,
-                completed: data.completed || false,
-                templateId: data.templateId || null
+                available: false,
+                completed: false,
+                message: "Error fetching daily tierlist"
             };
-        } catch (error) {
-            console.error('Error in fetchDailyTierlist:', error);
-            return { available: false, completed: false, templateId: null };
         }
     },
 

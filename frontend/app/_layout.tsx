@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated, Platform, Pressable, Dimensions } from 'react-native';
 import { useRouter, Slot, useSegments } from 'expo-router';
 import { StyleProvider } from './context/StyleContext';
 import { useAuthStore } from '../services/auth';
@@ -92,6 +92,153 @@ const Sidebar = () => {
   const [dailyTierCompleted, setDailyTierCompleted] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [dailyTemplateId, setDailyTemplateId] = useState<string | null>(null);
+  const [dailyTierTitle, setDailyTierTitle] = useState<string>("");
+  const [isHovering, setIsHovering] = useState(false);
+  const isWeb = Platform.OS === 'web';
+
+  // Animation for sidebar sliding
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const sidebarVisible = useRef(true);
+
+  const showSidebar = () => {
+    console.log("Showing sidebar");
+    sidebarVisible.current = true;
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideSidebar = () => {
+    if (!isHovering) {
+      console.log("Hiding sidebar");
+      sidebarVisible.current = false;
+      Animated.timing(slideAnim, {
+        toValue: -250, // Width of the sidebar
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  // Start hide timer when component mounts
+  useEffect(() => {
+    console.log("Setting up sidebar auto-hide timer");
+    const timer = setTimeout(() => {
+      console.log("Auto-hide timer triggered");
+      hideSidebar();
+    }, 5000); // Hide after 5 seconds
+
+    return () => {
+      console.log("Clearing auto-hide timer");
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Watch hover state changes to handle showing/hiding
+  useEffect(() => {
+    if (isHovering) {
+      showSidebar();
+    } else {
+      // Add a slight delay before hiding to prevent accidental hide
+      const timer = setTimeout(() => {
+        hideSidebar();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isHovering]);
+
+  // Setup web event handlers
+  useEffect(() => {
+    // We only run this code on web platform
+    if (Platform.OS !== 'web') return;
+
+    // For TypeScript, we need to be careful about accessing browser objects
+    const addListeners = () => {
+      try {
+        // We need to cast to any to avoid TypeScript errors with document/window
+        // This is safe because we've already checked Platform.OS === 'web'
+        const doc = (global as any).document;
+        const win = (global as any).window;
+
+        if (!doc || !win) return;
+
+        const sidebarElement = doc.getElementById('sidebar');
+        const triggerElement = doc.getElementById('sidebar-trigger');
+
+        const handleSidebarEnter = () => {
+          console.log("Mouse entered sidebar");
+          setIsHovering(true);
+          showSidebar();
+        };
+
+        const handleSidebarLeave = () => {
+          console.log("Mouse left sidebar");
+          setIsHovering(false);
+          setTimeout(() => hideSidebar(), 300); // Small delay before hiding
+        };
+
+        const handleTriggerEnter = () => {
+          console.log("Mouse entered trigger area");
+          setIsHovering(true);
+          showSidebar();
+        };
+
+        if (sidebarElement) {
+          sidebarElement.addEventListener('mouseenter', handleSidebarEnter);
+          sidebarElement.addEventListener('mouseleave', handleSidebarLeave);
+        }
+
+        if (triggerElement) {
+          triggerElement.addEventListener('mouseenter', handleTriggerEnter);
+        }
+
+        // Return cleanup function
+        return () => {
+          if (sidebarElement) {
+            sidebarElement.removeEventListener('mouseenter', handleSidebarEnter);
+            sidebarElement.removeEventListener('mouseleave', handleSidebarLeave);
+          }
+
+          if (triggerElement) {
+            triggerElement.removeEventListener('mouseenter', handleTriggerEnter);
+          }
+        };
+      } catch (error) {
+        console.error('Error setting up web event listeners:', error);
+        return () => { }; // Empty cleanup if there was an error
+      }
+    };
+
+    // Wait a moment for components to mount
+    const cleanup = setTimeout(addListeners, 500);
+
+    return () => {
+      clearTimeout(cleanup);
+    };
+  }, [isWeb]);
+
+  // For mobile, we use touch to toggle the sidebar
+  const handleTriggerTouch = () => {
+    showSidebar();
+  };
+
+  const handleTabHover = () => {
+    setIsHovering(true);
+  };
+
+  const handleTabHoverExit = () => {
+    setIsHovering(false);
+  };
+
+  const handleSidebarHover = () => {
+    setIsHovering(true);
+  };
+
+  const handleSidebarHoverExit = () => {
+    setIsHovering(false);
+  };
 
   const checkDailyTierlist = async () => {
     try {
@@ -104,6 +251,7 @@ const Sidebar = () => {
       setDailyTierAvailable(dailyData?.available || false);
       setDailyTierCompleted(dailyData?.completed || false);
       setDailyTemplateId(dailyData?.templateId || null);
+      setDailyTierTitle(dailyData?.title || "Daily Tier");
 
       setIsRefreshing(false);
     } catch (error) {
@@ -111,30 +259,59 @@ const Sidebar = () => {
       setDailyTierAvailable(false);
       setDailyTierCompleted(false);
       setDailyTemplateId(null);
+      setDailyTierTitle("Daily Tier");
       setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     checkDailyTierlist();
+
+    // Set up an interval to periodically check the daily tierlist status
+    // This helps ensure the UI reflects the current state even after completion
+    const intervalId = setInterval(() => {
+      checkDailyTierlist();
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
   }, []);
 
-  const handleDailyTierClick = () => {
-    if (dailyTierAvailable && !dailyTierCompleted && dailyTemplateId) {
-      // Pass the templateId to the tierlists screen
-      router.push({
-        pathname: '/tierlists',
-        params: { dailyTemplateId }
-      });
-    } else {
-      if (dailyTierCompleted) {
+  const handleDailyTierClick = async () => {
+    // Check daily status again right before navigation to ensure it's up-to-date
+    try {
+      const dailyData = await fetchDailyTierlist();
+      const isCompleted = dailyData?.completed || false;
+      const isAvailable = dailyData?.available || false;
+      const currentTemplateId = dailyData?.templateId || null;
+
+      if (isCompleted) {
         Alert.alert(
           "Already Completed",
           "You have already completed today's daily tier list."
         );
-      } else {
-        console.log('Daily Tier not available or already completed');
+        return;
       }
+
+      if (!isAvailable || !currentTemplateId) {
+        Alert.alert(
+          "Daily Tier Unavailable",
+          "Today's daily tier list is not available right now. Please check back later."
+        );
+        console.log('Daily Tier not available');
+        return;
+      }
+
+      // Navigate to the tierlist screen with the template ID
+      router.push({
+        pathname: '/tierlists',
+        params: { dailyTemplateId: currentTemplateId }
+      });
+    } catch (error) {
+      console.error('Error checking daily tierlist before navigation:', error);
+      Alert.alert(
+        "Error",
+        "There was an error accessing the daily tier list. Please try again later."
+      );
     }
   };
 
@@ -149,107 +326,256 @@ const Sidebar = () => {
   };
 
   return (
-    <View style={styles.sidebar}>
-      <Text style={styles.logo}>Love Tiers</Text>
+    <>
+      {/* Sidebar Tab - always visible when sidebar is hidden */}
+      <Animated.View
+        style={[
+          styles.sidebarTab,
+          {
+            opacity: slideAnim.interpolate({
+              inputRange: [-250, -200, 0],
+              outputRange: [1, 0.5, 0],
+            })
+          }
+        ]}
+        pointerEvents="box-none"
+      >
+        {Platform.OS === 'web' ? (
+          <Pressable
+            style={styles.tabButton}
+            onHoverIn={handleTabHover}
+            onHoverOut={handleTabHoverExit}
+            onPress={handleTriggerTouch}
+            testID="sidebar-tab"
+          >
+            <MaterialIcons name="menu" size={24} color="#FF4B6E" />
+          </Pressable>
+        ) : (
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={handleTriggerTouch}
+            testID="sidebar-tab"
+          >
+            <MaterialIcons name="menu" size={24} color="#FF4B6E" />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
 
-      {/* Daily Tier Link with conditional styling and refresh button */}
-      <View style={styles.dailyTierContainer}>
-        <TouchableOpacity
+      {/* Sidebar Content */}
+      {Platform.OS === 'web' ? (
+        <Animated.View
           style={[
-            styles.sidebarItem,
-            styles.dailyTierItem,
-            !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {}
+            styles.sidebar,
+            { transform: [{ translateX: slideAnim }] }
           ]}
-          onPress={handleDailyTierClick}
-          disabled={!dailyTierAvailable || dailyTierCompleted}
+          nativeID="sidebar"
         >
-          <MaterialIcons name="stars" size={24} color={!dailyTierAvailable || dailyTierCompleted ? "#999" : "#FF4B6E"} />
-          <View style={styles.dailyTierTextContainer}>
-            <Text style={[
-              styles.sidebarText,
-              !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
-            ]}>
-              Daily Tier
-            </Text>
-            {dailyTierCompleted && (
-              <Text style={styles.completedTag}>Completed</Text>
-            )}
-            {!dailyTierAvailable && !dailyTierCompleted && (
-              <Text style={styles.unavailableTag}>Unavailable</Text>
+          <Pressable
+            style={{ flex: 1 }}
+            onHoverIn={handleSidebarHover}
+            onHoverOut={handleSidebarHoverExit}
+          >
+            <Text style={styles.logo}>Love Tiers</Text>
+
+            {/* Daily Tier Link with conditional styling and refresh button */}
+            <View style={styles.dailyTierContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.sidebarItem,
+                  styles.dailyTierItem,
+                  !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {}
+                ]}
+                onPress={handleDailyTierClick}
+                disabled={!dailyTierAvailable || dailyTierCompleted}
+              >
+                <MaterialIcons name="stars" size={24} color={!dailyTierAvailable || dailyTierCompleted ? "#999" : "#FF4B6E"} />
+                <View style={styles.dailyTierTextContainer}>
+                  <Text style={[
+                    styles.sidebarText,
+                    !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
+                  ]}>
+                    {dailyTierTitle.length > 20 ? dailyTierTitle.substring(0, 17) + "..." : dailyTierTitle || "Daily Tier"}
+                  </Text>
+                  {dailyTierCompleted && (
+                    <Text style={styles.completedTag}>Completed</Text>
+                  )}
+                  {!dailyTierAvailable && !dailyTierCompleted && (
+                    <Text style={styles.unavailableTag}>Unavailable</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+              {/* Only show refresh button if not completed */}
+              {!dailyTierCompleted && (
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={checkDailyTierlist}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <ActivityIndicator size="small" color="#999" />
+                  ) : (
+                    <MaterialIcons name="refresh" size={20} color="#999" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={() => router.push('/my-tiers')}
+            >
+              <MaterialIcons name="list" size={24} color="#333" />
+              <Text style={styles.sidebarText}>Your Tierlists</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={() => router.push('/browse')}
+            >
+              <MaterialIcons name="explore" size={24} color="#333" />
+              <Text style={styles.sidebarText}>Discover</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={() => router.push('/tier-builder')}
+            >
+              <MaterialIcons name="build" size={24} color="#333" />
+              <Text style={styles.sidebarText}>Tier Builder</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={() => router.push('/chats')}
+            >
+              <MaterialIcons name="chat" size={24} color="#333" />
+              <Text style={styles.sidebarText}>Chats</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.sidebarItem}
+              onPress={() => router.push('/')}
+            >
+              <MaterialIcons name="person" size={24} color="#333" />
+              <Text style={styles.sidebarText}>Profile</Text>
+            </TouchableOpacity>
+
+            <View style={styles.spacer} />
+
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+            >
+              <MaterialIcons name="logout" size={24} color="#FF4B6E" />
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Animated.View>
+      ) : (
+        <Animated.View
+          style={[
+            styles.sidebar,
+            { transform: [{ translateX: slideAnim }] }
+          ]}
+          nativeID="sidebar"
+        >
+          <Text style={styles.logo}>Love Tiers</Text>
+
+          {/* Daily Tier Link with conditional styling and refresh button */}
+          <View style={styles.dailyTierContainer}>
+            <TouchableOpacity
+              style={[
+                styles.sidebarItem,
+                styles.dailyTierItem,
+                !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {}
+              ]}
+              onPress={handleDailyTierClick}
+              disabled={!dailyTierAvailable || dailyTierCompleted}
+            >
+              <MaterialIcons name="stars" size={24} color={!dailyTierAvailable || dailyTierCompleted ? "#999" : "#FF4B6E"} />
+              <View style={styles.dailyTierTextContainer}>
+                <Text style={[
+                  styles.sidebarText,
+                  !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
+                ]}>
+                  {dailyTierTitle.length > 20 ? dailyTierTitle.substring(0, 17) + "..." : dailyTierTitle || "Daily Tier"}
+                </Text>
+                {dailyTierCompleted && (
+                  <Text style={styles.completedTag}>Completed</Text>
+                )}
+                {!dailyTierAvailable && !dailyTierCompleted && (
+                  <Text style={styles.unavailableTag}>Unavailable</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+            {/* Only show refresh button if not completed */}
+            {!dailyTierCompleted && (
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={checkDailyTierlist}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <ActivityIndicator size="small" color="#999" />
+                ) : (
+                  <MaterialIcons name="refresh" size={20} color="#999" />
+                )}
+              </TouchableOpacity>
             )}
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={checkDailyTierlist}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <ActivityIndicator size="small" color="#999" />
-          ) : (
-            <MaterialIcons name="refresh" size={20} color="#999" />
-          )}
-        </TouchableOpacity>
-      </View>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/')}
-      >
-        <MaterialIcons name="home" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Home</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={() => router.push('/my-tiers')}
+          >
+            <MaterialIcons name="list" size={24} color="#333" />
+            <Text style={styles.sidebarText}>Your Tierlists</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/my-tiers')}
-      >
-        <MaterialIcons name="list" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Your Tierlists</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={() => router.push('/browse')}
+          >
+            <MaterialIcons name="explore" size={24} color="#333" />
+            <Text style={styles.sidebarText}>Discover</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/browse')}
-      >
-        <MaterialIcons name="explore" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Discover</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={() => router.push('/tier-builder')}
+          >
+            <MaterialIcons name="build" size={24} color="#333" />
+            <Text style={styles.sidebarText}>Tier Builder</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/tier-builder')}
-      >
-        <MaterialIcons name="build" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Tier Builder</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={() => router.push('/chats')}
+          >
+            <MaterialIcons name="chat" size={24} color="#333" />
+            <Text style={styles.sidebarText}>Chats</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/chats')}
-      >
-        <MaterialIcons name="chat" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Chats</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.sidebarItem}
+            onPress={() => router.push('/')}
+          >
+            <MaterialIcons name="person" size={24} color="#333" />
+            <Text style={styles.sidebarText}>Profile</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.sidebarItem}
-        onPress={() => router.push('/profile')}
-      >
-        <MaterialIcons name="person" size={24} color="#333" />
-        <Text style={styles.sidebarText}>Profile</Text>
-      </TouchableOpacity>
+          <View style={styles.spacer} />
 
-      <View style={styles.spacer} />
-
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <MaterialIcons name="logout" size={24} color="#FF4B6E" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <MaterialIcons name="logout" size={24} color="#FF4B6E" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+    </>
   );
 };
 
@@ -266,20 +592,21 @@ export default function Layout() {
     <StyleProvider>
       <AuthWrapper>
         <View style={styles.container}>
-          {!isAuthPage && <Sidebar />}
           <View style={styles.content}>
             <Slot />
           </View>
+          {!isAuthPage && <Sidebar />}
         </View>
       </AuthWrapper>
     </StyleProvider>
   );
 }
 
+const screenWidth = Dimensions.get('window').width;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
   },
   sidebar: {
     width: 250,
@@ -288,6 +615,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRightWidth: 1,
     borderRightColor: '#e0e0e0',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   sidebarItem: {
     flexDirection: 'row',
@@ -310,6 +647,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: '#fff',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -382,6 +720,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#f0f0f0',
     marginLeft: 4,
+  },
+  triggerArea: {
+    position: 'absolute',
+    width: 20,
+    height: '100%',
+    left: 0,
+    top: 0,
+    zIndex: 10,
+  },
+  sidebarTab: {
+    position: 'absolute',
+    left: 0,
+    top: '50%',
+    zIndex: 101,
+    transform: [{ translateY: -20 }],
+  },
+  tabButton: {
+    backgroundColor: '#f8f8f8',
+    width: 30,
+    height: 50,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 5,
   },
 });
 

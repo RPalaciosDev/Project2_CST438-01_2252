@@ -41,7 +41,13 @@ export interface AuthState {
     updateOnboardingStatus: (completed: boolean) => Promise<boolean>;
     deleteUserAccount: () => Promise<boolean>;
     fetchCompleteUserData: () => Promise<any>;
-    fetchDailyTierlist: () => Promise<{ available: boolean; completed: boolean; templateId: string | null }>;
+    fetchDailyTierlist: () => Promise<{
+        available: boolean;
+        completed: boolean;
+        templateId: string | null;
+        title?: string;
+        description?: string;
+    }>;
     markDailyTierlistCompleted: () => Promise<any>;
     setDailyTierlist: (templateId: string) => Promise<any>;
 }

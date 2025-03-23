@@ -75,44 +75,10 @@ export default function Home() {
   // Animated value for slide-up button - start at -100 to be hidden initially
   const slideAnim = useRef(new Animated.Value(-100)).current;
 
-  // Simplified check - only verify if user has completed onboarding
-  const checkOnboardingAndRedirect = () => {
-    console.log('Home: Checking if user has completed onboarding');
-
-    if (!user) {
-      console.log('Home: No user data available, redirecting to auth-check');
-      router.replace('/auth-check');
-      return;
-    }
-
-    console.log('Home: User onboarding status:', {
-      hasCompletedOnboarding: user.hasCompletedOnboarding === true ? 'true' : 'false/undefined',
-      userId: user.id
-    });
-
-    if (user.hasCompletedOnboarding !== true) {
-      console.log('Home: User has not completed onboarding, redirecting to startup');
-      // Store that this is a new user
-      useAuthStore.setState({ isNewUser: true });
-      router.replace('/startup');
-    } else {
-      console.log('Home: User has completed onboarding, continuing to home');
-    }
-  };
-
-  // Initial load and onboarding check
-  useEffect(() => {
-    checkOnboardingAndRedirect();
-  }, [user]);
-
   // Basic token check without making API calls
   useEffect(() => {
-    if (!token) {
-      console.log('Home: No token found, redirecting to sign-in');
-      router.replace('/sign-in');
-    }
     setPickerValue(selectedStyle);
-  }, [selectedStyle, token]);
+  }, [selectedStyle]);
 
   // Check for changes and animate save button accordingly
   useEffect(() => {
