@@ -152,8 +152,12 @@ export default function AuthCheck() {
     // Display loading indicator while checking
     return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FF4B6E', marginBottom: 15 }}>Welcome to Love Tiers!</Text>
             <ActivityIndicator size="large" color="#FF4B6E" />
-            <Text style={{ marginTop: 20, color: '#555' }}>Verifying your account...</Text>
+            <Text style={{ marginTop: 20, color: '#555', textAlign: 'center', maxWidth: '80%' }}>Verifying your account...</Text>
+            <Text style={{ marginTop: 10, color: '#888', textAlign: 'center', maxWidth: '80%', fontSize: 14 }}>
+                We're personalizing your experience and preparing your daily tier list.
+            </Text>
         </View>
     );
 } 

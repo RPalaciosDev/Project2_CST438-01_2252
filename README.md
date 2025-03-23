@@ -1,10 +1,12 @@
 # LoveTiers App
 
-A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication and OAuth2 authentication.
+A modern, mobile-first application for creating and sharing tier lists. Built with Expo, React Native, and a microservices architecture. Features secure HTTPS communication, OAuth2 authentication, and personalized tier list recommendations.
 
 ## Table of Contents
+
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
+- [Repository Structure](#repository-structure)
 - [Project Structure](#project-structure)
 - [Services Overview](#services-overview)
   - [Frontend Service](#frontend-service)
@@ -12,8 +14,11 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - [Tier List Service](#tier-list-service)
   - [Chat Service](#chat-service)
   - [Image Storage Service](#image-storage-service)
-- [Development Setup](#development-setup)
-- [Production Deployment](#production-deployment)
+  - [ML Service](#ml-service)
+- [Key Features](#key-features)
+  - [Tag System Integration](#tag-system-integration)
+  - [Daily Tier Lists](#daily-tier-lists)
+- [Deployment Strategy](#deployment-strategy)
 - [Configuration Management](#configuration-management)
 - [Security](#security)
 - [Troubleshooting](#troubleshooting)
@@ -21,139 +26,151 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 
 ## Quick Start
 
-1. **Clone and Install Dependencies**
+1. **Clone Repository**
+
    ```bash
-   git clone https://github.com/yourusername/tierlist-app.git
-   cd tierlist-app
+   git clone https://github.com/RPalaciosDev/Project2_CST438-01_2252
+   cd Project2_CST438-01_2252
    ```
 
-2. **Run Setup Script**
-   
-   Windows (PowerShell):
-   ```powershell
-   .\setup.ps1
-   ```
+2. **Deploy Individual Services to Railway**
+   - Deploy each microservice separately to Railway using their provided documentation.
+   - See [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) for detailed instructions.
 
-   Unix-like systems (Linux/macOS):
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-
-3. **Setup and Start Frontend Expo App**
-   ```bash
-   chmod +x frontend.sh
-   ./frontend.sh
-   ```
-   This script updates Expo packages to their required versions and launches the development server.
-
-4. **Start Backend Services**
-   
-   Development:
-   ```bash
-   docker-compose up -d
-   ```
-
-   Production:
-   ```bash
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
+3. **Configure Environment Variables**
+   - Use Railway's environment variable management system to configure each service.
+   - Reference the `.env.example` file for required variables for each service.
 
 ## Prerequisites
 
+- [Railway](https://railway.app/) account
 - Node.js (v18 or later)
-- Docker and Docker Compose
-- Expo CLI (`npm install -g expo-cli`)
-- Java 17 (for backend services)
 - Git
-- OpenSSL (for SSL certificates)
+- Java 17 (for backend services)
+- Python 3.9+ (for ML service)
+
+## Repository Structure
+
+This repository focuses on individual microservice deployment to Railway.
+
+The current repository structure emphasizes:
+
+- Individual, independently deployable microservices
+- Service-specific configurations
+- Railway-first deployment approach
+
 
 ## Project Structure
 
 ```
 ├── frontend/             # Expo React Native application
-│   ├── app/             # App directory (Expo Router)
-│   ├── components/      # Reusable components
-│   ├── services/        # API services
-│   ├── styles/         # Shared styles
-│   └── types/          # TypeScript types
-├── auth-user-service/   # Authentication microservice
-├── tier-list-service/  # Tier list management service
-├── chat-service/       # Real-time chat functionality
-├── image-storage-service/ # Image handling and storage
-├── secrets/           # Secure credential storage
-└── docker/            # Shared Docker configurations
+│   ├── app/              # App directory (Expo Router)
+│   │   ├── tierlists/    # Tier list components and pages
+│   │   ├── chats/        # Chat functionality
+│   │   ├── auth/         # Authentication flows
+│   │   ├── context/      # React context providers
+│   ├── components/       # Reusable components
+│   ├── services/         # API services
+│   ├── store/            # State management
+│   ├── styles/           # Shared styles
+│   └── types/            # TypeScript types
+├── auth_user_api/        # Authentication microservice (Java)
+├── tier-list-service/    # Tier list management service (Java)
+├── chat_api/             # Real-time chat functionality (Java)
+├── image-storage-service/ # Image handling and storage (Java)
+├── ml-service/           # Machine learning service for matching (Python)
+├── .env.example          # Example environment variables
+└── RAILWAY_DEPLOYMENT.md # Railway deployment instructions
 ```
 
 ## Services Overview
 
 ### Frontend Service
+
 - **Technology**: Expo/React Native
 - **Port**: 19006
 - **Features**:
-  - Mobile-first design
-  - Offline support
-  - Real-time updates
-  - Drag-and-drop interface
-- **Development**:
+  - Mobile-first design with responsive UI
+  - Offline support with data synchronization
+  - Real-time updates for chat and notifications
+  - Drag-and-drop tier list creation interface
+  - Authentication with email/password and Google OAuth
+  - Tag-based tier list organization and discovery
+  - Animated sidebar with daily tier list tracking
+  - Personalized experience based on user preferences
+- **Deployment**:
+
   ```bash
+  # Deploy to Railway
   cd frontend
-  npm install
-  npx expo start
+  railway up
   ```
 
 ### Authentication Service
+
 - **Technology**: Spring Boot
 - **Port**: 8081
 - **Features**:
   - OAuth2 with Google
   - JWT token management
-  - User management
+  - User management with roles and permissions
+  - User preferences storage
+  - Tag recording for personalization
+  - Profile completion tracking
 - **Database**: MongoDB
 - **Environment Variables**:
   - `GOOGLE_CLIENT_ID`
   - `GOOGLE_CLIENT_SECRET`
   - `JWT_SECRET`
   - `MONGO_ROOT_PASSWORD`
+  - `ALLOWED_ORIGINS`
+  - `FRONTEND_URL`
 
 ### Tier List Service
+
 - **Technology**: Spring Boot
 - **Port**: 8082
 - **Features**:
   - Tier list CRUD operations
-  - Category management
-  - Voting system
-- **Database**: PostgreSQL
+  - Category and tag management
+  - Daily tier list system
+  - User tier list completion tracking
+  - Template management
+  - Voting and ranking system
+- **Database**: MongoDB
 - **Environment Variables**:
-  - `POSTGRES_USER`
-  - `POSTGRES_PASSWORD`
-  - `POSTGRES_TIER_DB`
+  - `MONGO_ROOT_PASSWORD`
+  - `MONGO_URI`
 
 ### Chat Service
+
 - **Technology**: Spring Boot
 - **Port**: 8083
 - **Features**:
   - Real-time messaging
   - WebSocket support
-  - Chat history
-- **Database**: Cassandra 
+  - Chat history and message persistence
+  - User online status tracking
+  - Typing indicators
+- **Database**: PostgreSQL
 - **Environment Variables**:
-  - `CASSANDRA_CLUSTER_NAME`
-  - `CASSANDRA_DC`
-  - `CASSANDRA_RACK`
-  - `CASSANDRA_ENDPOINT_SNITCH`
+  - `POSTGRES_USER`
+  - `POSTGRES_PASSWORD`
+  - `POSTGRES_CHAT_DB`
 
 ### Image Storage Service
+
 - **Technology**: Spring Boot
 - **Port**: 8084
 - **Features**:
   - Image upload/download
   - Automatic S3 to MongoDB synchronization
-  - Metadata management
-  - Secure file storage
+  - Metadata management with tag extraction
+  - Tag frequency tracking
+  - Secure file storage with access control
   - Support for multiple image formats
   - Automatic error handling and retry mechanisms
-- **Storage**: 
+- **Storage**:
   - AWS S3 (for image files)
   - MongoDB (for metadata)
 - **Environment Variables**:
@@ -164,74 +181,122 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
   - `MONGO_ROOT_PASSWORD`: MongoDB root password
   - `MONGO_URI`: MongoDB connection string
 
-## Development Setup
+### ML Service
 
-1. **Environment Configuration**
-   - Run the setup script (`setup.ps1` or `setup.sh`)
-   - Review generated `credentials.txt`
-   - Configure Google OAuth2 (see below)
+- **Technology**: Python, Flask
+- **Port**: 8085
+- **Features**:
+  - User matching based on tier list preferences
+  - Tag-based recommendation system
+  - Statistical analysis of user preferences
+  - Real-time matching with API endpoints
+- **Dependencies**:
+  - Python 3.9+
+  - Flask
+  - NumPy
+  - Pandas
+- **Environment Variables**:
+  - `MODEL_PATH`: Path to ML model files
+  - `DEBUG`: Enable/disable debug mode
 
-2. **Frontend Setup**
-   - Run the frontend script (`frontend.sh`)
-   - This updates required Expo packages to compatible versions
-   - Launches the Expo development server
-   - See the frontend README for more details
+## Key Features
 
-3. **Google OAuth2 Setup**
-   a. Visit [Google Cloud Console](https://console.cloud.google.com)
-   b. Create/select a project
-   c. Enable Google+ API
-   d. Create OAuth 2.0 credentials
-   e. Add redirect URIs:
-      - Development: `http://localhost:8081/login/oauth2/code/google`
-      - Production: `https://your-domain.com/login/oauth2/code/google`
+### Tag System Integration
 
-## Production Deployment
+The app features a comprehensive tag system that works across multiple services:
 
-1. **Environment Setup**
-   ```bash
-   # Copy production configuration
-   cp .env.example .env.production
-   
-   # Generate production certificates
-   # (Use Let's Encrypt or similar for production)
-   ```
+- **Image Storage Service**:
+  - Extracts and stores tags from image metadata
+  - Maintains tag frequencies based on usage
+  - Provides API endpoints for tag search and frequencies
 
-2. **Start Services**
-   ```bash
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
+- **Authentication Service**:
+  - Records user tag preferences and interactions
+  - Stores tag-based user statistics
+  - Provides personalization data for recommendations
 
-3. **Production Checklist**
-   - [ ] Replace self-signed certificates with valid SSL
-   - [ ] Update OAuth2 redirect URIs
-   - [ ] Configure production database credentials
-   - [ ] Set up monitoring and logging
-   - [ ] Configure backup strategy
+- **Tier List Service**:
+  - Associates tags with tier list templates
+  - Enables tag-based searching and filtering
+  - Tracks tag popularity for trending features
+
+- **Frontend**:
+  - Tag-based browsing in the tier list explorer
+  - Tag recording during tier list submissions
+  - Tag selection in tier list builder
+
+### Daily Tier Lists
+
+The app implements a daily tier list feature to encourage regular user engagement:
+
+- **Daily List Selection**:
+  - Admin-configurable daily tier list
+  - Automatic rotation of featured lists
+
+- **User Tracking**:
+  - Per-user completion status tracking
+  - Rewards system for consistent participation
+
+- **UI Integration**:
+  - Animated sidebar with real-time status updates
+  - Visual indication of completion status
+  - Easy access to the current daily tier list
+
+- **Backend Services**:
+  - API endpoints for setting and retrieving daily lists
+  - Completion status management
+  - Analytics on completion rates
+
+## Deployment Strategy
+
+This project uses Railway for deployment of all microservices. Each service is deployed independently, allowing for:
+
+1. **Independent Scaling**: Each service can be scaled according to its specific needs
+2. **Isolated Updates**: Services can be updated without affecting the entire system
+3. **Technology Flexibility**: Each service can use the most appropriate technology stack
+4. **Simplified CI/CD**: Railway handles the continuous deployment process
+
+### Railway Deployment Process
+
+1. **Service Setup**
+   - Create a new project in Railway for each service
+   - Connect to the GitHub repository
+   - Configure the build settings for each service
+
+2. **Environment Configuration**
+   - Set the required environment variables in Railway's dashboard
+   - Link shared resources (databases, storage) between services
+
+3. **Custom Domains**
+   - Configure custom domains for each service through Railway
+   - Set up SSL certificates through Railway's automated system
+
+4. **Monitoring**
+   - Use Railway's built-in logs and metrics
+   - Set up alerts for service health
+
+For detailed deployment instructions, see [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
 
 ## Configuration Management
 
-### Development vs Production
-- Development: Uses `compose.yaml`
-  - Hot-reloading enabled
-  - Debug logging
-  - Local database instances
+### Environment Variables
 
-- Production: Uses `docker-compose.prod.yml`
-  - SSL enabled
-  - Optimized for performance
-  - Secure credential management
-  - MongoDB for auth service
+- Railway environment variables for service configuration
+- `.env.example` as a reference for required variables
+- Service-specific configuration in each microservice directory
 
-### Environment Files
-- `.env`: Development environment variables
-- `.env.production`: Production settings
-- `application.yml`: Service-specific configuration
-- `secrets/`: Secure credentials storage
+### Security Best Practices
+
+- Use Railway's secret management for sensitive credentials
+- Never commit sensitive data to Git
+- Use SSL/TLS for all services
+- Implement rate limiting
+- Enable security headers
 
 ## Security
 
 ### Best Practices
+
 - Use secure password manager for team credentials
 - Regularly rotate secrets
 - Never commit sensitive data to Git
@@ -240,10 +305,11 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - Enable security headers
 
 ### SSL Configuration
-- Development: Self-signed certificates
-- Production: Use Let's Encrypt or commercial SSL
-- Configure HTTPS redirect
-- Enable HTTP/2
+
+- Configure SSL through Railway's custom domain settings
+- Ensure all services use HTTPS endpoints
+- Configure CORS to allow only trusted origins
+- Enable HTTP/2 where supported
 
 ## Troubleshooting
 
@@ -255,7 +321,7 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    - When deploying to other platforms, use platform-specific SSL certificate setup
 
 2. **Database Connection Issues**
-   - Verify credentials in `.env`
+   - Verify credentials in Railway environment variables
    - Check database service is running
    - Confirm port availability
 
@@ -264,36 +330,21 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
    - Check redirect URI configuration
    - Confirm SSL certificate validity
 
-4. **Container Startup Issues**
-   ```bash
-   # View service logs
-   docker-compose logs [service-name]
-   
-   # Restart specific service
-   docker-compose restart [service-name]
-   ```
-
 ### Getting Help
-- Check service logs: `docker-compose logs`
+
+- Check service logs in Railway dashboard
 - Review error messages in browser console
-- Check application logs in `logs/` directory
 - Contact team lead for credential issues
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- Expo Team for the mobile framework
-- Spring Boot Team for the backend framework
-- All contributors to this project
-
 ## Enhanced Authentication System
 
 This project implements a robust authentication system using Spring Boot with OAuth2 Resource Server for JWT-based authentication and authorization.
 
-## Features
+### Features
 
 - JWT-based authentication for API endpoints
 - User registration and login with password encryption
@@ -302,7 +353,7 @@ This project implements a robust authentication system using Spring Boot with OA
 - Role-based authorization
 - CORS configuration for frontend integration
 
-## Security Configuration
+### Security Configuration
 
 The security configuration has been enhanced to use Spring Security's OAuth2 Resource Server capabilities, which provides a standardized way to validate and process JWT tokens.
 
@@ -313,7 +364,7 @@ The security configuration has been enhanced to use Spring Security's OAuth2 Res
 3. **CustomUserDetailsService**: Loads user details from MongoDB for authentication
 4. **SecurityConfig**: Configures security filters, authentication, and authorization rules
 
-## JWT Authentication Flow
+### JWT Authentication Flow
 
 The application uses a simplified JWT authentication flow:
 
@@ -323,7 +374,7 @@ The application uses a simplified JWT authentication flow:
 4. **Token Usage**: Frontend stores the token and includes it in the `Authorization` header
 5. **Token Validation**: Backend validates the token using the same secret key
 
-## Environment Variables
+### Environment Variables
 
 For correct authentication configuration, set these environment variables in Railway:
 
@@ -332,22 +383,12 @@ For correct authentication configuration, set these environment variables in Rai
 | `JWT_SECRET` | Secret key for JWT signing | Yes | your-very-long-secret-key-should-be-kept-safe |
 | `GOOGLE_CLIENT_ID` | Google OAuth2 client ID | For OAuth | - |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret | For OAuth | - |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | Yes | http://localhost:3000,http://localhost:19006 |
-| `FRONTEND_URL` | URL to redirect after OAuth login | Yes | http://localhost:3000 |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | Yes | <http://localhost:3000,http://localhost:19006> |
+| `FRONTEND_URL` | URL to redirect after OAuth login | Yes | <http://localhost:3000> |
 
-## Testing OAuth Integration
-
-You can test OAuth integration using these endpoints:
-
-- `/api/oauth/config` - Get OAuth configuration for clients
-- `/api/oauth/test` - Test endpoint to verify OAuth integration
-- `/oauth2/authorization/google` - Start Google OAuth flow
-
-## Best Practices
+### Best Practices
 
 - Keep your JWT secret secure and different in each environment
 - Make sure the CORS configuration allows your frontend domains
 - Set appropriate token expiration (default is 24 hours)
 - Use HTTPS in production
-
-

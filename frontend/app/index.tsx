@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useRouter, Redirect } from 'expo-router';
 import { useAuthStore } from '../services/auth';
 import axios from 'axios';
 
@@ -10,6 +10,7 @@ export default function Index() {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const isMounted = useRef(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Set mounted ref after first render
   useEffect(() => {
@@ -35,12 +36,21 @@ export default function Index() {
           userId: currentState.user?.id,
           hasCompletedOnboarding: currentState.user?.hasCompletedOnboarding === true ? 'true' : 'false/undefined'
         });
+        
+        // Mark initial load as complete
+        if (isMounted.current) {
+          setIsInitialLoad(false);
+        }
       } catch (err) {
         console.error('Index: Auth loading error:', err);
         if (axios.isAxiosError(err)) {
           setError(`Authentication error: ${err.message}. Please check your connection.`);
         } else {
           setError('Failed to load authentication data. Please try again.');
+        }
+        // Mark initial load as complete even on error
+        if (isMounted.current) {
+          setIsInitialLoad(false);
         }
       }
     };
@@ -53,28 +63,6 @@ export default function Index() {
     return () => clearTimeout(timer);
   }, [loadStoredAuth, retrying]);
 
-  useEffect(() => {
-    // Redirect to auth-check which will handle all authentication and onboarding routing
-    if (!isLoading && isMounted.current) {
-      console.log('Index: Ready to navigate, isAuthenticated:', isAuthenticated);
-
-      // Use setTimeout to ensure navigation happens after mounting
-      const timer = setTimeout(() => {
-        if (!isMounted.current) return;
-
-        if (isAuthenticated) {
-          console.log('Index: Redirecting to auth-check for authenticated user');
-          router.replace('/auth-check');
-        } else {
-          console.log('Index: Redirecting to sign-in for unauthenticated user');
-          router.replace('/sign-in');
-        }
-      }, 50);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, isAuthenticated, router]);
-
   // Handle retry
   const handleRetry = () => {
     console.log('Index: Retrying authentication load...');
@@ -83,11 +71,17 @@ export default function Index() {
     setTimeout(() => setRetrying(false), 500);
   };
 
+  // Immediately redirect to auth-check without showing home.tsx
+  if (!isInitialLoad && !error) {
+    return <Redirect href="/auth-check" />;
+  }
+
   // Show loading screen while checking auth
   return (
     <View style={styles.container}>
+      <Text style={styles.welcomeTitle}>Welcome to Love Tiers!</Text>
       <ActivityIndicator size="large" color="#FF4B6E" />
-      <Text style={styles.loadingText}>Loading...</Text>
+      <Text style={styles.loadingText}>Preparing your experience...</Text>
 
       {error && (
         <View style={styles.errorContainer}>
@@ -109,10 +103,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F5',
     padding: 20,
   },
+  welcomeTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#FF4B6E',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   loadingText: {
-    marginTop: 10,
+    marginTop: 15,
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
   },
   errorContainer: {
     marginTop: 20,

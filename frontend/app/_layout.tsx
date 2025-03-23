@@ -128,7 +128,7 @@ const Sidebar = () => {
     const timer = setTimeout(() => {
       console.log("Auto-hide timer triggered");
       hideSidebar();
-    }, 5000); // Hide after 5 seconds
+    }, 6000); // Hide after 6 seconds (increased from 5 seconds)
 
     return () => {
       console.log("Clearing auto-hide timer");
@@ -144,7 +144,7 @@ const Sidebar = () => {
       // Add a slight delay before hiding to prevent accidental hide
       const timer = setTimeout(() => {
         hideSidebar();
-      }, 300);
+      }, 500); // Increased from 300ms to 500ms
       return () => clearTimeout(timer);
     }
   }, [isHovering]);

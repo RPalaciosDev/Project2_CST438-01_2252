@@ -1,197 +1,359 @@
-# Railway Deployment Guide for LoveTiers App
+# Railway Deployment Guide
 
-This guide will walk you through deploying the LoveTiers App to Railway.
+This guide provides instructions for deploying each microservice of the LoveTiers application to Railway.
 
-## Prerequisites
+## Table of Contents
 
-1. A Railway account - [Sign up here](https://railway.app/)
-2. Railway CLI installed - `npm install -g @railway/cli`
-3. Your Google OAuth credentials for authentication
-4. AWS S3 credentials for image storage
-5. Git repository with your project code
+- [Introduction to Railway](#introduction-to-railway)
+- [Getting Started](#getting-started)
+- [General Deployment Process](#general-deployment-process)
+- [Service-Specific Deployment](#service-specific-deployment)
+  - [Frontend Service](#frontend-service)
+  - [Auth User Service](#auth-user-service)
+  - [Tier List Service](#tier-list-service)
+  - [Chat Service](#chat-service)
+  - [Image Storage Service](#image-storage-service)
+  - [ML Service](#ml-service)
+- [Environment Variables](#environment-variables)
+- [Database Setup](#database-setup)
+- [Custom Domains and SSL](#custom-domains-and-ssl)
+- [Monitoring and Logs](#monitoring-and-logs)
+- [Troubleshooting](#troubleshooting)
 
-## Deployment Steps
+## Introduction to Railway
 
-### 1. Login to Railway CLI
+Railway is a deployment platform that makes it simple to deploy applications and databases. It handles infrastructure management, scaling, and CI/CD pipelines.
 
-```bash
-railway login
-```
+Key benefits:
 
-### 2. Initialize Railway Project
+- No infrastructure management required
+- Automatic deployments from Git
+- Environment variable management
+- Database provisioning
+- Monitoring and logging
+- Custom domains with automatic SSL
 
-```bash
-# Navigate to your project directory
-cd lovetiers-app
+## Getting Started
 
-# Link to a new Railway project
-railway init
-```
+1. **Create a Railway Account**
+   - Sign up at [Railway.app](https://railway.app/)
+   - Connect your GitHub account for easy deployment
 
-### 3. Set Up Project Variables
+2. **Install Railway CLI (Optional)**
 
-Set up the required environment variables:
-
-```bash
-# Set environment variables
-railway variables set GOOGLE_CLIENT_ID=your_google_client_id
-railway variables set GOOGLE_CLIENT_SECRET=your_google_client_secret
-railway variables set MONGO_ROOT_PASSWORD=your_mongo_password
-railway variables set AWS_ACCESS_KEY_ID=your_aws_key
-railway variables set AWS_SECRET_ACCESS_KEY=your_aws_secret
-railway variables set AWS_S3_REGION=your_aws_region
-railway variables set AWS_S3_BUCKET=your_s3_bucket_name
-```
-
-### 4. Create Required Databases
-
-Create the PostgreSQL and MongoDB instances using the Railway dashboard:
-
-1. Go to your Railway project
-2. Click "New Service" > "Database"
-3. Choose PostgreSQL
-4. Repeat for MongoDB
-
-#### Linking Databases to Services
-
-After creating the databases, you need to link them to your services:
-
-1. Go to each service that needs database access
-2. Click on "Variables" tab
-3. Click "Add a Variable" > "Add from service"
-4. Select the appropriate database
-5. Railway will automatically add the connection variables
-
-For PostgreSQL, these variables include:
-- `DATABASE_URL`
-- `PGDATABASE`
-- `PGHOST`
-- `PGPASSWORD`
-- `PGPORT`
-- `PGUSER`
-
-For MongoDB, these variables include:
-- `MONGODB_URL`
-
-The `.railway.toml` file is configured to use these environment variables for database connections.
-
-### 5. Deploy Your Services
-
-Use the `.railway.toml` configuration file to deploy your services:
-
-```bash
-# Deploy all services
-railway up
-```
-
-### 6. Configure Custom Domains
-
-For each service, set up custom domains in the Railway dashboard:
-
-1. Navigate to each service in your Railway project
-2. Go to the "Settings" tab
-3. Under "Domains", click "Generate Domain"
-4. Optionally, configure your own custom domain
-
-### 7. Update OAuth Redirect URIs
-
-Update your Google OAuth configuration with the new domain:
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Navigate to "APIs & Services" > "Credentials"
-3. Edit your OAuth 2.0 Client ID
-4. Add the new redirect URI: `https://auth.yourdomain.com/login/oauth2/code/google`
-
-### 8. Configure CORS for Cross-Service Communication
-
-When deploying without Nginx, CORS needs to be properly configured to allow communication between services:
-
-1. Each service is configured to read the `ALLOWED_ORIGINS` environment variable
-2. Make sure this variable is set correctly in Railway for each service
-3. The value should be a comma-separated list of allowed domains, e.g.:
+   ```bash
+   npm i -g @railway/cli
+   railway login
    ```
-   https://app.yourdomain.com,https://tierlist.yourdomain.com
-   ```
-4. For the auth and image storage services, ensure they allow requests from the frontend domain
-5. For the tier list service that communicates with the image service, ensure it's included in the image service's allowed origins
 
-Example environment variable setup:
-```bash
-# For auth-service, tier-list-service, chat-service
-railway variables set -s auth-service ALLOWED_ORIGINS=https://app.yourdomain.com
+3. **Understand Railway Projects**
+   - Each microservice will be deployed as a separate Railway project
+   - Projects can contain multiple services (web servers, databases, etc.)
+   - Services within a project can communicate via internal networking
 
-# For image-storage-service (allows both frontend and tier-list-service)
-railway variables set -s image-storage-service ALLOWED_ORIGINS=https://app.yourdomain.com,https://tierlist.yourdomain.com
+## General Deployment Process
+
+Each microservice follows this deployment process:
+
+1. **Create a New Project**
+   - From the Railway dashboard, click "New Project"
+   - Select "Deploy from GitHub repo"
+
+2. **Connect Repository**
+   - Select your GitHub repository
+   - Set the appropriate subdirectory (e.g., `/frontend` or `/auth_user_api`)
+
+3. **Configure Build Settings**
+   - Railway will auto-detect settings for most services
+   - You can customize build commands and start commands if needed
+
+4. **Set Environment Variables**
+   - Add service-specific environment variables
+   - Connect to other services (databases, etc.)
+
+5. **Deploy the Service**
+   - Railway will automatically build and deploy your service
+   - Monitor logs for any build or startup issues
+
+6. **Set Up Custom Domain (Optional)**
+   - Add a custom domain in the project settings
+   - Configure DNS records as instructed
+   - Railway will handle SSL certificate generation
+
+## Service-Specific Deployment
+
+### Frontend Service
+
+**Directory**: `frontend/`
+
+**Build Settings**:
+
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm start`
+
+**Environment Variables**:
+
 ```
+NODE_ENV=production
+AUTH_API_URL=https://your-auth-service-url
+TIERLIST_API_URL=https://your-tierlist-service-url
+CHAT_API_URL=https://your-chat-service-url
+IMAGE_API_URL=https://your-image-service-url
+ML_SERVICE_URL=https://your-ml-service-url
+```
+
+**Notes**:
+
+- Ensure all backend service URLs are correctly set in environment variables
+- For Expo/React Native projects, Railway will serve the web build
+
+### Auth User Service
+
+**Directory**: `auth_user_api/`
+
+**Build Settings**:
+
+- Railway should auto-detect Java/Spring Boot settings
+
+**Environment Variables**:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+JWT_SECRET=your-secure-jwt-secret-key
+MONGO_URI=your-mongodb-connection-string
+ALLOWED_ORIGINS=https://your-frontend-url
+FRONTEND_URL=https://your-frontend-url
+```
+
+**Database Setup**:
+
+1. Create a MongoDB service in your Railway project
+2. Railway will automatically provide the connection string as an environment variable
+3. Use this connection string in your `MONGO_URI` variable
+
+### Tier List Service
+
+**Directory**: `tier-list-service/`
+
+**Build Settings**:
+
+- Railway should auto-detect Java/Spring Boot settings
+
+**Environment Variables**:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+MONGO_URI=your-mongodb-connection-string
+ALLOWED_ORIGINS=https://your-frontend-url
+AUTH_SERVICE_URL=https://your-auth-service-url
+IMAGE_SERVICE_URL=https://your-image-service-url
+```
+
+**Database Setup**:
+
+1. Create a MongoDB service in your Railway project
+2. Railway will automatically provide the connection string as an environment variable
+3. Use this connection string in your `MONGO_URI` variable
+
+### Chat Service
+
+**Directory**: `chat_api/`
+
+**Build Settings**:
+
+- Railway should auto-detect Java/Spring Boot settings
+
+**Environment Variables**:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+SPRING_DATASOURCE_URL=jdbc:postgresql://your-postgres-host:5432/chat_db
+SPRING_DATASOURCE_USERNAME=postgres-username
+SPRING_DATASOURCE_PASSWORD=postgres-password
+ALLOWED_ORIGINS=https://your-frontend-url
+```
+
+**Database Setup**:
+
+1. Create a PostgreSQL service in your Railway project
+2. Railway will automatically provide the connection details as environment variables
+3. Use these details in your database configuration
+
+### Image Storage Service
+
+**Directory**: `image-storage-service/`
+
+**Build Settings**:
+
+- Railway should auto-detect Java/Spring Boot settings
+
+**Environment Variables**:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_S3_REGION=your-aws-region
+AWS_S3_BUCKET=your-s3-bucket-name
+MONGO_URI=your-mongodb-connection-string
+ALLOWED_ORIGINS=https://your-frontend-url
+```
+
+**Storage Setup**:
+
+1. Create an AWS S3 bucket for image storage
+2. Set up IAM credentials with appropriate S3 access
+3. Create a MongoDB service in Railway for metadata storage
+
+### ML Service
+
+**Directory**: `ml-service/`
+
+**Build Settings**:
+
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `python app.py` (adjust to your main file)
+
+**Environment Variables**:
+
+```
+FLASK_ENV=production
+MODEL_PATH=/app/models
+DEBUG=false
+```
+
+**Notes**:
+
+- Ensure your `requirements.txt` file includes all necessary dependencies
+- Adjust the start command based on your main Python file
+- For machine learning models, consider using Railway volumes for persistent storage
+
+## Environment Variables
+
+Railway provides a secure way to manage environment variables:
+
+1. **Project-Level Variables**:
+   - Set in the project settings
+   - Shared across all services in the project
+
+2. **Service-Level Variables**:
+   - Set in the service settings
+   - Override project-level variables
+
+3. **Variable References**:
+   - You can reference other variables: `${VARIABLE_NAME}`
+   - Useful for sharing values between services
+
+4. **Secrets Management**:
+   - All environment variables are encrypted at rest
+   - Never commit sensitive values to your repository
+
+## Database Setup
+
+Railway provides managed database services:
+
+1. **Creating a Database**:
+   - From your project, click "New Service"
+   - Select the database type (MongoDB, PostgreSQL, MySQL, Redis)
+   - Railway will provision a database with connection details
+
+2. **Accessing Connection Details**:
+   - Connection details are automatically injected as environment variables
+   - For PostgreSQL:
+     - `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGPORT`
+   - For MongoDB:
+     - `MONGODB_URL`
+
+3. **Database Migration**:
+   - For services that require initialization or migration:
+     - Add migration scripts to your repository
+     - Configure your application to run migrations on startup
+
+## Custom Domains and SSL
+
+Configure custom domains for your services:
+
+1. **Adding a Domain**:
+   - Go to your service settings
+   - Click "Custom Domain"
+   - Enter your domain name
+
+2. **DNS Configuration**:
+   - Add the CNAME record provided by Railway to your DNS provider
+   - Point to the provided Railway domain
+
+3. **SSL Certificates**:
+   - Railway automatically provisions SSL certificates
+   - Certificates are automatically renewed
+   - No manual configuration required
+
+## Monitoring and Logs
+
+Railway provides monitoring and logging tools:
+
+1. **Logs**:
+   - Access real-time logs in the service dashboard
+   - Filter logs by service or time period
+   - Search for specific log entries
+
+2. **Metrics**:
+   - View CPU, memory, and network usage
+   - Monitor service uptime and response times
+
+3. **Alerts**:
+   - Set up alerts for service failures
+   - Receive notifications via email or Slack
 
 ## Troubleshooting
 
-### Service Connection Issues
+Common issues and solutions:
 
-If services can't connect to each other:
+### Build Failures
 
-1. Check the environment variables for the correct service URLs
-2. Ensure CORS is properly configured to allow cross-origin requests
-3. Verify database connection strings are correctly formatted
+1. **Missing Dependencies**:
+   - Check your build logs for missing dependencies
+   - Ensure your package.json, requirements.txt, or build.gradle files are correct
+   - For Java services, check Gradle or Maven configuration
 
-### Database Migration Issues
+2. **Environment Configuration**:
+   - Verify required environment variables are set
+   - Check for typos in variable names
 
-If you encounter database migration issues:
+3. **Resource Limits**:
+   - Railway has resource limits for build processes
+   - Large builds might need optimization
 
-1. Check the database connection strings
-2. Ensure the database user has the necessary permissions
-3. Run migrations manually if needed
+### Runtime Errors
 
-### Frontend Not Loading
+1. **Service Crashes**:
+   - Check logs for error messages
+   - Verify all required environment variables
+   - Ensure databases are properly connected
 
-If the frontend is not loading properly:
+2. **Network Issues**:
+   - Check if services can communicate with each other
+   - Verify correct URLs for service-to-service communication
+   - For external services, check API keys and access permissions
 
-1. Check the Railway logs for any errors
-2. Verify that the environment variables are properly set
-3. Test the API endpoints to ensure they're accessible
+3. **Database Connectivity**:
+   - Verify connection strings
+   - Check database user permissions
+   - Ensure your database service is running
 
-## Monitoring and Maintenance
+### Deployment Delays
 
-### Health Checks
+1. **Build Queue**:
+   - Railway builds might be queued during high load
+   - Check the deployment status in dashboard
 
-Railway monitors your services' health through their endpoints. Spring Boot services automatically include the `/actuator/health` endpoint. To verify your services are healthy:
+2. **Large Repositories**:
+   - Large codebases might take longer to clone and build
+   - Consider optimizing your repository size
 
-1. Navigate to each service in your Railway dashboard
-2. Check the "Deployments" tab
-3. A green status indicates a healthy service
-4. If a service shows as unhealthy, check its logs for errors
+3. **Dependency Installation**:
+   - Large dependency trees can slow down builds
+   - Consider using dependency caching if available
 
-For custom health checks, you can configure them in the service settings:
-
-1. Navigate to the service
-2. Go to "Settings" > "Health Check"
-3. Enter an appropriate health check path (e.g., `/actuator/health` for Spring services)
-4. Set an appropriate check interval (e.g., 30 seconds)
-
-### Checking Logs
-
-```bash
-# View logs for a specific service
-railway logs -s frontend
-```
-
-### Updating Your Deployment
-
-```bash
-# Push changes to your deployment
-git push railway main
-```
-
-### Scaling Services
-
-Adjust the resources for your services through the Railway dashboard:
-
-1. Navigate to the service
-2. Go to the "Settings" tab
-3. Adjust the CPU and RAM settings as needed
-
-## Additional Resources
-
-- [Railway Documentation](https://docs.railway.app/)
-- [Spring Boot on Railway](https://blog.railway.app/p/spring-boot)
-- [Deploying React Apps on Railway](https://blog.railway.app/p/react-railway) 
+If issues persist, contact Railway support through their dashboard or check their documentation for specific error messages.
