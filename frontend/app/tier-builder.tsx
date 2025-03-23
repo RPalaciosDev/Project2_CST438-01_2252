@@ -483,7 +483,7 @@ export default function TierBuilder() {
   // Render tags
   const renderTag = (tag: string, index: number, isSystemTag: boolean) => (
     <View
-      key={index}
+      key={`${isSystemTag ? 'system' : 'user'}-${index}`}
       style={[
         styles.tag,
         isSystemTag && styles.systemTag
@@ -491,7 +491,11 @@ export default function TierBuilder() {
     >
       <Text style={[styles.tagText, isSystemTag && styles.systemTagText]}>{tag}</Text>
       {!isSystemTag && (
-        <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
+        <TouchableOpacity
+          onPress={() => handleRemoveTag(tag)}
+          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          accessibilityLabel={`Remove tag ${tag}`}
+        >
           <Text style={styles.tagRemove}>×</Text>
         </TouchableOpacity>
       )}
@@ -671,20 +675,12 @@ export default function TierBuilder() {
               </TouchableOpacity>
             </View>
 
-            {template.tags.length > 0 && (
+            {(template.tags.length > 0 || template.systemTags.length > 0) && (
               <View>
-                <Text style={styles.tagSectionLabel}>Your Tags:</Text>
-                <View style={styles.tagsContainer}>
-                  {template.tags.map((tag, index) => renderTag(tag, index, false))}
-                </View>
-              </View>
-            )}
-
-            {template.systemTags.length > 0 && (
-              <View>
-                <Text style={styles.tagSectionLabel}>Tags from Images (cannot be removed):</Text>
+                <Text style={styles.tagSectionLabel}>Tags ({template.systemTags.length} auto-generated, {template.tags.length} custom)</Text>
                 <View style={styles.tagsContainer}>
                   {template.systemTags.map((tag, index) => renderTag(tag, index, true))}
+                  {template.tags.map((tag, index) => renderTag(tag, index, false))}
                 </View>
               </View>
             )}
@@ -981,6 +977,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 16,
+    marginTop: 8,
   },
   tag: {
     flexDirection: 'row',
@@ -994,11 +991,14 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#FF4B6E',
     marginRight: 4,
+    fontSize: 12,
   },
   tagRemove: {
     color: '#FF4B6E',
     fontWeight: 'bold',
     fontSize: 16,
+    width: 16,
+    textAlign: 'center',
   },
   imagesSelectedText: {
     fontSize: 14,
@@ -1180,7 +1180,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
-    marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
 }); 

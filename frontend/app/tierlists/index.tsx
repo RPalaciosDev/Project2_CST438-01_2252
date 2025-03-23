@@ -12,7 +12,7 @@ import { useStyle } from "../context/StyleContext";
 import stylesMap from "../../styles/index";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
-import { TIERLIST_API_URL, useAuthStore } from '../../services/auth';
+import { TIERLIST_API_URL, AUTH_SERVICE_URL, useAuthStore } from '../../services/auth';
 
 // Template type definition
 type Template = {
@@ -59,7 +59,7 @@ export default function TierList() {
     const { templateId, dailyTemplateId } = useLocalSearchParams();
     const router = useRouter();
     const { selectedStyle } = useStyle();
-    const { user } = useAuthStore();
+    const { user, token } = useAuthStore();
     const [theme, setTheme] = useState(stylesMap[selectedStyle] || stylesMap["default"]);
     const [tierItems, setTierItems] = useState<TierItem[]>([]);
     const [availableItems, setAvailableItems] = useState<TierItem[]>([]);
@@ -611,6 +611,33 @@ export default function TierList() {
             });
 
             console.log("ML service response:", response.data);
+
+            // Also record tags for user statistics if template has tags
+            try {
+                // Get the template to access its tags
+                if (templateId) {
+                    const templateResponse = await axios.get(`${TIERLIST_API_URL}/api/templates/${templateId}`);
+                    const templateData = templateResponse.data;
+
+                    if (templateData && templateData.tags && templateData.tags.length > 0) {
+                        console.log("Recording tags for user statistics:", templateData.tags);
+
+                        await axios.post(`${AUTH_SERVICE_URL}/api/user/tags/record/${user.id}`, {
+                            tags: templateData.tags
+                        }, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        console.log("Tags successfully recorded for user statistics");
+                    }
+                }
+            } catch (tagError) {
+                // Don't fail the submission if tag recording fails
+                console.error("Error recording tags for user statistics:", tagError);
+            }
 
             // Check if this is the daily tierlist (either by template field or by dailyTemplateId param)
             const isDailyTierlist = template?.isCurrentDailyList || !!dailyTemplateId;

@@ -93,6 +93,11 @@ export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://imageapi-production-af11.up.railway.app')
     : 'http://localhost:8084';
 
+// Export the auth service URL for use in other components
+export const AUTH_SERVICE_URL = process.env.NODE_ENV === 'production'
+    ? ensureHttps('https://auth-user-service-production.up.railway.app')
+    : 'http://localhost:8080';
+
 // Special instance for registration with longer timeout
 const registrationAxios = axios.create({
     timeout: 60000, // 60 seconds for registration
