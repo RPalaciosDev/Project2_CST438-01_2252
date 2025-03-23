@@ -1071,28 +1071,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Daily Tierlist API methods
     fetchDailyTierlist: async () => {
         try {
-            // Get user from state instead of storage
-            const { user } = get();
-            const userId = user?.id;
+            const token = await storage.getItem('token');
 
-            if (!userId) {
-                console.warn('No user ID available when fetching daily tierlist');
-                return { available: false, message: "User not authenticated" };
+            if (!token) {
+                console.log('No token found for fetchDailyTierlist');
+                return { available: false, completed: false, templateId: null };
             }
 
-            const response = await axiosInstance.get(`${TIERLIST_API_URL}/api/daily`, {
+            const response = await axiosInstance.get(`${TIERLIST_API_URL}/api/tierlists/daily`, {
                 headers: {
-                    'X-User-ID': userId
+                    'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`
                 }
             });
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching daily tierlist:', error);
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-                // No daily tierlist available is an expected response
-                return { available: false };
+
+            if (response.status !== 200) {
+                console.log('Error fetching daily tierlist:', response.status);
+                return { available: false, completed: false, templateId: null };
             }
-            throw error;
+
+            const data = response.data;
+            console.log('Daily tierlist data:', data);
+
+            return {
+                available: data.available || false,
+                completed: data.completed || false,
+                templateId: data.templateId || null
+            };
+        } catch (error) {
+            console.error('Error in fetchDailyTierlist:', error);
+            return { available: false, completed: false, templateId: null };
         }
     },
 
