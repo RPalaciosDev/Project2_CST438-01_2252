@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -37,7 +38,7 @@ public class TierlistTemplate {
 
     @Field(name = "createdAt")
     private LocalDateTime createdAt;
-    
+
     @Field(name = "updatedAt")
     private LocalDateTime updatedAt;
 
@@ -53,7 +54,24 @@ public class TierlistTemplate {
     @Builder.Default
     @Field(name = "imageIds")
     private List<String> imageIds = new ArrayList<>();
-    
+
     @Field(name = "thumbnailUrl")
     private String thumbnailUrl;
+
+    /**
+     * If this template was used as a daily tierlist, this field contains the date
+     * when it was active.
+     * Null if this template was never a daily tierlist.
+     */
+    @Field(name = "wasDailyList")
+    private LocalDate wasDailyList;
+
+    /**
+     * Checks if this template is currently the daily tierlist (active today)
+     * 
+     * @return true if this template is today's daily tierlist
+     */
+    public boolean isCurrentDailyList() {
+        return wasDailyList != null && wasDailyList.equals(LocalDate.now());
+    }
 }

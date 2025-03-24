@@ -20,7 +20,8 @@ export default function SignUp() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { register } = useAuthStore();
+    const [signupSuccess, setSignupSuccess] = useState(false);
+    const { register, logout } = useAuthStore();
     const router = useRouter();
 
     const handleSubmit = async () => {
@@ -41,14 +42,26 @@ export default function SignUp() {
             setError('Passwords do not match');
             return;
         }
-        
+
         // Clear previous errors and show loading state
         setError('');
         setIsLoading(true);
-        
+
         try {
             await register(username, email, password);
-            router.replace('/startup'); // Redirect to startup screen for new users
+
+            // Log the user out immediately after registration 
+            // to prevent automatic navigation to home
+            await logout();
+
+            // Show success message instead of redirecting
+            setSignupSuccess(true);
+
+            // Clear form fields
+            setUsername('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
         } catch (err) {
             console.error('Sign up error:', err);
             if (axios.isAxiosError(err)) {
@@ -71,7 +84,7 @@ export default function SignUp() {
                     } else {
                         setError(`Registration failed: ${err.response.status}`);
                     }
-                } 
+                }
                 // Handle network errors
                 else if (!err.response) {
                     setError('Network error. Please check your connection and try again.');
@@ -84,6 +97,32 @@ export default function SignUp() {
         }
     };
 
+    // Function to navigate to sign-in page
+    const goToSignIn = () => {
+        router.replace('/sign-in');
+    };
+
+    // If registration was successful, show success message and button to sign in
+    if (signupSuccess) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.form}>
+                    <Text style={styles.title}>Account Created!</Text>
+                    <Text style={styles.successMessage}>
+                        Your account has been successfully created. Please sign in with your new credentials.
+                    </Text>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={goToSignIn}
+                    >
+                        <Text style={styles.buttonText}>Go to Sign In</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -92,8 +131,18 @@ export default function SignUp() {
             <View style={styles.form}>
                 <Text style={styles.title}>Love Tiers</Text>
                 <Text style={styles.subtitle}>Join the community!</Text>
-                
-                {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                {error ? (
+                    <View style={styles.errorContainer}>
+                        <Text style={styles.error}>{error}</Text>
+                        <TouchableOpacity
+                            style={styles.returnButton}
+                            onPress={() => router.replace('/sign-in')}
+                        >
+                            <Text style={styles.returnButtonText}>Return to Sign In</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
 
                 <TextInput
                     style={styles.input}
@@ -136,7 +185,7 @@ export default function SignUp() {
                     editable={!isLoading}
                 />
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.button, isLoading && styles.buttonDisabled]}
                     onPress={handleSubmit}
                     disabled={isLoading}
@@ -195,6 +244,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 30,
     },
+    successMessage: {
+        fontSize: 16,
+        color: '#28a745',
+        textAlign: 'center',
+        marginBottom: 30,
+        lineHeight: 22,
+    },
     input: {
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
@@ -251,10 +307,30 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 15,
     },
+    errorContainer: {
+        marginBottom: 15,
+        backgroundColor: '#FFF0F0',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#FFD0D0',
+    },
     error: {
         color: '#FF4B6E',
-        marginBottom: 15,
         textAlign: 'center',
         fontSize: 14,
+        marginBottom: 8,
+    },
+    returnButton: {
+        backgroundColor: '#FFE4E8',
+        padding: 8,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    returnButtonText: {
+        color: '#FF4B6E',
+        fontSize: 14,
+        fontWeight: '500',
     },
 }); 

@@ -35,22 +35,34 @@ interface TierTemplate {
   title: string;
   description: string;
   tags: string[];
+  systemTags: string[]; // Tags automatically generated from filenames
   imageIds: string[];
   thumbnailUrl?: string;
+}
+
+// Define the tag frequency type
+interface TagFrequencies {
+  frequencies: Record<string, number>;
+  lastUpdated: number;
+  count: number;
 }
 
 export default function TierBuilder() {
   const [images, setImages] = useState<ImageMetadata[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTags, setLoadingTags] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tagError, setTagError] = useState<string | null>(null);
   const [selectedParts, setSelectedParts] = useState<Set<string>>(new Set());
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [tagFrequencies, setTagFrequencies] = useState<Record<string, number>>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [template, setTemplate] = useState<TierTemplate>({
     title: '',
     description: '',
     tags: [],
+    systemTags: [],
     imageIds: []
   });
   const [tagsInput, setTagsInput] = useState('');
@@ -61,6 +73,7 @@ export default function TierBuilder() {
 
   useEffect(() => {
     fetchImages();
+    fetchTagFrequencies();
   }, []);
 
   // Control button animation based on selected images
@@ -134,25 +147,64 @@ export default function TierBuilder() {
     }
   };
 
+  const fetchTagFrequencies = async () => {
+    setLoadingTags(true);
+    setTagError(null);
+
+    try {
+      console.log('Starting tag frequencies fetch attempt');
+
+      const apiUrl = `${IMAGE_API_URL}/api/tags/frequencies`;
+      console.log('Making request to:', apiUrl);
+
+      const response = await axios.get<TagFrequencies>(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log(`Fetched ${response.data.count} tag frequencies`);
+      setTagFrequencies(response.data.frequencies);
+    } catch (error) {
+      console.error('Error fetching tag frequencies:', error);
+      setTagError('Failed to load tag frequencies. Falling back to local calculation.');
+      // If the API fails, fall back to local calculation
+      calculateTagFrequenciesLocally();
+    } finally {
+      setLoadingTags(false);
+    }
+  };
+
+  // Fallback method for calculating tag frequencies locally if the API fails
+  const calculateTagFrequenciesLocally = () => {
+    console.log('Calculating tag frequencies locally');
+    const frequencies: Record<string, number> = {};
+
+    images.forEach(image => {
+      if (image.fileName) {
+        const parts = splitFileName(image.fileName);
+        parts.forEach(part => {
+          if (part.trim() !== '' && !part.endsWith('.webp') && !part.endsWith('.jpg')) {
+            frequencies[part] = (frequencies[part] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    setTagFrequencies(frequencies);
+  };
+
   const splitFileName = (fileName: string): string[] => {
     return fileName.split('/');
   };
 
-  // Get all unique filename parts from all images
+  // Get all unique filename parts using the fetched tag frequencies
   const uniqueFilenameParts = useMemo(() => {
-    const allParts = new Set<string>();
-
-    images.forEach(image => {
-      const parts = splitFileName(image.fileName);
-      parts.forEach(part => {
-        if (part.trim() !== '' && !part.endsWith('.webp') && !part.endsWith('.jpg')) {
-          allParts.add(part);
-        }
-      });
-    });
-
-    return Array.from(allParts).sort();
-  }, [images]);
+    // Convert the tag frequencies object into a sorted array of tags
+    return Object.keys(tagFrequencies).sort();
+  }, [tagFrequencies]);
 
   // Toggle button selection
   const handleButtonPress = (part: string) => {
@@ -200,6 +252,28 @@ export default function TierBuilder() {
       Alert.alert("No Images Selected", "Please select at least one image to create a tier list.");
       return;
     }
+
+    // Extract tags from filenames of selected images
+    const systemTags = new Set<string>();
+    selectedImages.forEach(imageId => {
+      const image = findImageById(imageId);
+      if (image && image.fileName) {
+        const parts = splitFileName(image.fileName);
+        parts.forEach(part => {
+          if (part.trim() !== '' && !part.endsWith('.webp') && !part.endsWith('.jpg') && !part.endsWith('.jpeg') && !part.endsWith('.png')) {
+            systemTags.add(part);
+          }
+        });
+      }
+    });
+
+    // Update template with system tags and image IDs
+    setTemplate(prev => ({
+      ...prev,
+      systemTags: Array.from(systemTags),
+      imageIds: Array.from(selectedImages)
+    }));
+
     setModalVisible(true);
   };
 
@@ -298,8 +372,13 @@ export default function TierBuilder() {
 
       // Ensure tags is always a clean array with no null values
       const currentTags = Array.isArray(template.tags) ? [...template.tags] : [];
+      const currentSystemTags = Array.isArray(template.systemTags) ? [...template.systemTags] : [];
+
+      // Combine both types of tags
+      const allTags = [...currentSystemTags, ...currentTags];
+
       // Ensure each tag is a string and not null/undefined/empty
-      const cleanedTags = currentTags
+      const cleanedTags = allTags
         .filter(tag => tag !== null && tag !== undefined && tag !== '')
         .map(tag => String(tag)); // Explicitly convert each tag to a string
 
@@ -338,6 +417,7 @@ export default function TierBuilder() {
         title: '',
         description: '',
         tags: [],
+        systemTags: [],
         imageIds: []
       });
       setModalVisible(false);
@@ -401,15 +481,25 @@ export default function TierBuilder() {
   );
 
   // Render tags
-  const renderTag = (tag: string, index: number) => (
-    <TouchableOpacity
-      key={index}
-      style={styles.tag}
-      onPress={() => handleRemoveTag(tag)}
+  const renderTag = (tag: string, index: number, isSystemTag: boolean) => (
+    <View
+      key={`${isSystemTag ? 'system' : 'user'}-${index}`}
+      style={[
+        styles.tag,
+        isSystemTag && styles.systemTag
+      ]}
     >
-      <Text style={styles.tagText}>{tag}</Text>
-      <Text style={styles.tagRemove}>×</Text>
-    </TouchableOpacity>
+      <Text style={[styles.tagText, isSystemTag && styles.systemTagText]}>{tag}</Text>
+      {!isSystemTag && (
+        <TouchableOpacity
+          onPress={() => handleRemoveTag(tag)}
+          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          accessibilityLabel={`Remove tag ${tag}`}
+        >
+          <Text style={styles.tagRemove}>×</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   // Thumbnail navigation
@@ -423,11 +513,13 @@ export default function TierBuilder() {
     });
   };
 
-  if (loading) {
+  if (loading || loadingTags) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF4B6E" />
-        <Text style={styles.loadingText}>Loading images...</Text>
+        <Text style={styles.loadingText}>
+          {loading ? 'Loading images...' : 'Loading categories...'}
+        </Text>
       </View>
     );
   }
@@ -448,6 +540,10 @@ export default function TierBuilder() {
     );
   }
 
+  // If there was an error loading tag frequencies but images loaded, 
+  // show a warning but continue with local calculations
+  const shouldShowTagWarning = tagError && !loadingTags;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.buttonContainer} horizontal={false}>
@@ -464,28 +560,39 @@ export default function TierBuilder() {
           )}
         </View>
 
+        {shouldShowTagWarning && (
+          <View style={styles.warningBanner}>
+            <Text style={styles.warningText}>
+              Using locally calculated categories due to server error.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.filterButtons}>
-          {uniqueFilenameParts.map((part) => (
-            <TouchableOpacity
-              key={part}
-              style={[
-                styles.partButton,
-                selectedParts.has(part) && styles.selectedPartButton
-              ]}
-              onPress={() => handleButtonPress(part)}
-              accessibilityLabel={`${selectedParts.has(part) ? 'Selected ' : ''}Category ${part}`}
-              accessibilityRole="button"
-            >
-              <Text
+          {uniqueFilenameParts.map((part) => {
+            const count = tagFrequencies[part] || 0;
+            return (
+              <TouchableOpacity
+                key={part}
                 style={[
-                  styles.partButtonText,
-                  selectedParts.has(part) && styles.selectedPartButtonText
+                  styles.partButton,
+                  selectedParts.has(part) && styles.selectedPartButton
                 ]}
+                onPress={() => handleButtonPress(part)}
+                accessibilityLabel={`${selectedParts.has(part) ? 'Selected ' : ''}Category ${part} (${count} images)`}
+                accessibilityRole="button"
               >
-                {part}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.partButtonText,
+                    selectedParts.has(part) && styles.selectedPartButtonText
+                  ]}
+                >
+                  {part} <Text style={styles.countText}>({count})</Text>
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {selectedParts.size > 0 && (
@@ -493,11 +600,11 @@ export default function TierBuilder() {
             data={filteredImages}
             renderItem={renderImageItem}
             keyExtractor={(item) => item.id}
-            numColumns={2}
+            numColumns={6}
             style={styles.imageList}
             contentContainerStyle={styles.imageListContent}
-            initialNumToRender={6}
-            maxToRenderPerBatch={10}
+            initialNumToRender={18}
+            maxToRenderPerBatch={24}
             windowSize={5}
             ListEmptyComponent={
               <Text style={styles.noImagesText}>No images match the selected criteria</Text>
@@ -568,9 +675,13 @@ export default function TierBuilder() {
               </TouchableOpacity>
             </View>
 
-            {template.tags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {template.tags.map(renderTag)}
+            {(template.tags.length > 0 || template.systemTags.length > 0) && (
+              <View>
+                <Text style={styles.tagSectionLabel}>Tags ({template.systemTags.length} auto-generated, {template.tags.length} custom)</Text>
+                <View style={styles.tagsContainer}>
+                  {template.systemTags.map((tag, index) => renderTag(tag, index, true))}
+                  {template.tags.map((tag, index) => renderTag(tag, index, false))}
+                </View>
               </View>
             )}
 
@@ -714,19 +825,20 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     flex: 1,
-    margin: 8,
+    margin: 4,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 2,
     position: 'relative',
+    maxWidth: '16%',
   },
   selectedImageContainer: {
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#FF4B6E',
   },
   imageWrapper: {
@@ -742,20 +854,20 @@ const styles = StyleSheet.create({
   },
   selectionIndicator: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#FF4B6E',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkmark: {
-    width: 12,
-    height: 6,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
+    width: 8,
+    height: 4,
+    borderLeftWidth: 1.5,
+    borderBottomWidth: 1.5,
     borderColor: '#FFF',
     transform: [{ rotate: '-45deg' }],
   },
@@ -865,6 +977,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 16,
+    marginTop: 8,
   },
   tag: {
     flexDirection: 'row',
@@ -878,11 +991,14 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#FF4B6E',
     marginRight: 4,
+    fontSize: 12,
   },
   tagRemove: {
     color: '#FF4B6E',
     fontWeight: 'bold',
     fontSize: 16,
+    width: 16,
+    textAlign: 'center',
   },
   imagesSelectedText: {
     fontSize: 14,
@@ -1037,5 +1153,33 @@ const styles = StyleSheet.create({
   navButtonText: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  warningBanner: {
+    backgroundColor: '#FFE0E5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  warningText: {
+    color: '#FF4B6E',
+    fontWeight: 'bold',
+  },
+  countText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  systemTag: {
+    backgroundColor: '#E0E5FF',
+    borderWidth: 1,
+    borderColor: '#4B6EFF',
+  },
+  systemTagText: {
+    color: '#4B6EFF',
+  },
+  tagSectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
   },
 }); 

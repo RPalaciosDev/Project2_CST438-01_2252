@@ -333,69 +333,24 @@ export default function StartupScreen() {
 
   // Add picture and complete onboarding
   const uploadPictureAndComplete = async (pictureUrl: string, useDefault: boolean = false) => {
-    setIsSubmittingPicture(true);
-    setPictureError('');
-
     try {
+      setIsSubmittingPicture(true);
+
       console.log("Uploading profile picture and completing onboarding");
 
       // Update user's profile picture in the database
       const success = await updateUserPicture(pictureUrl);
       console.log("Profile picture update success:", success);
 
-      // Mark user as having completed onboarding in the backend
-      try {
-        const token = await SecureStore.getItemAsync('token') || localStorage.getItem('token');
-        console.log("Making API call to mark onboarding as completed");
+      // Use our new function to mark onboarding as completed
+      console.log("Marking onboarding as completed using updateOnboardingStatus");
+      const authStore = useAuthStore.getState();
+      const onboardingSuccess = await authStore.updateOnboardingStatus(true);
 
-        const formattedToken = token?.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`,
-          {
-            hasCompletedOnboarding: true,
-            // Also ensure other critical fields are set for backward compatibility
-            gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
-            lookingFor: selectedPreferences.join(', '),
-            // Include other fields that might be critical
-            hasDoneInitialSetup: true
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': formattedToken
-            }
-          }
-        );
-
-        if (response.status === 200) {
-          console.log("Successfully marked user as having completed onboarding");
-
-          // Update local store with the updated user data
-          const authStore = useAuthStore.getState();
-          if (authStore.user) {
-            await authStore.setUser({
-              token: token || '',
-              user: {
-                ...authStore.user,
-                hasCompletedOnboarding: true,
-                hasDoneInitialSetup: true,
-                gender: selectedGender === 'Other' && customGender.trim() ? customGender.trim() : selectedGender,
-                lookingFor: selectedPreferences.join(', '),
-                picture: pictureUrl
-              } as any
-            });
-          }
-        } else {
-          console.error("Failed to mark user as onboarded, status:", response.status);
-        }
-      } catch (error) {
-        console.error("Failed to mark user as onboarded in backend:", error);
-        if (axios.isAxiosError(error)) {
-          console.error("API Error details:", {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-          });
-        }
+      if (onboardingSuccess) {
+        console.log("Successfully marked user as having completed onboarding");
+      } else {
+        console.warn("Failed to mark user as having completed onboarding, but continuing anyway");
       }
 
       // Mark user as no longer new (completing onboarding)
@@ -403,14 +358,22 @@ export default function StartupScreen() {
 
       // Fetch fresh user data to ensure everything is in sync before navigating
       try {
+        console.log("Refreshing user data before navigation");
         await useAuthStore.getState().checkStatus();
+
+        // Verify that hasCompletedOnboarding is properly set
+        const currentUserState = useAuthStore.getState().user;
+        console.log("Final user state check:", {
+          hasCompletedOnboarding: currentUserState?.hasCompletedOnboarding === true ? "true" : "false/undefined",
+          id: currentUserState?.id
+        });
       } catch (e) {
         console.error("Error refreshing user data:", e);
       }
 
       // Navigate to home page
       console.log("Navigating to home page after completion");
-      router.replace('/home');
+      router.replace('/');
     } catch (err) {
       setPictureError(err instanceof Error ? err.message : 'An error occurred. Please try again or use the default picture.');
     } finally {
