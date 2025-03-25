@@ -61,6 +61,14 @@ public class SecurityConfig {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private static final String[] PUBLIC_URLS = {
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/google-login",
+            "/api/healthcheck/**",
+            "/api/user/tags/**" // Add the tag stats endpoints to public URLs
+    };
+
     @Bean
     public JwtDecoder jwtDecoder() {
         // Create a secret key from the JWT secret

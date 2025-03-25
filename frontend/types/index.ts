@@ -38,8 +38,18 @@ export interface AuthState {
     updateUserGender: (gender: string) => Promise<boolean>;
     updateUserPreferences: (lookingFor: string) => Promise<boolean>;
     updateUserPicture: (pictureUrl: string) => Promise<boolean>;
+    updateOnboardingStatus: (completed: boolean) => Promise<boolean>;
     deleteUserAccount: () => Promise<boolean>;
     fetchCompleteUserData: () => Promise<any>;
+    fetchDailyTierlist: () => Promise<{
+        available: boolean;
+        completed: boolean;
+        templateId: string | null;
+        title?: string;
+        description?: string;
+    }>;
+    markDailyTierlistCompleted: () => Promise<any>;
+    setDailyTierlist: (templateId: string) => Promise<any>;
 }
 
 // TierList Types

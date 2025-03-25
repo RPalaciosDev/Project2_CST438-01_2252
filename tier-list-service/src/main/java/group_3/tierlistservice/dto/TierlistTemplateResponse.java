@@ -3,6 +3,7 @@ package group_3.tierlistservice.dto;
 import lombok.Data;
 import lombok.Builder;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -16,4 +17,6 @@ public class TierlistTemplateResponse {
     private LocalDateTime updatedAt;
     private List<String> tags;
     private String thumbnailUrl;
+    private LocalDate wasDailyList;
+    private boolean isCurrentDailyList;
 }

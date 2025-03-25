@@ -17,6 +17,7 @@ public class StorageService {
 
     private final S3Client s3Client;
     private final ImageMetadataRepository metadataRepository;
+    private final TagService tagService;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
@@ -24,9 +25,10 @@ public class StorageService {
     @Value("${aws.s3.region}")
     private String region;
 
-    public StorageService(S3Client s3Client, ImageMetadataRepository metadataRepository) {
+    public StorageService(S3Client s3Client, ImageMetadataRepository metadataRepository, TagService tagService) {
         this.s3Client = s3Client;
         this.metadataRepository = metadataRepository;
+        this.tagService = tagService;
     }
 
     @PostConstruct // Executes after the bean is initialized.
@@ -37,9 +39,11 @@ public class StorageService {
     /**
      * Syncs all images from AWS S3 into MongoDB.
      * If an image exists in S3 but not in MongoDB, it will be added.
+     * Also updates the tag frequencies collection after syncing.
      */
     public void syncS3ToMongo() {
         System.out.println("syncS3ToMongo() method called!");
+        boolean imagesAdded = false;
 
         // List all objects in the S3 bucket.
         ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
@@ -52,12 +56,14 @@ public class StorageService {
             // Construct the S3 file URL.
             String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;
 
+
             // Determine the folder name.
             String folder = fileKey.contains("/") ? fileKey.substring(0, fileKey.lastIndexOf('/')) : "root";
 
             // Check if the file already exists in MongoDB.
             Optional<ImageMetadataDocument> existing = metadataRepository.findByFileName(fileKey);
-            if (existing.isPresent()) continue;
+            if (existing.isPresent())
+                continue;
 
             // Create and save metadata for the new file.
             ImageMetadataDocument metadata = new ImageMetadataDocument();
@@ -69,9 +75,17 @@ public class StorageService {
             metadata.setFolder(folder);
 
             metadataRepository.save(metadata);
+            imagesAdded = true;
             System.out.println("Stored in MongoDB: " + fileUrl + " (Folder: " + folder + ")");
         }
 
         System.out.println("syncS3ToMongo() completed.");
+
+        // If any new images were added or this is the first sync, update tag
+        // frequencies
+        if (imagesAdded || tagService.getTagFrequencies().getFrequencies().isEmpty()) {
+            System.out.println("New images detected or first sync - updating tag frequencies");
+            tagService.updateTagFrequencies();
+        }
     }
 }

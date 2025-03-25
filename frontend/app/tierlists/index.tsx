@@ -12,7 +12,7 @@ import { useStyle } from "../context/StyleContext";
 import stylesMap from "../../styles/index";
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import axios from 'axios';
-import { TIERLIST_API_URL, useAuthStore } from '../../services/auth';
+import { TIERLIST_API_URL, AUTH_SERVICE_URL, useAuthStore } from '../../services/auth';
 
 // Template type definition
 type Template = {
@@ -26,6 +26,7 @@ type Template = {
     }[];
     tags: string[];
     viewCount: number;
+    isCurrentDailyList: boolean;
 };
 
 // Local image imports as fallback
@@ -55,10 +56,10 @@ interface TierZone {
 }
 
 export default function TierList() {
-    const { templateId } = useLocalSearchParams();
+    const { templateId, dailyTemplateId } = useLocalSearchParams();
     const router = useRouter();
     const { selectedStyle } = useStyle();
-    const { user } = useAuthStore();
+    const { user, token } = useAuthStore();
     const [theme, setTheme] = useState(stylesMap[selectedStyle] || stylesMap["default"]);
     const [tierItems, setTierItems] = useState<TierItem[]>([]);
     const [availableItems, setAvailableItems] = useState<TierItem[]>([]);
@@ -100,9 +101,17 @@ export default function TierList() {
     }, [selectedStyle]);
 
     useEffect(() => {
-        // Fetch template data if templateId is provided
-        if (templateId) {
-            fetchTemplateData(templateId as string);
+        // Fetch template data if a template ID is provided
+        // Priority: dailyTemplateId (from sidebar) > templateId (from browse)
+        const selectedTemplateId = dailyTemplateId || templateId;
+
+        if (selectedTemplateId) {
+            fetchTemplateData(selectedTemplateId as string);
+
+            // If this is a daily tier list, check if the user has already completed it
+            if (dailyTemplateId) {
+                checkDailyCompletionStatus();
+            }
         } else {
             // If no templateId, just use local images and stop loading
             const items = localImages.map(img => ({
@@ -113,7 +122,7 @@ export default function TierList() {
             setAvailableItems(items);
             setLoading(false);
         }
-    }, [templateId]);
+    }, [templateId, dailyTemplateId]);
 
     useEffect(() => {
         // Set up the pulsing animation for the heart
@@ -603,6 +612,62 @@ export default function TierList() {
 
             console.log("ML service response:", response.data);
 
+            // Also record tags for user statistics if template has tags
+            try {
+                // Get the template to access its tags
+                if (templateId) {
+                    const templateResponse = await axios.get(`${TIERLIST_API_URL}/api/templates/${templateId}`);
+                    const templateData = templateResponse.data;
+
+                    if (templateData && templateData.tags && templateData.tags.length > 0) {
+                        console.log("Recording tags for user statistics:", templateData.tags);
+
+                        await axios.post(`${AUTH_SERVICE_URL}/api/user/tags/record/${user.id}`, {
+                            tags: templateData.tags
+                        }, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        console.log("Tags successfully recorded for user statistics");
+                    }
+                }
+            } catch (tagError) {
+                // Don't fail the submission if tag recording fails
+                console.error("Error recording tags for user statistics:", tagError);
+            }
+
+            // Check if this is the daily tierlist (either by template field or by dailyTemplateId param)
+            const isDailyTierlist = template?.isCurrentDailyList || !!dailyTemplateId;
+
+            if (isDailyTierlist) {
+                try {
+                    console.log("Marking daily tierlist as completed for user:", user.id);
+
+                    // Access function directly from the auth store
+                    const markDailyTierlistCompleted = useAuthStore.getState().markDailyTierlistCompleted;
+
+                    // Mark the daily tierlist as completed
+                    const completionResponse = await markDailyTierlistCompleted();
+                    console.log("Daily tierlist marked as completed:", completionResponse);
+
+                    if (!completionResponse || !completionResponse.success) {
+                        console.error("Failed to mark daily tierlist as completed:", completionResponse);
+                        Alert.alert("Warning", "Your rankings were saved, but we couldn't mark the daily tierlist as completed. You may be able to complete it again.");
+                    } else {
+                        // Explicitly update the daily tierlist status in the sidebar
+                        const checkDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
+                        await checkDailyTierlist();
+                    }
+                } catch (completionError) {
+                    console.error("Error marking daily tierlist as completed:", completionError);
+                    Alert.alert("Warning", "Your rankings were saved, but we couldn't mark the daily tierlist as completed. You may be able to complete it again.");
+                    // Continue navigation even if marking as completed fails
+                }
+            }
+
             // Successfully submitted - navigate directly to browse
             console.log("Submission successful, redirecting to browse page");
             router.replace('browse');
@@ -611,6 +676,32 @@ export default function TierList() {
             Alert.alert("Error", "Failed to submit your tier list. Please try again.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Add this new function to check if the user has already completed this daily tier list
+    const checkDailyCompletionStatus = async () => {
+        try {
+            // Get the fetchDailyTierlist function from auth store
+            const fetchDailyTierlist = useAuthStore.getState().fetchDailyTierlist;
+
+            // Fetch the latest daily tier list data
+            const dailyData = await fetchDailyTierlist();
+
+            console.log("Daily tierlist status check:", dailyData);
+
+            // If the user has already completed this daily tier list
+            if (dailyData?.completed) {
+                Alert.alert(
+                    "Already Completed",
+                    "You have already completed today's daily tier list!",
+                    [
+                        { text: "Return to Browse", onPress: () => router.replace('/browse') }
+                    ]
+                );
+            }
+        } catch (error) {
+            console.error("Error checking daily tier list completion status:", error);
         }
     };
 

@@ -93,6 +93,11 @@ export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://imageapi-production-af11.up.railway.app')
     : 'http://localhost:8084';
 
+// Export the auth service URL for use in other components
+export const AUTH_SERVICE_URL = process.env.NODE_ENV === 'production'
+    ? ensureHttps('https://auth-user-service-production.up.railway.app')
+    : 'http://localhost:8080';
+
 // Special instance for registration with longer timeout
 const registrationAxios = axios.create({
     timeout: 60000, // 60 seconds for registration
@@ -196,58 +201,27 @@ export const checkAuthStatus = async () => {
     }
 };
 
-// Add a function to validate JWT token
-export const validateToken = async (token: string | null): Promise<boolean> => {
-    if (!token) {
-        console.log('No token to validate');
-        return false;
-    }
-
+// Add this function if it doesn't exist or fix it if it does
+// The validateToken function should safely validate a token with proper error handling
+export const validateToken = async (token: string) => {
     try {
-        console.log(`Validating token at ${API_URL}/api/auth/me`);
-
-        // Make sure token is properly formatted
-        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-        console.log('Authorization header:', `${formattedToken.substring(0, 20)}...`);
-
-        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
-            headers: {
-                Authorization: formattedToken
-            },
-            // Add debugging options
-            maxRedirects: 0,
-            validateStatus: function (status) {
-                console.log(`Token validation status: ${status}`);
-                return status < 500;
-            }
-        });
-
-        console.log('Token validation response status:', response.status);
-
-        // For debug purpose, check token with JWT debugger if it's failing
-        if (response.status !== 200) {
-            try {
-                console.log(`Debug token at ${API_URL}/api/auth/debug?token=${encodeURIComponent(token)}`);
-                const debugResponse = await axiosInstance.get(
-                    `${API_URL}/api/auth/debug?token=${encodeURIComponent(token)}`
-                );
-                console.log('Token debug response:', debugResponse.data);
-            } catch (debugError) {
-                console.error('Failed to debug token:', debugError);
-            }
+        console.log('validateToken: Validating token');
+        if (!token) {
+            console.log('validateToken: No token provided');
+            return false;
         }
 
-        return response.status === 200;
-    } catch (error) {
-        console.error('Token validation error details:', {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            isAxiosError: axios.isAxiosError(error),
-            response: axios.isAxiosError(error) ? {
-                status: error.response?.status,
-                data: error.response?.data
-            } : null
+        // Make a request to the API to validate the token
+        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
+            headers: {
+                Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+            }
         });
 
+        console.log('validateToken: Response status:', response.status);
+        return response.status === 200;
+    } catch (error) {
+        console.error('validateToken: Error validating token:', error);
         return false;
     }
 };
@@ -294,15 +268,26 @@ export const handleGoogleAuth = async () => {
                 // Get the redirect URI (same as was used to start the flow)
                 const redirectUri = getRedirectUri();
 
-                // Exchange the code for an access token
-                const { accessToken } = await fetchAccessTokenFromCode(code, redirectUri);
+                // Exchange the code for tokens
+                const tokenData = await fetchAccessTokenFromCode(code, redirectUri);
 
-                // Exchange the access token for our app's JWT
+                // IMPORTANT: Use the ID token which contains user profile data
+                // The ID token is a JWT that contains user info including email
+                if (!tokenData.idToken) {
+                    console.error("No ID token received from Google - this is required for our backend");
+                    throw new Error("Authentication failed - ID token not received from Google");
+                }
+
+                // Exchange the ID token for our app's JWT
                 const API_URL = process.env.NODE_ENV === 'production'
                     ? 'https://auth-user-service-production.up.railway.app' // Railway deployed auth service
                     : 'http://localhost:8080';
 
-                return await exchangeGoogleTokenForJWT(accessToken, API_URL);
+                console.log("Using ID token for backend authentication - length:",
+                    tokenData.idToken.length,
+                    "preview:", tokenData.idToken.substring(0, 10) + "...");
+
+                return await exchangeGoogleTokenForJWT(tokenData.idToken, API_URL);
             } else {
                 throw new Error('No authorization code found in the response');
             }
@@ -610,32 +595,76 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    // Update checkStatus to use validateToken
+    // Update checkStatus to use validateToken and ensure proper user data handling
     checkStatus: async () => {
         try {
+            console.log('checkStatus: Starting authentication check');
             set({ isLoading: true, error: null });
 
             // First check if we have a token stored
             const token = await storage.getItem('token');
+            console.log('checkStatus: Retrieved token from storage:', token ? 'yes' : 'no');
 
             if (token) {
                 // Validate the token by making a request to /me endpoint
+                console.log('checkStatus: Validating token...');
+
+                // Use the standalone validateToken function with proper error handling
                 const isValid = await validateToken(token);
+                console.log('checkStatus: Token validation result:', isValid);
 
                 if (isValid) {
-                    // If token is valid, load user data
-                    const userJson = await storage.getItem('user');
-                    if (userJson) {
-                        try {
-                            const user = JSON.parse(userJson) as User;
+                    // If token is valid, get fresh user data
+                    console.log('checkStatus: Token is valid, getting user data');
+                    try {
+                        // Make a direct request to get fresh user data
+                        const response = await axiosInstance.get(`${API_URL}/api/auth/me`, {
+                            headers: {
+                                Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.status === 200 && response.data) {
+                            const user = response.data;
+
+                            // Log important user fields
+                            console.log('checkStatus: Retrieved user data:', {
+                                id: user.id,
+                                hasCompletedOnboarding: user.hasCompletedOnboarding === true ? 'true' : 'false/undefined',
+                                isNewUser: user.isNewUser || false
+                            });
+
+                            // Ensure user data is stored with correct flags
+                            await storage.setItem('user', JSON.stringify(user));
                             set({ token, user, isAuthenticated: true, isLoading: false });
+                            console.log('checkStatus: Authentication successful, user state updated');
                             return { isAuthenticated: true };
-                        } catch (e) {
-                            console.error('Error parsing user data:', e);
+                        } else {
+                            console.log('checkStatus: User data retrieval failed:', response.status);
+                        }
+                    } catch (e) {
+                        console.error('checkStatus: Error getting fresh user data:', e);
+
+                        // Fall back to stored user data if API call fails
+                        console.log('checkStatus: Falling back to stored user data');
+                        const userJson = await storage.getItem('user');
+                        if (userJson) {
+                            try {
+                                const user = JSON.parse(userJson) as User;
+                                console.log('checkStatus: Using stored user data:', {
+                                    id: user.id,
+                                    hasCompletedOnboarding: user.hasCompletedOnboarding === true ? 'true' : 'false/undefined'
+                                });
+                                set({ token, user, isAuthenticated: true, isLoading: false });
+                                return { isAuthenticated: true };
+                            } catch (parseError) {
+                                console.error('checkStatus: Error parsing stored user data:', parseError);
+                            }
                         }
                     }
                 } else {
                     // If token is invalid, clear storage
+                    console.log('checkStatus: Token is invalid, clearing storage');
                     await Promise.all([
                         storage.removeItem('token'),
                         storage.removeItem('user')
@@ -643,31 +672,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 }
             }
 
-            // If we don't have a valid token or failed validation, check auth status
-            const status = await checkAuthStatus();
-
-            if (status.isAuthenticated) {
-                // If already authenticated, update the store
-                const user = status.user;
-                const token = status.token || await storage.getItem('token');
-
-                if (token) {
-                    await storage.setItem('token', token);
-                    if (user) {
-                        await storage.setItem('user', JSON.stringify(user));
-                    }
-                    set({ token, user, isAuthenticated: true, isLoading: false });
-                    return { isAuthenticated: true };
-                }
-            }
-
-            set({ isLoading: false });
-            return {
-                isAuthenticated: false,
-                googleAuthUrl: status.googleAuthUrl
-            };
+            // If we don't have a valid token or failed validation
+            console.log('checkStatus: No valid token, returning not authenticated');
+            set({ token: null, user: null, isAuthenticated: false, isLoading: false });
+            return { isAuthenticated: false };
         } catch (error) {
-            console.error('Status check error:', error);
+            console.error('checkStatus: Error checking status:', error);
             set({ error: 'Failed to check authentication status', isLoading: false });
             return { isAuthenticated: false };
         }
@@ -680,19 +690,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             // Handle the Google login flow
             const authData = await handleGoogleAuth();
+            console.log('Google auth completed, received auth data:', {
+                hasToken: !!authData.token,
+                userId: authData.id,
+                email: authData.email
+            });
 
             // Determine if this is a new user based on the response
             // If the response includes a field indicating this is a new user, set isNewUser to true
             const isNewUser = authData.isNewAccount || false;
 
+            // Create user object from auth data
+            const user = {
+                id: authData.id,
+                username: authData.username,
+                email: authData.email,
+                roles: authData.roles
+            };
+
+            // IMPORTANT: Store the token and user in local storage
+            await storage.setItem('token', authData.token);
+            await storage.setItem('user', JSON.stringify(user));
+            console.log('Token and user stored in local storage after Google login');
+
             set({
                 token: authData.token,
-                user: {
-                    id: authData.id,
-                    username: authData.username,
-                    email: authData.email,
-                    roles: authData.roles
-                },
+                user,
                 isAuthenticated: true,
                 isLoading: false,
                 isNewUser: isNewUser
@@ -1047,6 +1070,142 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             console.error('Error fetching complete user data:', error);
             set({ error: 'Failed to fetch user data', isLoading: false });
             return null;
+        }
+    },
+
+    // Daily Tierlist API methods
+    fetchDailyTierlist: async () => {
+        try {
+            // Log the API URL being used
+            console.log("Fetching daily tierlist from:", TIERLIST_API_URL);
+
+            // Check if user is authenticated
+            if (!get().token) {
+                console.log("User not authenticated, cannot fetch daily tierlist");
+                return { available: false, message: "Not authenticated" };
+            }
+
+            const response = await axios.get(`${TIERLIST_API_URL}/api/daily`, {
+                headers: {
+                    'X-User-ID': get().user?.id
+                }
+            });
+
+            // Log successful response
+            console.log("Daily tierlist fetch successful:", response.status);
+
+            return response.data;
+        } catch (err) {
+            console.error("Error in fetchDailyTierlist:", err);
+
+            // Enhanced error logging
+            if (axios.isAxiosError(err)) {
+                console.log("Status:", err.response?.status);
+                console.log("Response data:", err.response?.data);
+            }
+
+            // Return a valid default response
+            return {
+                available: false,
+                completed: false,
+                message: "Error fetching daily tierlist"
+            };
+        }
+    },
+
+    markDailyTierlistCompleted: async () => {
+        try {
+            // Get user from state instead of storage
+            const { user } = get();
+            const userId = user?.id;
+
+            if (!userId) {
+                console.warn('No user ID available when marking daily tierlist completed');
+                return { success: false, message: "User not authenticated" };
+            }
+
+            const response = await axiosInstance.post(`${TIERLIST_API_URL}/api/daily/complete`, {}, {
+                headers: {
+                    'X-User-ID': userId
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error marking daily tierlist completed:', error);
+            throw error;
+        }
+    },
+
+    setDailyTierlist: async (templateId: string) => {
+        try {
+            // Get user from state instead of storage
+            const { user } = get();
+            const userId = user?.id;
+
+            if (!userId) {
+                console.warn('No user ID available when setting daily tierlist');
+                return { success: false, message: "User not authenticated" };
+            }
+
+            const response = await axiosInstance.post(`${TIERLIST_API_URL}/api/daily/${templateId}`, {}, {
+                headers: {
+                    'X-User-ID': userId
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error setting daily tierlist:', error);
+            throw error;
+        }
+    },
+
+    // Add method to update hasCompletedOnboarding flag
+    updateOnboardingStatus: async (completed: boolean) => {
+        try {
+            set({ isLoading: true, error: null });
+
+            const { token, user } = get();
+
+            if (!token || !user) {
+                throw new Error('User not authenticated');
+            }
+
+            console.log(`Setting hasCompletedOnboarding to ${completed} at ${API_URL}/api/auth/update-profile`);
+
+            const response = await axiosInstance.post(`${API_URL}/api/auth/update-profile`,
+                { hasCompletedOnboarding: completed },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (response.status === 200) {
+                // Update the user in state with the new onboarding status
+                const updatedUser = { ...user, hasCompletedOnboarding: completed };
+
+                // Log the updated user to verify the flag is set correctly
+                console.log('User updated with hasCompletedOnboarding:', completed);
+                console.log('Updated user data:', updatedUser);
+
+                // Store updated user info
+                await storage.setItem('user', JSON.stringify(updatedUser));
+
+                // Update state
+                set({ user: updatedUser, isLoading: false });
+                return true;
+            } else {
+                throw new Error('Failed to update onboarding status');
+            }
+        } catch (error) {
+            console.error('Update onboarding status error:', error);
+            set({
+                error: error instanceof Error ? error.message : 'Failed to update onboarding status',
+                isLoading: false
+            });
+            return false;
         }
     },
 }));
