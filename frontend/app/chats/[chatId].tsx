@@ -4,7 +4,7 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useLocalSearchParams } from 'expo-router';
 import useAuthStore, { CHAT_API_URL } from 'services/auth';
-import { randomUUID } from 'crypto';
+import uuid from 'react-native-uuid';
 
 export default function ChatScreen() {
     const { chatId } = useLocalSearchParams();
@@ -92,7 +92,7 @@ export default function ChatScreen() {
                     sender: user?.id,
                     content: message,
                     conversationId: chatId,
-                    id: randomUUID(),
+                    id: uuid.v4(),
                     type: 'CHAT'
                 }),
             });
