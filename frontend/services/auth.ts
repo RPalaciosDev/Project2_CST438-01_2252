@@ -86,8 +86,8 @@ export const TIERLIST_API_URL = process.env.NODE_ENV === 'production'
     : 'http://localhost:8082';
 
 export const CHAT_API_URL = process.env.NODE_ENV === 'production'
-    ? ensureHttps(process.env.CHAT_API_URL || 'https://chat.yourdomain.com')
-    : 'http://localhost:8083';
+    ? ensureHttps(process.env.CHAT_API_URL || 'https://soothing-warmth-production.up.railway.app')
+    : 'https://soothing-warmth-production.up.railway.app';
 
 export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://imageapi-production-af11.up.railway.app')
