@@ -5,6 +5,7 @@ import com.group3.chat_api.mapper.ConversationManagerMapper;
 import com.group3.chat_api.mapper.ConversationMapper;
 import com.group3.chat_api.dto.ConversationRequest;
 import com.group3.chat_api.model.Conversation;
+import com.group3.chat_api.model.ConversationManager;
 import com.group3.chat_api.service.ConversationManagerService;
 import com.group3.chat_api.service.ConversationService;
 
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,6 +62,26 @@ public class ConversationController {
             log.error("Error returning conversation list: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @GetMapping("/info/{conversationId}")
+    public ResponseEntity<String> getConversationInfo(@PathVariable UUID conversationId,
+                                                            @RequestHeader("X-User-Id") String userId) {
+        try {
+            List<ConversationManager> infoList = conversationManagerService.getConversationById(conversationId);
+
+            for (ConversationManager convo : infoList) {
+                if (!convo.getUserId().equals(userId)) {
+                    return ResponseEntity.ok(
+                            convo.getUserId()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error getting info for conversation: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+        return null;
     }
 
     @GetMapping("/{conversationId}")

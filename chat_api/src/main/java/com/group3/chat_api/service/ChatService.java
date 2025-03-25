@@ -1,6 +1,7 @@
 package com.group3.chat_api.service;
 
 import com.group3.chat_api.model.Chat;
+import com.group3.chat_api.model.ChatMessage;
 import com.group3.chat_api.repository.ChatRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,10 @@ import java.util.UUID;
 public class ChatService {
 
     private final ChatRepository chatRepository;
+
+    public Chat storeChat(Chat chat) {
+       return chatRepository.save(chat);
+    }
 
     public List<Chat> getChats(UUID conversationId) {
         return chatRepository.findByConversationId(conversationId);

@@ -27,4 +27,13 @@ public class ConversationManagerService {
             throw new RuntimeException(e);
         }
     }
+
+    public List<ConversationManager> getConversationById(UUID conversationId) {
+        try {
+            return conversationManagementRepository.findByConversationId(conversationId);
+        } catch (Exception e) {
+            log.error("Error unable to get conversations: ", e);
+            throw new RuntimeException(e);
+        }
+    }
 }
