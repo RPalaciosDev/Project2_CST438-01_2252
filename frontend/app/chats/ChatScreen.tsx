@@ -35,8 +35,17 @@ export default function ChatScreen() {
     const connectWebSocket = async () => {
       if (user && token) {
         try {
-          await WebSocketService.connect(user.id, token);
+          console.log('Attempting to connect to WebSocket service...');
+          // Add a timeout for the connection to prevent hanging
+          const connectPromise = WebSocketService.connect(user.id, token);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('WebSocket connection timeout')), 10000)
+          );
+
+          // Race the connection against a timeout
+          await Promise.race([connectPromise, timeoutPromise]);
           setConnected(true);
+          console.log('Successfully connected to WebSocket');
 
           // Register callback for new messages
           WebSocketService.registerCallback('newMessage', (newMessage: NewMessageData) => {
@@ -58,6 +67,10 @@ export default function ChatScreen() {
 
         } catch (error) {
           console.error('WebSocket connection error:', error);
+          setConnected(false);
+
+          // Try to reconnect after a delay
+          setTimeout(connectWebSocket, 5000);
         }
       }
     };

@@ -6,6 +6,7 @@ import { useAuthStore } from '../services/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import WebSocketService from '../services/websocket';
+import axios from 'axios';
 
 // Auth protection component to check if user is authenticated
 const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -626,14 +627,88 @@ export default function Layout() {
             console.log('WebSocket connected on app initialization');
 
             // Register global match notification listener
-            WebSocketService.registerCallback('match', (matchData: { userId: string; matchId: string }) => {
+            WebSocketService.registerCallback('match', async (matchData: { userId: string; matchId: string }) => {
               // Check if this notification is for the current user
               if (matchData.userId === user.id || matchData.matchId === user.id) {
-                // Show notification to user
+                // Get the match ID (the other user's ID)
+                const matchUserId = matchData.userId === user.id ? matchData.matchId : matchData.userId;
+
+                console.log('Match notification received:', matchData);
+                console.log('Current user:', user.id, 'Match user:', matchUserId);
+
+                // Show notification to user with option to navigate to chat
                 Alert.alert(
                   'New Match!',
-                  'You have a new match. Check your matches to start chatting!',
-                  [{ text: 'OK', onPress: () => console.log('Match notification acknowledged') }]
+                  'You have a new match. Would you like to start chatting now?',
+                  [
+                    {
+                      text: 'Not Now',
+                      style: 'cancel',
+                      onPress: () => console.log('Match notification dismissed')
+                    },
+                    {
+                      text: 'Chat Now!',
+                      style: 'default',
+                      onPress: async () => {
+                        try {
+                          console.log('Creating conversation with match:', matchUserId);
+                          const { CHAT_API_URL } = await import('../services/api');
+
+                          // First, check if a conversation already exists
+                          console.log('Checking existing conversations...');
+                          const conversationsResponse = await axios.get(
+                            `${CHAT_API_URL}/api/conversations/user/${user.id}`,
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+
+                          let conversationId = null;
+
+                          // Check if conversation with this user already exists
+                          if (conversationsResponse.data && conversationsResponse.data.length > 0) {
+                            const existingConversation = conversationsResponse.data.find(
+                              (conv: any) => conv.participants &&
+                                conv.participants.includes(matchUserId)
+                            );
+
+                            if (existingConversation) {
+                              console.log('Found existing conversation:', existingConversation.conversationIdString || existingConversation.conversationId);
+                              conversationId = existingConversation.conversationIdString || existingConversation.conversationId;
+                            }
+                          }
+
+                          // If no existing conversation, create a new one
+                          if (!conversationId) {
+                            console.log('No existing conversation found, creating new one...');
+                            const createResponse = await axios.post(
+                              `${CHAT_API_URL}/api/conversations`,
+                              { participants: [user.id, matchUserId] },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+
+                            if (createResponse.data) {
+                              console.log('Created new conversation:', createResponse.data);
+                              conversationId = createResponse.data.conversationIdString || createResponse.data.conversationId;
+                            }
+                          }
+
+                          if (conversationId) {
+                            console.log('Navigating to conversation:', conversationId);
+                            // Navigate to the chat screen with the conversation ID
+                            router.push({
+                              pathname: '/chats/conversation',
+                              params: { chatId: conversationId }
+                            });
+                          } else {
+                            console.error('Failed to get or create conversation');
+                            Alert.alert('Error', 'Could not start the conversation. Please try again later.');
+                          }
+                        } catch (error) {
+                          console.error('Error navigating to chat:', error);
+                          Alert.alert('Error', 'Could not start the conversation. Please try again later.');
+                        }
+                      }
+                    }
+                  ]
                 );
               }
             });

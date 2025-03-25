@@ -19,12 +19,17 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
 
     public Conversation createConversation(Conversation conversation) {
-        conversation.setCreatedAt(LocalDateTime.now());
+        // Set current timestamp if not already set
+        if (conversation.getCreatedAt() == null) {
+            conversation.setCreatedAt(LocalDateTime.now());
+        }
 
-       // Chat expires one week from creation
-        LocalDateTime dt = LocalDateTime.now();
-        conversation.setExpiresAt(dt.plusDays(7));
+        // Set expiration to 30 days from now if not already set
+        if (conversation.getExpiresAt() == null) {
+            conversation.setExpiresAt(LocalDateTime.now().plusDays(30));
+        }
 
+        log.info("Creating conversation: {}", conversation);
         return conversationRepository.save(conversation);
     }
 

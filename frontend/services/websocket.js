@@ -2,6 +2,19 @@ import { Client } from '@stomp/stompjs';
 import { CHAT_API_URL } from './api';
 import { Platform } from 'react-native';
 
+// Define a null SockJS by default
+let SockJS = null;
+
+// Only try to import SockJS on web platform
+if (Platform.OS === 'web') {
+    try {
+        // Use dynamic import to avoid issues with native platforms
+        SockJS = require('sockjs-client').default || require('sockjs-client');
+    } catch (error) {
+        console.error('Error importing SockJS, falling back to direct WebSocket', error);
+    }
+}
+
 class WebSocketService {
     constructor() {
         this.client = null;
@@ -18,11 +31,13 @@ class WebSocketService {
 
         this.connectPromise = new Promise((resolve, reject) => {
             try {
+                // Use the sockjs endpoint for web, direct WebSocket for native
+                const sockjsUrl = `${CHAT_API_URL}/ws`;
                 const wsUrl = `${CHAT_API_URL.replace('http', 'ws')}/ws`;
-                console.log(`Connecting to WebSocket at: ${wsUrl}`);
 
-                this.client = new Client({
-                    brokerURL: wsUrl,
+                console.log(`Connecting to WebSocket at: ${Platform.OS === 'web' && SockJS ? sockjsUrl : wsUrl}`);
+
+                const connectionOptions = {
                     connectHeaders: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -59,8 +74,16 @@ class WebSocketService {
                         this.isConnected = false;
                         reject(new Error('WebSocket connection error'));
                     },
-                });
+                };
 
+                // Add the appropriate connection method based on platform
+                if (Platform.OS === 'web' && SockJS) {
+                    connectionOptions.webSocketFactory = () => new SockJS(sockjsUrl);
+                } else {
+                    connectionOptions.brokerURL = wsUrl;
+                }
+
+                this.client = new Client(connectionOptions);
                 this.client.activate();
             } catch (error) {
                 console.error('Error creating STOMP client:', error);
