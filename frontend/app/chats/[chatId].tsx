@@ -12,6 +12,7 @@ export default function ChatScreen() {
     const [message, setMessage] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
     const stompClientRef = useRef(null);
+    const flatListRef = useRef(null);
 
     console.log('ChatScreen', chatId);
 
@@ -28,7 +29,7 @@ export default function ChatScreen() {
             .then((response) => response.json())
             .then((data) => {
                 const messages = data?.map((message) => ({
-                    id: message?.id,
+                    id: message?.chatId,
                     sender: message?.senderId === user?.id ? 'You' : 'Other',
                     content: message?.message,
                 }));
@@ -57,9 +58,14 @@ export default function ChatScreen() {
                 stompClient.subscribe(`/topic/${chatId}`, (response) => {
                     console.log('Received message:', response.body);
                     const message = JSON.parse(response.body);
+                    message.id = message.messageId;
                     message.sender = message.sender === user?.id ? 'You' : 'Other';
 
                     setChatMessages((prevMessages) => [message, ...prevMessages]);
+
+                    if (flatListRef.current) {
+                        flatListRef.current.scrollToEnd({ animated: true });
+                    }
                 });
 
                 stompClient.publish({
@@ -106,7 +112,8 @@ export default function ChatScreen() {
     return (
         <View style={styles.container}>
             <FlatList
-                data={chatMessages.reverse()}
+                data={chatMessages}
+                ref={flatListRef}
                 keyExtractor={(item) => item?.id}
                 renderItem={({ item }) => (
                     <View style={[styles.message, item?.sender === "You" ? styles.sent : styles.received]}>
