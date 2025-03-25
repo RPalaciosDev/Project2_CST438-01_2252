@@ -23,14 +23,14 @@ import { axiosInstance } from '../services/auth';
 
 // Conditionally import ImagePicker to handle web/mobile compatibility issues
 let ImagePicker: any = null;
-if (Platform.OS !== 'web') {
-  // Only import on native platforms
-  try {
-    ImagePicker = require('expo-image-picker');
-  } catch (e) {
-    console.warn('expo-image-picker not available:', e);
-  }
-}
+// if (Platform.OS !== 'web') {
+//   // Only import on native platforms
+//   try {
+//     ImagePicker = require('expo-image-picker');
+//   } catch (e) {
+//     console.warn('expo-image-picker not available:', e);
+//   }
+// }
 
 // Define API URL - same as in home.tsx
 const API_URL = (() => {

@@ -1,8 +1,13 @@
-// Use environment variables from Expo for API URLs
-const AUTH_API_URL = process.env.EXPO_PUBLIC_AUTH_API_URL || 'https://auth-user-service-production.up.railway.app';
-const TIERLIST_API_URL = process.env.EXPO_PUBLIC_TIERLIST_API_URL || 'https://tierlist-service-production.up.railway.app';
-const CHAT_API_URL = process.env.EXPO_PUBLIC_CHAT_API_URL || 'https://soothing-warmth-production.up.railway.app';
-const IMAGE_API_URL = process.env.EXPO_PUBLIC_IMAGE_API_URL || 'https://image-storage-service-production.up.railway.app';
+// Import URLs from auth.ts
+import { AUTH_SERVICE_URL, TIERLIST_API_URL, IMAGE_API_URL, ML_API_URL, CHAT_API_URL } from './auth';
 
-// Export the URLs for use in other services
-export { AUTH_API_URL, TIERLIST_API_URL, CHAT_API_URL, IMAGE_API_URL };
+// Log the API URLs for debugging
+console.log('API URLs:');
+console.log('AUTH_API_URL:', AUTH_SERVICE_URL);
+console.log('TIERLIST_API_URL:', TIERLIST_API_URL);
+console.log('IMAGE_API_URL:', IMAGE_API_URL);
+console.log('ML_API_URL:', ML_API_URL);
+console.log('CHAT_API_URL:', CHAT_API_URL);
+
+// Re-export the URLs for use in other services
+export { AUTH_SERVICE_URL as AUTH_API_URL, TIERLIST_API_URL, CHAT_API_URL, IMAGE_API_URL, ML_API_URL };

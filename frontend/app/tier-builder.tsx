@@ -412,26 +412,29 @@ export default function TierBuilder() {
 
       console.log('Template submitted successfully:', JSON.stringify(response.data, null, 2));
 
-      // Reset form and close modal
-      setTemplate({
-        title: '',
-        description: '',
-        tags: [],
-        systemTags: [],
-        imageIds: []
-      });
+      // Close modal immediately after successful submission
       setModalVisible(false);
-      setSelectedThumbnail(null);
 
-      // Clear selections immediately after successful submission
-      setSelectedImages(new Set());
-      setSelectedParts(new Set());
-
-      // Show success message
+      // Then show success message
       Alert.alert(
         "Success",
         "Your tier list template has been created!",
-        [{ text: "OK" }]
+        [{
+          text: "OK",
+          onPress: () => {
+            // Reset states after alert is dismissed
+            setTemplate({
+              title: '',
+              description: '',
+              tags: [],
+              systemTags: [],
+              imageIds: []
+            });
+            setSelectedThumbnail(null);
+            setSelectedImages(new Set());
+            setSelectedParts(new Set());
+          }
+        }]
       );
 
     } catch (error) {
@@ -546,89 +549,95 @@ export default function TierBuilder() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.buttonContainer} horizontal={false}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerText}>Select Categories</Text>
-          {selectedParts.size > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}
-              accessibilityLabel="Clear all filters"
-            >
-              <Text style={styles.clearButtonText}>Clear All</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {shouldShowTagWarning && (
-          <View style={styles.warningBanner}>
-            <Text style={styles.warningText}>
-              Using locally calculated categories due to server error.
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.filterButtons}>
-          {uniqueFilenameParts.map((part) => {
-            const count = tagFrequencies[part] || 0;
-            return (
-              <TouchableOpacity
-                key={part}
-                style={[
-                  styles.partButton,
-                  selectedParts.has(part) && styles.selectedPartButton
-                ]}
-                onPress={() => handleButtonPress(part)}
-                accessibilityLabel={`${selectedParts.has(part) ? 'Selected ' : ''}Category ${part} (${count} images)`}
-                accessibilityRole="button"
-              >
-                <Text
-                  style={[
-                    styles.partButtonText,
-                    selectedParts.has(part) && styles.selectedPartButtonText
-                  ]}
-                >
-                  {part} <Text style={styles.countText}>({count})</Text>
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {selectedParts.size > 0 && (
-          <FlatList
-            data={filteredImages}
-            renderItem={renderImageItem}
-            keyExtractor={(item) => item.id}
-            numColumns={6}
-            style={styles.imageList}
-            contentContainerStyle={styles.imageListContent}
-            initialNumToRender={18}
-            maxToRenderPerBatch={24}
-            windowSize={5}
-            ListEmptyComponent={
-              <Text style={styles.noImagesText}>No images match the selected criteria</Text>
-            }
-            ListFooterComponent={filteredImages.length > 0 ? (
-              <Text style={styles.resultCountText}>
-                Showing {filteredImages.length} {filteredImages.length === 1 ? 'image' : 'images'}
-              </Text>
-            ) : null}
-          />
-        )}
-      </ScrollView>
-
-      {/* Action Button */}
-      <Animated.View style={actionButtonStyles}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleActionButtonPress}
+      <View style={styles.mainContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          horizontal={false}
+          showsVerticalScrollIndicator={true}
         >
-          <Text style={styles.actionButtonText}>
-            Create Tier List with {selectedImages.size} {selectedImages.size === 1 ? 'image' : 'images'}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerText}>Select Categories</Text>
+            {selectedParts.size > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearFilters}
+                accessibilityLabel="Clear all filters"
+              >
+                <Text style={styles.clearButtonText}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {shouldShowTagWarning && (
+            <View style={styles.warningBanner}>
+              <Text style={styles.warningText}>
+                Using locally calculated categories due to server error.
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.filterButtons}>
+            {uniqueFilenameParts.map((part) => {
+              const count = tagFrequencies[part] || 0;
+              return (
+                <TouchableOpacity
+                  key={part}
+                  style={[
+                    styles.partButton,
+                    selectedParts.has(part) && styles.selectedPartButton
+                  ]}
+                  onPress={() => handleButtonPress(part)}
+                  accessibilityLabel={`${selectedParts.has(part) ? 'Selected ' : ''}Category ${part} (${count} images)`}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    style={[
+                      styles.partButtonText,
+                      selectedParts.has(part) && styles.selectedPartButtonText
+                    ]}
+                  >
+                    {part} <Text style={styles.countText}>({count})</Text>
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {selectedParts.size > 0 && (
+            <FlatList
+              data={filteredImages}
+              renderItem={renderImageItem}
+              keyExtractor={(item) => item.id}
+              numColumns={6}
+              style={styles.imageList}
+              contentContainerStyle={styles.imageListContent}
+              initialNumToRender={18}
+              maxToRenderPerBatch={24}
+              windowSize={5}
+              ListEmptyComponent={
+                <Text style={styles.noImagesText}>No images match the selected criteria</Text>
+              }
+              ListFooterComponent={filteredImages.length > 0 ? (
+                <Text style={styles.resultCountText}>
+                  Showing {filteredImages.length} {filteredImages.length === 1 ? 'image' : 'images'}
+                </Text>
+              ) : null}
+            />
+          )}
+        </ScrollView>
+
+        {/* Action Button */}
+        <Animated.View style={actionButtonStyles} pointerEvents={selectedImages.size > 0 ? 'auto' : 'none'}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleActionButtonPress}
+          >
+            <Text style={styles.actionButtonText}>
+              Create Tier List with {selectedImages.size} {selectedImages.size === 1 ? 'image' : 'images'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
 
       {/* Template Creation Modal */}
       <Modal
@@ -783,6 +792,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF5F5',
   },
+  mainContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 80, // Reduced padding to account for action button
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -879,11 +896,12 @@ const styles = StyleSheet.create({
   },
   actionButtonContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
+    bottom: 16,
+    left: 16,
+    right: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   actionButton: {
     backgroundColor: '#FF4B6E',

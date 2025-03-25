@@ -56,20 +56,20 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   }, [segments]);
 
   // Handle redirects after auth check is complete
-  useEffect(() => {
-    if (hasCheckedAuth && isMounted.current) {
-      // Don't redirect if we're already on a public route
-      if (!isAuthenticated && !isPublicRoute) {
-        console.log("Not authenticated, redirecting to sign-in");
-        // Use setTimeout to ensure navigation happens after mounting
-        setTimeout(() => {
-          if (isMounted.current) {
-            router.replace('/sign-in');
-          }
-        }, 50);
-      }
-    }
-  }, [isAuthenticated, hasCheckedAuth, isPublicRoute, segments]);
+  // useEffect(() => {
+  //   if (hasCheckedAuth && isMounted.current) {
+  //     // Don't redirect if we're already on a public route
+  //     if (!isAuthenticated && !isPublicRoute) {
+  //       console.log("Not authenticated, redirecting to sign-in");
+  //       // Use setTimeout to ensure navigation happens after mounting
+  //       setTimeout(() => {
+  //         if (isMounted.current) {
+  //           router.replace('/sign-in');
+  //         }
+  //       }, 50);
+  //     }
+  //   }
+  // }, [isAuthenticated, hasCheckedAuth, isPublicRoute, segments]);
 
   if (!hasCheckedAuth && !isPublicRoute) {
     return (

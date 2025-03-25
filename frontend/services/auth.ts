@@ -86,8 +86,8 @@ export const TIERLIST_API_URL = process.env.NODE_ENV === 'production'
     : 'http://localhost:8082';
 
 export const CHAT_API_URL = process.env.NODE_ENV === 'production'
-    ? ensureHttps(process.env.CHAT_API_URL || 'https://soothing-warmth-production.up.railway.app')
-    : 'https://soothing-warmth-production.up.railway.app';
+    ? ensureHttps('https://soothing-warmth-production.up.railway.app')
+    : 'http://localhost:8083';
 
 export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://imageapi-production-af11.up.railway.app')
@@ -97,6 +97,10 @@ export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
 export const AUTH_SERVICE_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://auth-user-service-production.up.railway.app')
     : 'http://localhost:8080';
+
+export const ML_API_URL = process.env.NODE_ENV === 'production'
+    ? ensureHttps('https://ml-service-production.up.railway.app')
+    : 'http://localhost:8086';
 
 // Special instance for registration with longer timeout
 const registrationAxios = axios.create({
