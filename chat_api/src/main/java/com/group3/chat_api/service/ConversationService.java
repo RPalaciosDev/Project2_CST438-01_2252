@@ -23,7 +23,7 @@ public class ConversationService {
 
        // Chat expires one week from creation
         LocalDateTime dt = LocalDateTime.now();
-        conversation.setExpiresAt(dt.plusDays(7));
+        conversation.setExpiresAt(dt.plusDays(30));
 
         return conversationRepository.save(conversation);
     }

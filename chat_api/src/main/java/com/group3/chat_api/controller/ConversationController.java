@@ -30,7 +30,7 @@ public class ConversationController {
 
     @PostMapping
     public ResponseEntity<ConversationResponse> createConversation(@RequestBody ConversationRequest conversationRequest,
-                                                                   @RequestHeader("X-User-Id") String userId) {
+                                                                   @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(
                 conversationMapper.toResponse(
                         conversationService.createConversation(
