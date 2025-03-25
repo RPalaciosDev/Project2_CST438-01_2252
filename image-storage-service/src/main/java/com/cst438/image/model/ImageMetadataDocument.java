@@ -3,17 +3,17 @@ package com.cst438.image.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "images")
+@Document(collection = "images") // Maps this class to the "images" collection in MongoDB.
 public class ImageMetadataDocument {
 
-    @Id
+    @Id // Marks this field as the primary key.
     private String id;
-    private String fileName;
-    private String s3Url;
-    private String uploadedBy;
-    private String s3Key;
-    private long size;
-    private String folder;  
+    private String fileName; // The name of the file.
+    private String s3Url; // The S3 URL of the file.
+    private String uploadedBy; // The user who uploaded the file.
+    private String s3Key; // The S3 key of the file.
+    private long size; // The size of the file in bytes.
+    private String folder; // The folder where the file is stored.
 
     public ImageMetadataDocument() {}
 

@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * This provides an easily accessible endpoint to explain the service
  * capabilities.
  */
-@RestController
+@RestController // Marks this class as a REST controller.
 public class ServiceInfoController {
 
     @Value("${spring.application.name:image-storage-service}")
@@ -29,7 +29,7 @@ public class ServiceInfoController {
     // Record the start time when the controller is initialized
     private final long startTime = System.currentTimeMillis();
 
-    @GetMapping("/service-info")
+    @GetMapping("/service-info") // Endpoint to retrieve service information.
     public ResponseEntity<Map<String, Object>> getServiceInfo() {
         Map<String, Object> serviceInfo = new HashMap<>();
         long uptime = System.currentTimeMillis() - startTime;

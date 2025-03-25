@@ -8,7 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-@Configuration
+@Configuration // Marks this class as a configuration class.
 public class S3Config {
 
     @Value("${AWS_ACCESS_KEY_ID}")
@@ -20,7 +20,7 @@ public class S3Config {
     @Value("${aws.s3.region}")
     private String region;
 
-    @Bean
+    @Bean // Defines a bean for the S3 client.
     public S3Client s3Client() {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
 

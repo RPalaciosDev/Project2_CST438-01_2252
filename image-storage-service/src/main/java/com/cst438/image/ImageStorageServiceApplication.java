@@ -7,8 +7,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
-@SpringBootApplication(scanBasePackages = "com.cst438.image")
-@EnableMongoRepositories(basePackages = "com.cst438.image.repository") // Ensure MongoDB repositories are enabled
+@SpringBootApplication(scanBasePackages = "com.cst438.image") // Marks this as the main Spring Boot application.
+@EnableMongoRepositories(basePackages = "com.cst438.image.repository") // Enables MongoDB repositories.
 public class ImageStorageServiceApplication {
 
     private final StorageService storageService;
@@ -18,13 +18,13 @@ public class ImageStorageServiceApplication {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(ImageStorageServiceApplication.class, args);
+        SpringApplication.run(ImageStorageServiceApplication.class, args); // Starts the application.
     }
 
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(ApplicationReadyEvent.class) // Executes after the application is ready.
     public void syncOnStartup() {
         try {
-            storageService.syncS3ToMongo();
+            storageService.syncS3ToMongo(); // Syncs S3 images to MongoDB.
             System.out.println("S3 images synced to MongoDB on startup.");
         } catch (Exception e) {
             System.err.println("Error syncing S3 images to MongoDB: " + e.getMessage());

@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Collections;
 import java.util.Optional;
 
-@RestController
-@RequestMapping("/api/images")
+@RestController // Marks this class as a REST controller.
+@RequestMapping("/api/images") // Base path for all endpoints in this controller.
 public class ImageMetadataController {
 
     private final ImageMetadataService metadataService;
@@ -22,7 +22,7 @@ public class ImageMetadataController {
         this.storageService = storageService;
     }
 
-    @PostMapping("/store")
+    @PostMapping("/store") // Endpoint to store image metadata.
     public ResponseEntity<ImageMetadataDocument> storeImageUrl(
             @RequestParam String fileName,
             @RequestParam String s3Url,

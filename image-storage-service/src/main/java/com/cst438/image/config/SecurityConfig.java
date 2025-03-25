@@ -14,12 +14,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
-@Configuration
-@EnableWebSecurity
+@Configuration // Marks this class as a configuration class.
+@EnableWebSecurity // Enables Spring Security for the application.
 public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Bean
+    @Bean // Defines a bean for CORS configuration.
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
@@ -53,7 +53,7 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
+    @Bean // Defines a bean for the security filter chain.
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         logger.info("SecurityConfig is being loaded!");
 
