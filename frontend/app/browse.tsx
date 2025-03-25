@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import { TIERLIST_API_URL } from '../services/auth';
+import { TIERLIST_API_URL, IMAGE_API_URL } from '../services/auth';
 
 // Get screen dimensions for responsive layout
 const { width: screenWidth } = Dimensions.get('window');
@@ -48,9 +48,13 @@ export default function Browse() {
   const router = useRouter();
   const [topTemplates, setTopTemplates] = useState<Template[]>([]);
   const [templatesByTag, setTemplatesByTag] = useState<TemplatesByTag>({});
+  const [tagFrequencies, setTagFrequencies] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [visibleCategories, setVisibleCategories] = useState<number>(10);
+  const CATEGORIES_PER_LOAD = 10;
   const flatListRef = useRef<FlatList | null>(null);
   const [preloadedImages, setPreloadedImages] = useState<{ [key: string]: boolean }>({});
   const [isCarouselReady, setIsCarouselReady] = useState(false);
@@ -96,8 +100,20 @@ export default function Browse() {
     setIsCarouselReady(true);
   };
 
+  const fetchTagFrequencies = async () => {
+    try {
+      const response = await axios.get(`${IMAGE_API_URL}/api/tags/frequencies`);
+      console.log('Tag frequencies response:', response.data);
+      setTagFrequencies(response.data.frequencies);
+    } catch (error) {
+      console.error('Error fetching tag frequencies:', error);
+      // Don't set an error state, just log it - we can still show templates without frequencies
+    }
+  };
+
   useEffect(() => {
     fetchTemplates();
+    fetchTagFrequencies();
 
     // Cleanup function
     return () => {
@@ -369,6 +385,22 @@ export default function Browse() {
     index,
   });
 
+  const handleLoadMore = () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+
+    // Simulate a small delay for smooth loading
+    setTimeout(() => {
+      setVisibleCategories(prev => prev + CATEGORIES_PER_LOAD);
+      setLoadingMore(false);
+    }, 500);
+  };
+
+  const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }: any) => {
+    const paddingToBottom = 50; // Trigger when within 50px of bottom
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, styles.centered]}>
@@ -397,6 +429,12 @@ export default function Browse() {
         showsVerticalScrollIndicator={true}
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
+        onScroll={({ nativeEvent }) => {
+          if (isCloseToBottom(nativeEvent)) {
+            handleLoadMore();
+          }
+        }}
+        scrollEventThrottle={400}
       >
         {/* Featured carousel for top 5 templates */}
         <View style={styles.featuredContainer}>
@@ -466,15 +504,35 @@ export default function Browse() {
           <Text style={styles.categoriesTitle}>Categories</Text>
         </View>
 
-        {/* Tag-based sections */}
-        {Object.keys(templatesByTag).map(tag => (
-          <View key={tag}>
-            {renderSection(
-              `${tag.charAt(0).toUpperCase() + tag.slice(1)}`,
-              templatesByTag[tag]
-            )}
+        {/* Tag-based sections with infinite scroll */}
+        {Object.entries(templatesByTag)
+          .sort(([tagA, templatesA], [tagB, templatesB]) => {
+            // First sort by tag frequency
+            const freqA = tagFrequencies[tagA] || 0;
+            const freqB = tagFrequencies[tagB] || 0;
+            if (freqB !== freqA) {
+              return freqB - freqA;
+            }
+            // If frequencies are equal, sort by number of templates
+            return templatesB.length - templatesA.length;
+          })
+          .slice(0, visibleCategories)
+          .map(([tag, templates]) => (
+            <View key={tag}>
+              {renderSection(
+                `${tag.charAt(0).toUpperCase() + tag.slice(1)}`,
+                templates
+              )}
+            </View>
+          ))}
+
+        {/* Loading indicator for infinite scroll */}
+        {loadingMore && Object.keys(templatesByTag).length > visibleCategories && (
+          <View style={styles.loadingMoreContainer}>
+            <ActivityIndicator size="small" color="#FF4B6E" />
+            <Text style={styles.loadingMoreText}>Loading more categories...</Text>
           </View>
-        ))}
+        )}
 
         {/* Add some space at the bottom for better scrolling */}
         <View style={styles.footer} />
@@ -714,6 +772,15 @@ const styles = StyleSheet.create({
   carouselLoadingText: {
     marginTop: 12,
     fontSize: 16,
+    color: '#666',
+  },
+  loadingMoreContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingMoreText: {
+    marginTop: 8,
+    fontSize: 14,
     color: '#666',
   },
 }); 
