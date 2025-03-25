@@ -12,5 +12,5 @@ import java.util.UUID;
 @Table("user_conversation")
 public interface ConversationManagerRepository extends CrudRepository<ConversationManager, String> {
 
-    List<ConversationManager> findByUserId(UUID userId);
+    List<ConversationManager> findByUserId(String userId);
 }

@@ -23,7 +23,7 @@ public class ChatController {
 
     @GetMapping("/{conversationId}")
     public ResponseEntity<List<ChatResponse>> getChat(@PathVariable UUID conversationId,
-                                                      @RequestHeader("X-User-Id") UUID userId) {
+                                                      @RequestHeader("X-User-Id") String userId) {
         try {
             List<Chat> chatList = chatService.getChats(conversationId);
 

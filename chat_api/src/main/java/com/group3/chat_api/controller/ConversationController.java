@@ -30,7 +30,7 @@ public class ConversationController {
 
     @PostMapping
     public ResponseEntity<ConversationResponse> createConversation(@RequestBody ConversationRequest conversationRequest,
-                                                                   @RequestHeader("X-User-Id") UUID userId) {
+                                                                   @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(
                 conversationMapper.toResponse(
                         conversationService.createConversation(
@@ -41,7 +41,7 @@ public class ConversationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ConversationResponse>> getConversations(@RequestHeader("X-User-Id") UUID userId) {
+    public ResponseEntity<List<ConversationResponse>> getConversations(@RequestHeader("X-User-Id") String userId) {
         try {
             List<UUID> userConversations = conversationManagerService.getAllConversations(userId)
                     .stream()

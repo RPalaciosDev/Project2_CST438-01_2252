@@ -19,7 +19,7 @@ public class ConversationManagerService {
         return conversationManagementRepository.save(conversationManager);
     }
 
-    public List<ConversationManager> getAllConversations(UUID userId) {
+    public List<ConversationManager> getAllConversations(String userId) {
         try {
             return conversationManagementRepository.findByUserId(userId);
         } catch (Exception e) {
