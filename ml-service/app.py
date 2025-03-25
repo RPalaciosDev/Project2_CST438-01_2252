@@ -14,11 +14,11 @@ import requests
 import concurrent.futures
 from bson import ObjectId
 
-
+# Load environment variables from .env file.
 load_dotenv()
 
 app = Flask(__name__)
-# Configure CORS to allow requests from all frontend domains
+# Configure CORS to allow requests from specific frontend domains.
 CORS(app, resources={r"/*": {"origins": [
     "https://frontend-production-c2bc.up.railway.app",
     "https://frontend-production.up.railway.app",
@@ -31,6 +31,7 @@ CORS(app, resources={r"/*": {"origins": [
     "exp://localhost:19000"
 ], "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
 
+# MongoDB connection setup.
 MONGO_USER = os.getenv("MONGO_INITDB_ROOT_USERNAME")
 MONGO_PASS = os.getenv("MONGO_INITDB_ROOT_PASSWORD")
 MONGO_HOST = "centerbeam.proxy.rlwy.net"
@@ -41,43 +42,41 @@ MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASS}@{MONGO_HOST}:{MONGO_PORT}/{MON
 
 client = MongoClient(MONGO_URI)
 
-# Connect to the specific database and collection
+# Connect to the specific database and collection.
 db = client["auth_db"]
 users_collection = db["users"]
 
-# Log MongoDB connection status
+# Log MongoDB connection status.
 try:
-    db.command("ping")  # Test connection
-    print("✅ Successfully connected to MongoDB!", flush=True) 
+    db.command("ping")  # Test connection.
+    print("✅ Successfully connected to MongoDB!", flush=True)
 except Exception as e:
     print(f"❌ MongoDB Connection Failed: {e}", flush=True)
 
-# Debugging logs for RabbitMQ connection
+# Debugging logs for RabbitMQ connection.
 print(f"🐇 Attempting to connect to RabbitMQ at {os.getenv('RABBITMQ_HOST')}:{os.getenv('RABBITMQ_PORT')} "
       f"with user '{os.getenv('RABBITMQ_USERNAME')}'")
 
-# Initialize RabbitMQ Connection
+# Initialize RabbitMQ Connection.
 rabbitmq_connection = RabbitMQConnection(
     host=os.getenv("RABBITMQ_HOST"),
-    port=int(os.getenv("RABBITMQ_PORT")), 
+    port=int(os.getenv("RABBITMQ_PORT")),
     username=os.getenv("RABBITMQ_USERNAME"),
     password=os.getenv("RABBITMQ_PASSWORD")
 )
 
-
+# Attempt to connect to RabbitMQ.
 try:
     rabbitmq_connection.connect()
     print("✅ RabbitMQ Connection Successful!", flush=True)
 except Exception as e:
     print(f"❌ Error connecting to RabbitMQ: {e}", flush=True)
 
-
-# Define tier categories and weight mapping
+# Define tier categories and weight mapping.
 tiers = ["S", "A", "B", "C", "D", "E", "F"]
 tier_weights = {"S": 6, "A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0}
 
-
-# Define images
+# Define images for tier lists.
 images = [
     "Roronoa_Zoro",
     "Monkey_D_Luffy",
@@ -286,8 +285,17 @@ def schedule_daily_matching():
         # Send matches to RabbitMQ
         for match in matches:
             match_id = match['user_id']
-            rabbitmq_connection.send_match(user_id, match_id)
-            print(f"📤 Sent match {user_id} -> {match_id} to RabbitMQ", flush=True)
+            user_username = get_user_info(user_id).get("username", "unknown")
+            match_username = get_user_info(match_id).get("username", "unknown")
+
+            rabbitmq_connection.send_match(user_id, {
+                "user_id": user_id,
+                "match_id": match_id,
+                "username": user_username,
+                "match_username": match_username
+            })
+            print(f"📤 Sent match {user_id} ({user_username}) -> {match_id} ({match_username}) to RabbitMQ", flush=True)
+
 
         daily_matches[user_id] = [match["user_id"] for match in matches]
 

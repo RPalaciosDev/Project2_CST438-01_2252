@@ -14,6 +14,58 @@ A specialized Spring Boot service handling image storage, metadata management, a
 - [Running the Application](#running-the-application)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
+- [Future Improvements](#future-improvements)
+- [Railway Deployment Guide for Beginners](#railway-deployment-guide-for-beginners)
+
+## Project Overview
+The **Image Storage Service** allows users to retrieve images from AWS S3 and stores their metadata in MongoDB. The metadata includes:
+- File name
+- S3 URL
+- Uploaded by
+- S3 key
+- File size
+
+## Technologies Used
+- **Spring Boot** (Java)
+- **MongoDB** (for storing image metadata)
+- **AWS S3** (for cloud storage)
+- **Docker** (for containerized deployment)
+- **Spring Security** (for authentication and authorization)
+
+## Project Structure
+```
+image-storage-service/
+│── src/main/java/com/cst438/image/
+│   ├── ImageStorageServiceApplication.java     # Main entry point of the service
+│   ├── config/
+│   │   ├── MongoConfig.java                    # MongoDB client configuration
+│   │   ├── S3Config.java                       # AWS S3 client configuration
+│   │   ├── SecurityConfig.java                 # Spring Security configuration
+│   ├── controller/
+│   │   ├── ImageMetadataController.java        # REST API endpoints for image metadata
+│   │   ├── ServiceInfoController.java          # Provides service information and health checks
+│   ├── model/
+│   │   ├── ImageMetadataDocument.java          # MongoDB document structure
+│   ├── repository/
+│   │   ├── ImageMetadataRepository.java        # MongoDB repository for image metadata
+│   ├── service/
+│   │   ├── ImageMetadataService.java           # Service handling MongoDB operations
+│   │   ├── StorageService.java                 # AWS S3 storage and retrieval logic
+│── Dockerfile                                  # Docker configuration
+│── README.md                                   # Project documentation
+```
+
+### File Descriptions
+- **`ImageStorageServiceApplication.java`**: Main class that starts the Spring Boot application.
+- **`MongoConfig.java`**: Configures MongoDB client and repository settings.
+- **`S3Config.java`**: Configures AWS S3 client for uploading and retrieving images.
+- **`SecurityConfig.java`**: Manages authentication and security settings.
+- **`ImageMetadataController.java`**: Exposes RESTful endpoints to interact with image metadata.
+- **`ServiceInfoController.java`**: Provides service information, capabilities, and health checks.
+- **`ImageMetadataDocument.java`**: Defines the MongoDB document structure for image metadata.
+- **`ImageMetadataRepository.java`**: MongoDB repository interface for CRUD operations on image metadata.
+- **`ImageMetadataService.java`**: Handles logic for storing and retrieving image metadata from MongoDB.
+- **`StorageService.java`**: Provides methods for uploading images to AWS S3 and retrieving URLs.
 
 ## Features
 

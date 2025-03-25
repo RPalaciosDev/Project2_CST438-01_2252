@@ -12,7 +12,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import javax.annotation.PostConstruct;
 import java.util.Optional;
 
-@Service
+@Service // Marks this class as a Spring service.
 public class StorageService {
 
     private final S3Client s3Client;
@@ -31,7 +31,7 @@ public class StorageService {
         this.tagService = tagService;
     }
 
-    @PostConstruct
+    @PostConstruct // Executes after the bean is initialized.
     public void init() {
         System.out.println("AWS Bucket Name: " + bucketName);
     }
@@ -45,22 +45,27 @@ public class StorageService {
         System.out.println("syncS3ToMongo() method called!");
         boolean imagesAdded = false;
 
+        // List all objects in the S3 bucket.
         ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
         ListObjectsV2Response result = s3Client.listObjectsV2(request);
 
         for (S3Object s3Object : result.contents()) {
             String fileKey = s3Object.key();
-            if (fileKey.endsWith("/"))
-                continue; // Skip empty folders
+            if (fileKey.endsWith("/")) continue; // Skip empty folders.
 
+            // Construct the S3 file URL.
             String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;
 
+
+            // Determine the folder name.
             String folder = fileKey.contains("/") ? fileKey.substring(0, fileKey.lastIndexOf('/')) : "root";
 
+            // Check if the file already exists in MongoDB.
             Optional<ImageMetadataDocument> existing = metadataRepository.findByFileName(fileKey);
             if (existing.isPresent())
                 continue;
 
+            // Create and save metadata for the new file.
             ImageMetadataDocument metadata = new ImageMetadataDocument();
             metadata.setFileName(fileKey);
             metadata.setS3Key(fileKey);
