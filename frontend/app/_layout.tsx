@@ -5,6 +5,7 @@ import { StyleProvider } from './context/StyleContext';
 import { useAuthStore } from '../services/auth';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import WebSocketService from '../services/websocket';
 
 // Auth protection component to check if user is authenticated
 const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -581,11 +582,76 @@ const Sidebar = () => {
 
 export default function Layout() {
   const segments = useSegments();
+  const router = useRouter();
+  const { token, user, isAuthenticated } = useAuthStore();
+  const [isHydrated, setIsHydrated] = useState(false);
   const isAuthPage = segments.includes("sign-in") || segments.includes("sign-up") || segments.includes("startup");
+
+  // Set hydrated state after first render
+  useEffect(() => {
+    // Delay hydration slightly to ensure everything is properly initialized
+    const timer = setTimeout(() => {
+      setIsHydrated(true);
+      console.log("App layout hydrated");
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Register WebBrowser handler to ensure Google OAuth callback works
   useEffect(() => {
     WebBrowser.maybeCompleteAuthSession();
+  }, []);
+
+  // Effect for authentication
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    // Delay auth checks slightly to ensure root layout is fully mounted
+    const timer = setTimeout(() => {
+      const inAuthGroup = segments[0] === "(auth)";
+
+      if (!isAuthenticated && !inAuthGroup) {
+        console.log("Redirecting to sign-in because user is not authenticated");
+        router.replace("/sign-in");
+      } else if (isAuthenticated && inAuthGroup) {
+        console.log("Redirecting to home because user is authenticated");
+        router.replace("/home");
+      }
+
+      // Initialize WebSocket connection if authenticated
+      if (isAuthenticated && user && token) {
+        WebSocketService.connect(user.id, token)
+          .then(() => {
+            console.log('WebSocket connected on app initialization');
+
+            // Register global match notification listener
+            WebSocketService.registerCallback('match', (matchData: { userId: string; matchId: string }) => {
+              // Check if this notification is for the current user
+              if (matchData.userId === user.id || matchData.matchId === user.id) {
+                // Show notification to user
+                Alert.alert(
+                  'New Match!',
+                  'You have a new match. Check your matches to start chatting!',
+                  [{ text: 'OK', onPress: () => console.log('Match notification acknowledged') }]
+                );
+              }
+            });
+          })
+          .catch((error: Error) => {
+            console.error('Failed to connect to WebSocket on startup:', error);
+          });
+      }
+    }, 300); // Add a 300ms delay to ensure layout is mounted
+
+    return () => clearTimeout(timer);
+  }, [segments, isAuthenticated, isHydrated, user, token, router]);
+
+  // Clean up WebSocket on app unload
+  useEffect(() => {
+    return () => {
+      WebSocketService.disconnect();
+    };
   }, []);
 
   return (

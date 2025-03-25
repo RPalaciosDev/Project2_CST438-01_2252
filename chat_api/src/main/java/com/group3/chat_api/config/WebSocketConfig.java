@@ -39,7 +39,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         }
 
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:8081")
+                .setAllowedOrigins(allowedOrigins)
                 .withSockJS();
     }
 
@@ -49,7 +49,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setApplicationDestinationPrefixes("/chat")
                 .enableSimpleBroker("/topic")
                 .setTaskScheduler(heartBeatScheduler())
-                .setHeartbeatValue(new long[] {10000L, 10000L});
+                .setHeartbeatValue(new long[] { 10000L, 10000L });
     }
 
     @Bean
