@@ -19,7 +19,7 @@ import java.util.UUID;
 @Setter
 public class ConversationManager {
     @PrimaryKeyColumn(name = "userid", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
-    private UUID userId;
+    private String userId;
     @PrimaryKeyColumn(name = "conversationid", ordinal = 1, type = PrimaryKeyType.CLUSTERED)
     private UUID conversationId;
 }

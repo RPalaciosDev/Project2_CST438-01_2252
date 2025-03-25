@@ -9,6 +9,6 @@ import java.util.UUID;
 @Builder
 public class ChatResponse {
     private UUID chatId;
-    private UUID senderId;
+    private String senderId;
     private String message;
 }

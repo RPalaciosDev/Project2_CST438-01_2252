@@ -19,11 +19,20 @@ public class ConversationManagerService {
         return conversationManagementRepository.save(conversationManager);
     }
 
-    public List<ConversationManager> getAllConversations(UUID userId) {
+    public List<ConversationManager> getAllConversations(String userId) {
         try {
             return conversationManagementRepository.findByUserId(userId);
         } catch (Exception e) {
             log.error("Error unable to get all conversations: ", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<ConversationManager> getConversationById(UUID conversationId) {
+        try {
+            return conversationManagementRepository.findByConversationId(conversationId);
+        } catch (Exception e) {
+            log.error("Error unable to get conversations: ", e);
             throw new RuntimeException(e);
         }
     }

@@ -23,7 +23,7 @@ import java.util.UUID;
 public class Chat {
     private UUID chatId;
     @PrimaryKeyColumn(name = "conversationid", ordinal = 0, type = PrimaryKeyType.CLUSTERED) private UUID conversationId;
-    private UUID senderId;
+    private String senderId;
     private String message;
     @PrimaryKeyColumn(name = "sentat", ordinal = 1, type = PrimaryKeyType.PARTITIONED, ordering = Ordering.DESCENDING) private LocalDateTime sentAt;
 

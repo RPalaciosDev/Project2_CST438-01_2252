@@ -16,8 +16,7 @@ public class ChatMapper {
                 .chatId(UUID.randomUUID())
                 .conversationId(UUID.fromString(
                         chatRequest.getConversationId()))
-                .senderId(UUID.fromString(
-                        chatRequest.getSenderId()))
+                .senderId(chatRequest.getSenderId())
                 .message(chatRequest.getMessage())
                 .sentAt(LocalDateTime.now())
                 .build();
