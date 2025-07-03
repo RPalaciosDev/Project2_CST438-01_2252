@@ -26,6 +26,8 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 
 ## Quick Start
 
+### For Railway Deployment
+
 1. **Clone Repository**
 
    ```bash
@@ -40,6 +42,17 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 3. **Configure Environment Variables**
    - Use Railway's environment variable management system to configure each service.
    - Reference the `.env.example` file for required variables for each service.
+
+### For Local Development
+
+**⚠️ Important**: The project has been configured to work with Railway deployment by default. For local development, follow the [LOCAL_DEVELOPMENT_SETUP.md](LOCAL_DEVELOPMENT_SETUP.md) guide to fix port configuration issues.
+
+**Quick Local Setup:**
+1. Follow the [Local Development Setup Guide](LOCAL_DEVELOPMENT_SETUP.md)
+2. Set up environment variables for each service
+3. Start databases (MongoDB, Cassandra)
+4. Run services on their designated local ports
+5. Start the frontend with `npx expo start`
 
 ## Prerequisites
 

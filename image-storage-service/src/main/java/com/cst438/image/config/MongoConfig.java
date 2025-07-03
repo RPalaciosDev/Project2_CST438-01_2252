@@ -18,17 +18,31 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 })
 public class MongoConfig extends AbstractMongoClientConfiguration {
 
-    @Value("${spring.data.mongodb.uri}")
-    private String mongoUri;
+    @Value("${spring.data.mongodb.host}")
+    private String host;
+
+    @Value("${spring.data.mongodb.port}")
+    private int port;
+
+    @Value("${spring.data.mongodb.database}")
+    private String database;
+
+    @Value("${spring.data.mongodb.username}")
+    private String username;
+
+    @Value("${spring.data.mongodb.password}")
+    private String password;
 
     @Override
     protected String getDatabaseName() {
-        return "image_storage_db";
+        return database;
     }
 
     @Override
     public MongoClient mongoClient() {
-        return MongoClients.create(mongoUri);
+        String connectionString = String.format("mongodb://%s:%s@%s:%d/%s?authSource=admin", 
+            username, password, host, port, database);
+        return MongoClients.create(connectionString);
     }
 
     @Override

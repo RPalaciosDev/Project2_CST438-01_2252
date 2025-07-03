@@ -10,6 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +42,8 @@ public class SecurityConfig {
                     "http://localhost:19000",
                     "https://imageapi-production-af11.up.railway.app",
                     "https://tier-list-service-production.up.railway.app",
-                    "https://frontend-production-c2bc.up.railway.app");
+                    "https://frontend-production-c2bc.up.railway.app",
+                    "http://localhost:8083");
             logger.info("Using default CORS allowed origins: {}", allowedOrigins);
         }
 
@@ -79,5 +85,20 @@ public class SecurityConfig {
                 .anonymous(anonymous -> {
                 })
                 .build();
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+        return new InMemoryUserDetailsManager(
+            User.withUsername("admin")
+                .password(passwordEncoder.encode("password"))
+                .roles("ADMIN")
+                .build()
+        );
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

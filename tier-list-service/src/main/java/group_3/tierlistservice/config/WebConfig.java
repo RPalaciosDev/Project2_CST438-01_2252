@@ -29,10 +29,13 @@ public class WebConfig implements WebMvcConfigurer {
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "http://localhost:3000",
-                    "https://frontend-production-c2bc.up.railway.app" // Hardcoded production frontend URL
+                    "https://frontend-production-c2bc.up.railway.app",
+                    "http://localhost:8083"
             };
             logger.info("Using default CORS allowed origins: {}", Arrays.toString(allowedOrigins));
         }
+
+        logger.warn("[DEBUG] Allowed origins at startup: {}", Arrays.toString(allowedOrigins));
 
         registry.addMapping("/**")
                 .allowedOrigins(allowedOrigins)
@@ -46,6 +49,13 @@ public class WebConfig implements WebMvcConfigurer {
         // working
         registry.addMapping("/**")
                 .allowedOrigins("https://frontend-production-c2bc.up.railway.app")
+                .allowedMethods("*")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:8083")
                 .allowedMethods("*")
                 .allowedHeaders("*")
                 .allowCredentials(true)

@@ -73,8 +73,8 @@ const API_URL = (() => {
 
     // For local development
     return Platform.OS === 'web'
-        ? 'http://localhost:8080'
-        : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
+        ? 'http://localhost:8081'
+        : 'http://10.0.2.2:8081'; // Use 10.0.2.2 for Android emulator or your computer's actual IP address
 })();
 
 // Verify the API endpoint is correct during initialization
@@ -96,7 +96,7 @@ export const IMAGE_API_URL = process.env.NODE_ENV === 'production'
 // Export the auth service URL for use in other components
 export const AUTH_SERVICE_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://auth-user-service-production.up.railway.app')
-    : 'http://localhost:8080';
+    : 'http://localhost:8081';
 
 export const ML_API_URL = process.env.NODE_ENV === 'production'
     ? ensureHttps('https://ml-service-production.up.railway.app')

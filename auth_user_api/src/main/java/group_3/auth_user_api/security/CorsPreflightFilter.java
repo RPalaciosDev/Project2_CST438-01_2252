@@ -25,7 +25,7 @@ import java.util.List;
 public class CorsPreflightFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(CorsPreflightFilter.class);
 
-    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com,http://localhost:19006,http://localhost:3000}")
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com,http://localhost:19006,http://localhost:3000,http://localhost:8083}")
     private List<String> allowedOrigins;
 
     @Override
@@ -80,7 +80,8 @@ public class CorsPreflightFilter extends OncePerRequestFilter {
                     origin.equals("https://imageapi-production-af11.up.railway.app") ||
                     origin.equals("https://lovetiers.com") ||
                     origin.equals("http://localhost:19006") ||
-                    origin.equals("http://localhost:3000");
+                    origin.equals("http://localhost:3000") ||
+                    origin.equals("http://localhost:8083");
         }
 
         // Otherwise, check against our configured list
@@ -89,5 +90,10 @@ public class CorsPreflightFilter extends OncePerRequestFilter {
             logger.debug("Origin {} is not in allowed list: {}", origin, allowedOrigins);
         }
         return isAllowed;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws ServletException {
+        logger.warn("[DEBUG] Allowed origins at startup: {}", allowedOrigins);
     }
 }

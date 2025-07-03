@@ -3,12 +3,7 @@ spring:
     name: tier-list-service
   data:
     mongodb:
-      host: ${MONGODB_HOST:localhost}
-      port: ${MONGODB_PORT:27017}
-      database: ${MONGODB_DATABASE:tierlist_db}
-      authentication-database: admin
-      username: ${MONGODB_USERNAME:root}
-      password: ${MONGODB_PASSWORD:example}
+      uri: mongodb://root:example@localhost:27017/tier_list_db?authSource=admin
   main:
     allow-bean-definition-overriding: true
     
@@ -24,4 +19,4 @@ management:
 # External Services
 services:
   image-storage:
-    url: ${IMAGE_SERVICE_URL:https://imageapi-production-af11.up.railway.app} 
+    url: ${IMAGE_SERVICE_URL:http://localhost:8084} 

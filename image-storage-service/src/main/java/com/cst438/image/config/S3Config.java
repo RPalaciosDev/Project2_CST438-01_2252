@@ -11,10 +11,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 @Configuration // Marks this class as a configuration class.
 public class S3Config {
 
-    @Value("${AWS_ACCESS_KEY_ID}")
+    @Value("${aws.access-key-id}")
     private String accessKey;
 
-    @Value("${AWS_SECRET_ACCESS_KEY}")
+    @Value("${aws.secret-access-key}")
     private String secretKey;
 
     @Value("${aws.s3.region}")
