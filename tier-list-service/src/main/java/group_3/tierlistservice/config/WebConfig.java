@@ -29,6 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
                     "http://localhost:19006",
                     "http://localhost:19000",
                     "http://localhost:3000",
+                    "http://localhost:8083", // Frontend development port
                     "https://frontend-production-c2bc.up.railway.app" // Hardcoded production frontend URL
             };
             logger.info("Using default CORS allowed origins: {}", Arrays.toString(allowedOrigins));

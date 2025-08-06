@@ -1,18 +1,18 @@
 import { StyleSheet } from 'react-native';
 
 interface Tier {
-    label: string;
-    color: string;
-  }
-  
-  export const TIERS: Tier[] = [
-    { label: 'S', color: '#FF6B6B' },
-    { label: 'A', color: '#FFA94D' },
-    { label: 'B', color: '#FFD43B' },
-    { label: 'C', color: '#74C476' },
-    { label: 'D', color: '#4D94FF' },
-    { label: 'E', color: '#817EFF' },
-    { label: 'F', color: '#F78CFF' },
+  label: string;
+  color: string;
+}
+
+export const TIERS: Tier[] = [
+  { label: 'S', color: '#FF6B6B' },
+  { label: 'A', color: '#FFA94D' },
+  { label: 'B', color: '#FFD43B' },
+  { label: 'C', color: '#74C476' },
+  { label: 'D', color: '#4D94FF' },
+  { label: 'E', color: '#817EFF' },
+  { label: 'F', color: '#F78CFF' },
 ];
 
 export default StyleSheet.create({

@@ -6,15 +6,18 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.core.env.Environment;
 
 @SpringBootApplication(scanBasePackages = "com.cst438.image") // Marks this as the main Spring Boot application.
 @EnableMongoRepositories(basePackages = "com.cst438.image.repository") // Enables MongoDB repositories.
 public class ImageStorageServiceApplication {
 
     private final StorageService storageService;
+    private final Environment environment;
 
-    public ImageStorageServiceApplication(StorageService storageService) {
+    public ImageStorageServiceApplication(StorageService storageService, Environment environment) {
         this.storageService = storageService;
+        this.environment = environment;
     }
 
     public static void main(String[] args) {

@@ -34,9 +34,10 @@ export default function Index() {
           isAuthenticated: currentState.isAuthenticated,
           hasUser: !!currentState.user,
           userId: currentState.user?.id,
-          hasCompletedOnboarding: currentState.user?.hasCompletedOnboarding === true ? 'true' : 'false/undefined'
+          hasCompletedOnboarding:
+            currentState.user?.hasCompletedOnboarding === true ? 'true' : 'false/undefined',
         });
-        
+
         // Mark initial load as complete
         if (isMounted.current) {
           setIsInitialLoad(false);
@@ -140,5 +141,5 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  }
+  },
 });

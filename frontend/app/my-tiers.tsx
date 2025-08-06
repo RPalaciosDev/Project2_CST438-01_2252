@@ -92,17 +92,14 @@ export default function MyTiers() {
         throw new Error('User ID not available');
       }
 
-      const response = await axios.get(
-        `${TIERLIST_API_URL}/api/templates/user`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-ID': user.id,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-        }
-      );
+      const response = await axios.get(`${TIERLIST_API_URL}/api/templates/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-User-ID': user.id,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
 
       console.log(`Successfully fetched ${response.data.length} templates`);
       setTemplates(response.data);
@@ -114,7 +111,7 @@ export default function MyTiers() {
       }
       Alert.alert(
         'Error',
-        `Failed to load templates: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`
+        `Failed to load templates: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`,
       );
     } finally {
       setLoading(false);
@@ -130,17 +127,14 @@ export default function MyTiers() {
         throw new Error('User ID not available');
       }
 
-      const response = await axios.get(
-        `${TIERLIST_API_URL}/api/completions/user`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-ID': user.id,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-        }
-      );
+      const response = await axios.get(`${TIERLIST_API_URL}/api/completions/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-User-ID': user.id,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
 
       console.log(`Successfully fetched ${response.data.length} completions`);
       setCompletions(response.data);
@@ -152,7 +146,7 @@ export default function MyTiers() {
       }
       Alert.alert(
         'Error',
-        `Failed to load completions: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`
+        `Failed to load completions: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`,
       );
     } finally {
       setLoading(false);
@@ -168,11 +162,11 @@ export default function MyTiers() {
         `${TIERLIST_API_URL}/api/templates/${templateId}/with-images`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            Accept: 'application/json',
           },
-        }
+        },
       );
 
       console.log('Successfully fetched template with images');
@@ -185,7 +179,7 @@ export default function MyTiers() {
       }
       Alert.alert(
         'Error',
-        `Failed to load template details: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`
+        `Failed to load template details: ${axios.isAxiosError(error) ? error.message : 'Unknown error'}`,
       );
     } finally {
       setLoading(false);
@@ -206,7 +200,9 @@ export default function MyTiers() {
         style={[styles.tabButton, activeTab === 'templates' && styles.activeTabButton]}
         onPress={() => setActiveTab('templates')}
       >
-        <Text style={[styles.tabButtonText, activeTab === 'templates' && styles.activeTabButtonText]}>
+        <Text
+          style={[styles.tabButtonText, activeTab === 'templates' && styles.activeTabButtonText]}
+        >
           My Templates
         </Text>
       </TouchableOpacity>
@@ -214,7 +210,9 @@ export default function MyTiers() {
         style={[styles.tabButton, activeTab === 'completions' && styles.activeTabButton]}
         onPress={() => setActiveTab('completions')}
       >
-        <Text style={[styles.tabButtonText, activeTab === 'completions' && styles.activeTabButtonText]}>
+        <Text
+          style={[styles.tabButtonText, activeTab === 'completions' && styles.activeTabButtonText]}
+        >
           Completed Tiers
         </Text>
       </TouchableOpacity>
@@ -231,8 +229,12 @@ export default function MyTiers() {
         </View>
       )}
       <View style={styles.listItemContent}>
-        <Text style={styles.listItemTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.listItemDescription} numberOfLines={2}>{item.description}</Text>
+        <Text style={styles.listItemTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.listItemDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
         {item.tags && item.tags.length > 0 && (
           <View style={styles.tagsRow}>
             {item.tags.slice(0, 3).map((tag, index) => (
@@ -250,7 +252,10 @@ export default function MyTiers() {
   );
 
   const renderCompletionItem = ({ item }: { item: Completion }) => (
-    <TouchableOpacity style={styles.listItem} onPress={() => handleCompletionPress(item.templateId)}>
+    <TouchableOpacity
+      style={styles.listItem}
+      onPress={() => handleCompletionPress(item.templateId)}
+    >
       {item.templateThumbnailUrl ? (
         <Image source={{ uri: item.templateThumbnailUrl }} style={styles.listItemImage} />
       ) : (
@@ -259,7 +264,9 @@ export default function MyTiers() {
         </View>
       )}
       <View style={styles.listItemContent}>
-        <Text style={styles.listItemTitle} numberOfLines={1}>{item.templateTitle || 'Unnamed Template'}</Text>
+        <Text style={styles.listItemTitle} numberOfLines={1}>
+          {item.templateTitle || 'Unnamed Template'}
+        </Text>
         <Text style={styles.listItemDescription} numberOfLines={2}>
           {item.templateDescription || 'No description available'}
         </Text>
@@ -310,7 +317,9 @@ export default function MyTiers() {
                     source={{ uri: image.s3Url }}
                     style={styles.image}
                     resizeMode="cover"
-                    onError={(e) => console.error('Image loading error:', e.nativeEvent.error, image.s3Url)}
+                    onError={(e) =>
+                      console.error('Image loading error:', e.nativeEvent.error, image.s3Url)
+                    }
                   />
                 </View>
               ))
@@ -340,19 +349,17 @@ export default function MyTiers() {
             contentContainerStyle={styles.listContainer}
           />
         )
+      ) : completions.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>You haven't completed any tier lists yet.</Text>
+        </View>
       ) : (
-        completions.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>You haven't completed any tier lists yet.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={completions}
-            renderItem={renderCompletionItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-          />
-        )
+        <FlatList
+          data={completions}
+          renderItem={renderCompletionItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
       )}
     </SafeAreaView>
   );
@@ -550,4 +557,4 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%',
   },
-}); 
+});

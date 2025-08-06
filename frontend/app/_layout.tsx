@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated, Platform, Pressable, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Platform,
+  Pressable,
+  Dimensions,
+} from 'react-native';
 import { useRouter, Slot, useSegments } from 'expo-router';
 import { StyleProvider } from './context/StyleContext';
 import { useAuthStore } from '../services/auth';
@@ -16,7 +27,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
   // Public routes that don't require authentication
   const publicRoutes = ['sign-in', 'sign-up', 'auth-check', '(auth)', 'startup'];
-  const isPublicRoute = publicRoutes.some(route => segments.includes(route));
+  const isPublicRoute = publicRoutes.some((route) => segments.includes(route));
 
   // Set mounted ref after first render
   useEffect(() => {
@@ -28,18 +39,18 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
   // Check authentication status
   useEffect(() => {
-    console.log("Current route segments:", segments);
+    console.log('Current route segments:', segments);
 
     const checkAuth = async () => {
       if (!hasCheckedAuth) {
         try {
           const status = await checkStatus();
-          console.log("Auth check in layout:", status);
+          console.log('Auth check in layout:', status);
           if (isMounted.current) {
             setHasCheckedAuth(true);
           }
         } catch (err) {
-          console.error("Error checking auth:", err);
+          console.error('Error checking auth:', err);
           if (isMounted.current) {
             setHasCheckedAuth(true); // Still set to true to avoid infinite loop
           }
@@ -92,7 +103,7 @@ const Sidebar = () => {
   const [dailyTierCompleted, setDailyTierCompleted] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [dailyTemplateId, setDailyTemplateId] = useState<string | null>(null);
-  const [dailyTierTitle, setDailyTierTitle] = useState<string>("");
+  const [dailyTierTitle, setDailyTierTitle] = useState<string>('');
   const [isHovering, setIsHovering] = useState(false);
   const isWeb = Platform.OS === 'web';
 
@@ -101,7 +112,7 @@ const Sidebar = () => {
   const sidebarVisible = useRef(true);
 
   const showSidebar = () => {
-    console.log("Showing sidebar");
+    console.log('Showing sidebar');
     sidebarVisible.current = true;
     Animated.timing(slideAnim, {
       toValue: 0,
@@ -112,7 +123,7 @@ const Sidebar = () => {
 
   const hideSidebar = () => {
     if (!isHovering) {
-      console.log("Hiding sidebar");
+      console.log('Hiding sidebar');
       sidebarVisible.current = false;
       Animated.timing(slideAnim, {
         toValue: -250, // Width of the sidebar
@@ -124,14 +135,14 @@ const Sidebar = () => {
 
   // Start hide timer when component mounts
   useEffect(() => {
-    console.log("Setting up sidebar auto-hide timer");
+    console.log('Setting up sidebar auto-hide timer');
     const timer = setTimeout(() => {
-      console.log("Auto-hide timer triggered");
+      console.log('Auto-hide timer triggered');
       hideSidebar();
     }, 6000); // Hide after 6 seconds (increased from 5 seconds)
 
     return () => {
-      console.log("Clearing auto-hide timer");
+      console.log('Clearing auto-hide timer');
       clearTimeout(timer);
     };
   }, []);
@@ -168,19 +179,19 @@ const Sidebar = () => {
         const triggerElement = doc.getElementById('sidebar-trigger');
 
         const handleSidebarEnter = () => {
-          console.log("Mouse entered sidebar");
+          console.log('Mouse entered sidebar');
           setIsHovering(true);
           showSidebar();
         };
 
         const handleSidebarLeave = () => {
-          console.log("Mouse left sidebar");
+          console.log('Mouse left sidebar');
           setIsHovering(false);
           setTimeout(() => hideSidebar(), 300); // Small delay before hiding
         };
 
         const handleTriggerEnter = () => {
-          console.log("Mouse entered trigger area");
+          console.log('Mouse entered trigger area');
           setIsHovering(true);
           showSidebar();
         };
@@ -207,7 +218,7 @@ const Sidebar = () => {
         };
       } catch (error) {
         console.error('Error setting up web event listeners:', error);
-        return () => { }; // Empty cleanup if there was an error
+        return () => {}; // Empty cleanup if there was an error
       }
     };
 
@@ -245,13 +256,13 @@ const Sidebar = () => {
       setIsRefreshing(true);
       const dailyData = await fetchDailyTierlist();
 
-      console.log("Daily tierlist check result:", dailyData);
+      console.log('Daily tierlist check result:', dailyData);
 
       // Update all state in one place
       setDailyTierAvailable(dailyData?.available || false);
       setDailyTierCompleted(dailyData?.completed || false);
       setDailyTemplateId(dailyData?.templateId || null);
-      setDailyTierTitle(dailyData?.title || "Daily Tier");
+      setDailyTierTitle(dailyData?.title || 'Daily Tier');
 
       setIsRefreshing(false);
     } catch (error) {
@@ -259,7 +270,7 @@ const Sidebar = () => {
       setDailyTierAvailable(false);
       setDailyTierCompleted(false);
       setDailyTemplateId(null);
-      setDailyTierTitle("Daily Tier");
+      setDailyTierTitle('Daily Tier');
       setIsRefreshing(false);
     }
   };
@@ -285,17 +296,14 @@ const Sidebar = () => {
       const currentTemplateId = dailyData?.templateId || null;
 
       if (isCompleted) {
-        Alert.alert(
-          "Already Completed",
-          "You have already completed today's daily tier list."
-        );
+        Alert.alert('Already Completed', "You have already completed today's daily tier list.");
         return;
       }
 
       if (!isAvailable || !currentTemplateId) {
         Alert.alert(
-          "Daily Tier Unavailable",
-          "Today's daily tier list is not available right now. Please check back later."
+          'Daily Tier Unavailable',
+          "Today's daily tier list is not available right now. Please check back later.",
         );
         console.log('Daily Tier not available');
         return;
@@ -304,13 +312,13 @@ const Sidebar = () => {
       // Navigate to the tierlist screen with the template ID
       router.push({
         pathname: '/tierlists',
-        params: { dailyTemplateId: currentTemplateId }
+        params: { dailyTemplateId: currentTemplateId },
       });
     } catch (error) {
       console.error('Error checking daily tierlist before navigation:', error);
       Alert.alert(
-        "Error",
-        "There was an error accessing the daily tier list. Please try again later."
+        'Error',
+        'There was an error accessing the daily tier list. Please try again later.',
       );
     }
   };
@@ -335,8 +343,8 @@ const Sidebar = () => {
             opacity: slideAnim.interpolate({
               inputRange: [-250, -200, 0],
               outputRange: [1, 0.5, 0],
-            })
-          }
+            }),
+          },
         ]}
         pointerEvents="box-none"
       >
@@ -364,10 +372,7 @@ const Sidebar = () => {
       {/* Sidebar Content */}
       {Platform.OS === 'web' ? (
         <Animated.View
-          style={[
-            styles.sidebar,
-            { transform: [{ translateX: slideAnim }] }
-          ]}
+          style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
           nativeID="sidebar"
         >
           <Pressable
@@ -383,22 +388,28 @@ const Sidebar = () => {
                 style={[
                   styles.sidebarItem,
                   styles.dailyTierItem,
-                  !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {}
+                  !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {},
                 ]}
                 onPress={handleDailyTierClick}
                 disabled={!dailyTierAvailable || dailyTierCompleted}
               >
-                <MaterialIcons name="stars" size={24} color={!dailyTierAvailable || dailyTierCompleted ? "#999" : "#FF4B6E"} />
+                <MaterialIcons
+                  name="stars"
+                  size={24}
+                  color={!dailyTierAvailable || dailyTierCompleted ? '#999' : '#FF4B6E'}
+                />
                 <View style={styles.dailyTierTextContainer}>
-                  <Text style={[
-                    styles.sidebarText,
-                    !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
-                  ]}>
-                    {dailyTierTitle.length > 20 ? dailyTierTitle.substring(0, 17) + "..." : dailyTierTitle || "Daily Tier"}
+                  <Text
+                    style={[
+                      styles.sidebarText,
+                      !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {},
+                    ]}
+                  >
+                    {dailyTierTitle.length > 20
+                      ? dailyTierTitle.substring(0, 17) + '...'
+                      : dailyTierTitle || 'Daily Tier'}
                   </Text>
-                  {dailyTierCompleted && (
-                    <Text style={styles.completedTag}>Completed</Text>
-                  )}
+                  {dailyTierCompleted && <Text style={styles.completedTag}>Completed</Text>}
                   {!dailyTierAvailable && !dailyTierCompleted && (
                     <Text style={styles.unavailableTag}>Unavailable</Text>
                   )}
@@ -420,18 +431,12 @@ const Sidebar = () => {
               )}
             </View>
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push('/my-tiers')}
-            >
+            <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/my-tiers')}>
               <MaterialIcons name="list" size={24} color="#333" />
               <Text style={styles.sidebarText}>Your Tierlists</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push('/browse')}
-            >
+            <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/browse')}>
               <MaterialIcons name="explore" size={24} color="#333" />
               <Text style={styles.sidebarText}>Discover</Text>
             </TouchableOpacity>
@@ -444,28 +449,19 @@ const Sidebar = () => {
               <Text style={styles.sidebarText}>Tier Builder</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push('/chats')}
-            >
+            <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/chats')}>
               <MaterialIcons name="chat" size={24} color="#333" />
               <Text style={styles.sidebarText}>Chats</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.sidebarItem}
-              onPress={() => router.push('/')}
-            >
+            <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/')}>
               <MaterialIcons name="person" size={24} color="#333" />
               <Text style={styles.sidebarText}>Profile</Text>
             </TouchableOpacity>
 
             <View style={styles.spacer} />
 
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-            >
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <MaterialIcons name="logout" size={24} color="#FF4B6E" />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
@@ -473,10 +469,7 @@ const Sidebar = () => {
         </Animated.View>
       ) : (
         <Animated.View
-          style={[
-            styles.sidebar,
-            { transform: [{ translateX: slideAnim }] }
-          ]}
+          style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
           nativeID="sidebar"
         >
           <Text style={styles.logo}>Love Tiers</Text>
@@ -487,22 +480,28 @@ const Sidebar = () => {
               style={[
                 styles.sidebarItem,
                 styles.dailyTierItem,
-                !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {}
+                !dailyTierAvailable || dailyTierCompleted ? styles.disabledItem : {},
               ]}
               onPress={handleDailyTierClick}
               disabled={!dailyTierAvailable || dailyTierCompleted}
             >
-              <MaterialIcons name="stars" size={24} color={!dailyTierAvailable || dailyTierCompleted ? "#999" : "#FF4B6E"} />
+              <MaterialIcons
+                name="stars"
+                size={24}
+                color={!dailyTierAvailable || dailyTierCompleted ? '#999' : '#FF4B6E'}
+              />
               <View style={styles.dailyTierTextContainer}>
-                <Text style={[
-                  styles.sidebarText,
-                  !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {}
-                ]}>
-                  {dailyTierTitle.length > 20 ? dailyTierTitle.substring(0, 17) + "..." : dailyTierTitle || "Daily Tier"}
+                <Text
+                  style={[
+                    styles.sidebarText,
+                    !dailyTierAvailable || dailyTierCompleted ? styles.disabledText : {},
+                  ]}
+                >
+                  {dailyTierTitle.length > 20
+                    ? dailyTierTitle.substring(0, 17) + '...'
+                    : dailyTierTitle || 'Daily Tier'}
                 </Text>
-                {dailyTierCompleted && (
-                  <Text style={styles.completedTag}>Completed</Text>
-                )}
+                {dailyTierCompleted && <Text style={styles.completedTag}>Completed</Text>}
                 {!dailyTierAvailable && !dailyTierCompleted && (
                   <Text style={styles.unavailableTag}>Unavailable</Text>
                 )}
@@ -524,52 +523,34 @@ const Sidebar = () => {
             )}
           </View>
 
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => router.push('/my-tiers')}
-          >
+          <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/my-tiers')}>
             <MaterialIcons name="list" size={24} color="#333" />
             <Text style={styles.sidebarText}>Your Tierlists</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => router.push('/browse')}
-          >
+          <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/browse')}>
             <MaterialIcons name="explore" size={24} color="#333" />
             <Text style={styles.sidebarText}>Discover</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => router.push('/tier-builder')}
-          >
+          <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/tier-builder')}>
             <MaterialIcons name="build" size={24} color="#333" />
             <Text style={styles.sidebarText}>Tier Builder</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => router.push('/chats')}
-          >
+          <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/chats')}>
             <MaterialIcons name="chat" size={24} color="#333" />
             <Text style={styles.sidebarText}>Chats</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.sidebarItem}
-            onPress={() => router.push('/')}
-          >
+          <TouchableOpacity style={styles.sidebarItem} onPress={() => router.push('/')}>
             <MaterialIcons name="person" size={24} color="#333" />
             <Text style={styles.sidebarText}>Profile</Text>
           </TouchableOpacity>
 
           <View style={styles.spacer} />
 
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <MaterialIcons name="logout" size={24} color="#FF4B6E" />
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
@@ -581,7 +562,8 @@ const Sidebar = () => {
 
 export default function Layout() {
   const segments = useSegments();
-  const isAuthPage = segments.includes("sign-in") || segments.includes("sign-up") || segments.includes("startup");
+  const isAuthPage =
+    segments.includes('sign-in') || segments.includes('sign-up') || segments.includes('startup');
 
   // Register WebBrowser handler to ensure Google OAuth callback works
   useEffect(() => {
@@ -754,5 +736,3 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 });
-
-

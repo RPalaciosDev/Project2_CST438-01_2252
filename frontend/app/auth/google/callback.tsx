@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { fetchAccessTokenFromCode, getRedirectUri, exchangeGoogleTokenForJWT } from '../../../services/oauth';
+import {
+  fetchAccessTokenFromCode,
+  getRedirectUri,
+  exchangeGoogleTokenForJWT,
+} from '../../../services/oauth';
 import { useAuthStore } from '../../../services/auth';
 import Constants from 'expo-constants';
 
@@ -13,12 +17,12 @@ import Constants from 'expo-constants';
 export default function GoogleCallback() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const setUser = useAuthStore(state => state.setUser);
+  const setUser = useAuthStore((state) => state.setUser);
 
   // Use the correct API URL for the auth service
   const API_URL = 'https://auth-user-service-production.up.railway.app';
 
-  console.log("Using API URL in callback:", API_URL);
+  console.log('Using API URL in callback:', API_URL);
 
   useEffect(() => {
     async function handleCallback() {
@@ -42,7 +46,7 @@ export default function GoogleCallback() {
         console.log('Received tokens:', {
           hasAccessToken: !!tokenData.accessToken,
           hasIdToken: !!tokenData.idToken,
-          tokenType: tokenData.tokenType
+          tokenType: tokenData.tokenType,
         });
 
         if (!tokenData.accessToken && !tokenData.idToken) {
@@ -62,11 +66,16 @@ export default function GoogleCallback() {
         // The ID token contains the user's email address which is needed by the backend
         const tokenToUse = tokenData.idToken || tokenData.accessToken;
 
-        console.log('Using token type for backend:', tokenData.idToken ? 'ID Token' : 'Access Token');
+        console.log(
+          'Using token type for backend:',
+          tokenData.idToken ? 'ID Token' : 'Access Token',
+        );
 
         // If we're sending an access token, warn about potential issues
         if (!tokenData.idToken && tokenData.accessToken) {
-          console.warn('⚠️ USING ACCESS TOKEN INSTEAD OF ID TOKEN - THIS WILL CAUSE BACKEND ERRORS');
+          console.warn(
+            '⚠️ USING ACCESS TOKEN INSTEAD OF ID TOKEN - THIS WILL CAUSE BACKEND ERRORS',
+          );
         }
 
         // If we have an ID token, try to decode it for debugging
@@ -100,12 +109,15 @@ export default function GoogleCallback() {
           hasGender: !!authData.gender,
           hasLookingFor: !!authData.lookingFor,
           hasAge: authData.age > 0,
-          hasPicture: !!authData.picture
+          hasPicture: !!authData.picture,
         });
 
         // Debug: Log all available fields in authData
         console.log('All available fields in authData:', Object.keys(authData));
-        console.log('authData.user fields:', authData.user ? Object.keys(authData.user) : 'No user object');
+        console.log(
+          'authData.user fields:',
+          authData.user ? Object.keys(authData.user) : 'No user object',
+        );
 
         // Check if data is nested under a 'user' property
         const userData = authData.user || authData;
@@ -121,8 +133,8 @@ export default function GoogleCallback() {
             gender: userData.gender,
             lookingFor: userData.lookingFor,
             age: userData.age,
-            roles: userData.roles
-          }
+            roles: userData.roles,
+          },
         });
 
         // Set isNewUser flag correctly to ensure proper startup flow
@@ -135,8 +147,8 @@ export default function GoogleCallback() {
           console.log('Fetching complete user profile from /me endpoint');
           const meResponse = await fetch(`${API_URL}/api/auth/me`, {
             headers: {
-              Authorization: `Bearer ${authData.token}`
-            }
+              Authorization: `Bearer ${authData.token}`,
+            },
           });
 
           if (meResponse.ok) {
@@ -144,11 +156,13 @@ export default function GoogleCallback() {
             console.log('Full user profile received:', fullUserData);
 
             // Check if we got proper gender and lookingFor fields
-            const hasGender = fullUserData.gender != null &&
+            const hasGender =
+              fullUserData.gender != null &&
               fullUserData.gender !== '' &&
               fullUserData.gender !== 'undefined';
 
-            const hasLookingFor = fullUserData.lookingFor != null &&
+            const hasLookingFor =
+              fullUserData.lookingFor != null &&
               fullUserData.lookingFor !== '' &&
               fullUserData.lookingFor !== 'undefined';
 
@@ -163,16 +177,25 @@ export default function GoogleCallback() {
               hasAge,
               gender: fullUserData.gender,
               lookingFor: fullUserData.lookingFor,
-              age: fullUserData.age
+              age: fullUserData.age,
             });
 
             // Write a detailed log entry
-            console.warn('GOOGLE LOGIN - PROFILE CHECK - ' + new Date().toISOString() + ': ' +
-              'User ' + userData.email + ' - ' +
-              'Needs onboarding: ' + needsOnboarding +
-              '. Fields from /me: gender=' + (fullUserData.gender || 'missing') +
-              ', lookingFor=' + (fullUserData.lookingFor || 'missing') +
-              ', age=' + (fullUserData.age || 0)
+            console.warn(
+              'GOOGLE LOGIN - PROFILE CHECK - ' +
+                new Date().toISOString() +
+                ': ' +
+                'User ' +
+                userData.email +
+                ' - ' +
+                'Needs onboarding: ' +
+                needsOnboarding +
+                '. Fields from /me: gender=' +
+                (fullUserData.gender || 'missing') +
+                ', lookingFor=' +
+                (fullUserData.lookingFor || 'missing') +
+                ', age=' +
+                (fullUserData.age || 0),
             );
 
             if (needsOnboarding) {
@@ -189,13 +212,18 @@ export default function GoogleCallback() {
         }
 
         // Fallback to the original checks if /me endpoint fails
-        const hasGender = userData.gender != null && userData.gender !== '' && userData.gender !== 'undefined';
-        const hasLookingFor = userData.lookingFor != null && userData.lookingFor !== '' && userData.lookingFor !== 'undefined';
+        const hasGender =
+          userData.gender != null && userData.gender !== '' && userData.gender !== 'undefined';
+        const hasLookingFor =
+          userData.lookingFor != null &&
+          userData.lookingFor !== '' &&
+          userData.lookingFor !== 'undefined';
         const hasAge = userData.age != null && userData.age > 0;
 
         // Be more aggressive about routing to onboarding - ANY missing field or ANY sign of a
         // new account should trigger onboarding
-        const needsOnboarding = authData.isNewAccount ||
+        const needsOnboarding =
+          authData.isNewAccount ||
           !hasGender ||
           !hasLookingFor ||
           !hasAge ||
@@ -209,24 +237,44 @@ export default function GoogleCallback() {
           needsOnboarding,
           gender: String(userData.gender), // Convert to string for logging
           lookingFor: String(userData.lookingFor), // Convert to string for logging
-          age: userData.age
+          age: userData.age,
         });
 
         // Write a persistent log entry
-        console.warn('LOGIN SUCCESS LOG - ' + new Date().toISOString() + ': ' +
-          'User ' + userData.email + ' logged in via Google OAuth. ' +
-          'Needs onboarding: ' + needsOnboarding +
-          (needsOnboarding ? (' (Reason: ' +
-            (authData.isNewAccount ? 'New account' :
-              !hasGender ? 'Missing gender' :
-                !hasLookingFor ? 'Missing lookingFor' :
-                  !hasAge ? 'Missing age' : 'Unknown') +
-            ')') : '') +
-          '. Fields present: gender=' + hasGender +
-          ' (' + (String(userData.gender) || 'empty') + ')' +
-          ', lookingFor=' + hasLookingFor +
-          ' (' + (String(userData.lookingFor) || 'empty') + ')' +
-          ', age=' + (userData.age || 0)
+        console.warn(
+          'LOGIN SUCCESS LOG - ' +
+            new Date().toISOString() +
+            ': ' +
+            'User ' +
+            userData.email +
+            ' logged in via Google OAuth. ' +
+            'Needs onboarding: ' +
+            needsOnboarding +
+            (needsOnboarding
+              ? ' (Reason: ' +
+                (authData.isNewAccount
+                  ? 'New account'
+                  : !hasGender
+                    ? 'Missing gender'
+                    : !hasLookingFor
+                      ? 'Missing lookingFor'
+                      : !hasAge
+                        ? 'Missing age'
+                        : 'Unknown') +
+                ')'
+              : '') +
+            '. Fields present: gender=' +
+            hasGender +
+            ' (' +
+            (String(userData.gender) || 'empty') +
+            ')' +
+            ', lookingFor=' +
+            hasLookingFor +
+            ' (' +
+            (String(userData.lookingFor) || 'empty') +
+            ')' +
+            ', age=' +
+            (userData.age || 0),
         );
 
         if (needsOnboarding) {
@@ -242,7 +290,7 @@ export default function GoogleCallback() {
         // Redirect to login page with error
         router.replace({
           pathname: '/sign-in',
-          params: { error: 'Authentication failed. Please try again.' }
+          params: { error: 'Authentication failed. Please try again.' },
         });
       }
     }
@@ -270,4 +318,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-}); 
+});

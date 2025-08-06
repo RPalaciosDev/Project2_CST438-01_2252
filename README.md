@@ -26,6 +26,11 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 
 ## Quick Start
 
+### For Local Development
+For local development setup and troubleshooting, see [LOCAL_DEVELOPMENT_SETUP.md](LOCAL_DEVELOPMENT_SETUP.md) for detailed instructions on running all services locally.
+
+### For Railway Deployment
+
 1. **Clone Repository**
 
    ```bash

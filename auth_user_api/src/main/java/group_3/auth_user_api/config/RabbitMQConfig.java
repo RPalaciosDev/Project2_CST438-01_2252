@@ -5,14 +5,15 @@ import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Conditional;
 
 @Configuration
 @EnableRabbit
 public class RabbitMQConfig {
-    @Value("${spring.rabbitmq.template.exchange}")
+    @Value("${spring.rabbitmq.template.exchange:auth-exchange}")
     private String exchange;
 
-    @Value("${spring.rabbitmq.template.routing-key}")
+    @Value("${spring.rabbitmq.template.routing-key:auth-routing-key}")
     private String routingKey;
 
     // Queue name is hardcoded as it's an implementation detail

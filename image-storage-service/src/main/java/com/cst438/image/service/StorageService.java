@@ -45,47 +45,59 @@ public class StorageService {
         System.out.println("syncS3ToMongo() method called!");
         boolean imagesAdded = false;
 
-        // List all objects in the S3 bucket.
-        ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
-        ListObjectsV2Response result = s3Client.listObjectsV2(request);
+        try {
+            // List all objects in the S3 bucket.
+            ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(bucketName).build();
+            ListObjectsV2Response result = s3Client.listObjectsV2(request);
 
-        for (S3Object s3Object : result.contents()) {
-            String fileKey = s3Object.key();
-            if (fileKey.endsWith("/")) continue; // Skip empty folders.
+            for (S3Object s3Object : result.contents()) {
+                String fileKey = s3Object.key();
+                if (fileKey.endsWith("/")) continue; // Skip empty folders.
 
-            // Construct the S3 file URL.
-            String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;
+                // Construct the S3 file URL.
+                String fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileKey;
 
 
-            // Determine the folder name.
-            String folder = fileKey.contains("/") ? fileKey.substring(0, fileKey.lastIndexOf('/')) : "root";
+                // Determine the folder name.
+                String folder = fileKey.contains("/") ? fileKey.substring(0, fileKey.lastIndexOf('/')) : "root";
 
-            // Check if the file already exists in MongoDB.
-            Optional<ImageMetadataDocument> existing = metadataRepository.findByFileName(fileKey);
-            if (existing.isPresent())
-                continue;
+                // Check if the file already exists in MongoDB.
+                Optional<ImageMetadataDocument> existing = metadataRepository.findByFileName(fileKey);
+                if (existing.isPresent())
+                    continue;
 
-            // Create and save metadata for the new file.
-            ImageMetadataDocument metadata = new ImageMetadataDocument();
-            metadata.setFileName(fileKey);
-            metadata.setS3Key(fileKey);
-            metadata.setS3Url(fileUrl);
-            metadata.setSize(s3Object.size());
-            metadata.setUploadedBy("auto-sync");
-            metadata.setFolder(folder);
+                // Create and save metadata for the new file.
+                ImageMetadataDocument metadata = new ImageMetadataDocument();
+                metadata.setFileName(fileKey);
+                metadata.setS3Key(fileKey);
+                metadata.setS3Url(fileUrl);
+                metadata.setSize(s3Object.size());
+                metadata.setUploadedBy("auto-sync");
+                metadata.setFolder(folder);
 
-            metadataRepository.save(metadata);
-            imagesAdded = true;
-            System.out.println("Stored in MongoDB: " + fileUrl + " (Folder: " + folder + ")");
-        }
+                metadataRepository.save(metadata);
+                imagesAdded = true;
+                System.out.println("Stored in MongoDB: " + fileUrl + " (Folder: " + folder + ")");
+            }
 
-        System.out.println("syncS3ToMongo() completed.");
+            System.out.println("syncS3ToMongo() completed.");
 
-        // If any new images were added or this is the first sync, update tag
-        // frequencies
-        if (imagesAdded || tagService.getTagFrequencies().getFrequencies().isEmpty()) {
-            System.out.println("New images detected or first sync - updating tag frequencies");
-            tagService.updateTagFrequencies();
+            // If any new images were added or this is the first sync, update tag
+            // frequencies
+            if (imagesAdded || tagService.getTagFrequencies().getFrequencies().isEmpty()) {
+                System.out.println("New images detected or first sync - updating tag frequencies");
+                tagService.updateTagFrequencies();
+            }
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
+            System.err.println("Error syncing S3 images to MongoDB: " + e.getMessage());
+            System.err.println("Error details: " + e.awsErrorDetails());
+            System.err.println("Request ID: " + e.requestId());
+            System.err.println("Extended Request ID: " + e.extendedRequestId());
+            if (e.awsErrorDetails() != null) {
+                System.err.println("Error code: " + e.awsErrorDetails().errorCode());
+                System.err.println("Error message: " + e.awsErrorDetails().errorMessage());
+            }
+            throw e;
         }
     }
 }

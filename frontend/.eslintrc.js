@@ -21,4 +21,4 @@ module.exports = {
     'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
   ignorePatterns: ['node_modules/', 'dist/', '.expo/', 'web-build/'],
-}; 
+};

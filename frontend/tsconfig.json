@@ -4,44 +4,22 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@components/*": [
-        "src/components/*"
-      ],
-      "@screens/*": [
-        "src/screens/*"
-      ],
-      "@services/*": [
-        "src/services/*"
-      ],
-      "@utils/*": [
-        "src/utils/*"
-      ],
-      "@types/*": [
-        "src/types/*"
-      ],
-      "@styles/*": [
-        "src/styles/*"
-      ],
-      "@assets/*": [
-        "src/assets/*"
-      ]
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@screens/*": ["src/screens/*"],
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"],
+      "@types/*": ["src/types/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"]
     },
-    "types": [
-      "jest",
-      "react-native",
-      "node"
-    ],
+    "types": ["jest", "react-native", "node"],
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "jsx": "react-native",
-    "lib": [
-      "es2017"
-    ],
+    "lib": ["es2017"],
     "moduleResolution": "node",
     "noEmit": true,
     "resolveJsonModule": true,
@@ -50,13 +28,11 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "src/**/*"
-, "app/(auth)/ProtectedRoute.jsx", "0Auth2RedirectHandler.jsx", "app/services/auth-service.js", "app/App.js"  ],
-  "exclude": [
-    "node_modules",
-    "babel.config.js",
-    "metro.config.js",
-    "jest.config.js",
-    "dist"
-  ]
+    "src/**/*",
+    "app/(auth)/ProtectedRoute.jsx",
+    "0Auth2RedirectHandler.jsx",
+    "app/services/auth-service.js",
+    "app/App.js"
+  ],
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js", "dist"]
 }

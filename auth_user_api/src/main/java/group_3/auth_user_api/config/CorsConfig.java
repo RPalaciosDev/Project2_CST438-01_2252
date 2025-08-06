@@ -14,7 +14,7 @@ import java.util.List;
 public class CorsConfig {
 
     // Try to use environment variable, but provide fallback if it can't be resolved
-    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com,http://localhost:19006,http://localhost:3000}")
+    @Value("${cors.allowed-origins:https://frontend-production-c2bc.up.railway.app,https://imageapi-production-af11.up.railway.app,https://lovetiers.com,http://localhost:19006,http://localhost:3000,http://localhost:8083}")
     private List<String> allowedOrigins;
 
     @Bean
@@ -32,7 +32,8 @@ public class CorsConfig {
                     "https://imageapi-production-af11.up.railway.app",
                     "https://lovetiers.com",
                     "http://localhost:19006", // Expo web development server
-                    "http://localhost:3000" // Common React development port
+                    "http://localhost:3000", // Common React development port
+                    "http://localhost:8083" // Frontend development port
             ));
         } else {
             authConfig.setAllowedOrigins(allowedOrigins);
@@ -56,7 +57,9 @@ public class CorsConfig {
                     "https://imageapi-production-af11.up.railway.app",
                     "https://lovetiers.com",
                     "http://localhost:19006",
-                    "http://localhost:3000"));
+                    "http://localhost:3000",
+                    "http://localhost:8083" // Frontend development port
+            ));
         } else {
             oauthConfig.setAllowedOrigins(allowedOrigins);
         }

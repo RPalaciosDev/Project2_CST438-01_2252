@@ -19,6 +19,7 @@ public class User {
     private String jwtToken; // Store last issued JWT (optional)
     private String gender;
     private String lookingFor;
+    private String relationshipType;
     private int age;
     private boolean hasCompletedOnboarding;
 
@@ -129,6 +130,14 @@ public class User {
 
     public void setLookingFor(String lookingFor) {
         this.lookingFor = lookingFor;
+    }
+
+    public String getRelationshipType() {
+        return relationshipType;
+    }
+
+    public void setRelationshipType(String relationshipType) {
+        this.relationshipType = relationshipType;
     }
 
     public int getAge() {

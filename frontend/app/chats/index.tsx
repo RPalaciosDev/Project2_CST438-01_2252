@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import useConversations from 'hooks/useConversation';
 
@@ -18,7 +25,6 @@ export default function Chats() {
   if (error) {
     return (
       <View style={styles.container}>
-
         <Text style={styles.header}>Messages</Text>
         <View style={styles.errorMessage}>
           <Text style={styles.errorMessageTitle}>An error occurred</Text>
@@ -48,7 +54,7 @@ export default function Chats() {
             onPress={() => router.push(`/chats/${item.conversationId}`)}
           >
             <Text style={styles.username}>{item.conversationId}</Text>
-            <Text style={styles.lastMessage}>{"Say hi!"}</Text>
+            <Text style={styles.lastMessage}>{'Say hi!'}</Text>
           </TouchableOpacity>
         )}
       />
@@ -117,4 +123,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

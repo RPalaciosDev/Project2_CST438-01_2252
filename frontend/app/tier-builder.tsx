@@ -15,7 +15,7 @@ import {
   TextInput,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from 'react-native';
 import { useAuthStore } from '../services/auth';
 import axios from 'axios';
@@ -63,7 +63,7 @@ export default function TierBuilder() {
     description: '',
     tags: [],
     systemTags: [],
-    imageIds: []
+    imageIds: [],
   });
   const [tagsInput, setTagsInput] = useState('');
   const buttonAnimation = useRef(new Animated.Value(0)).current;
@@ -81,7 +81,7 @@ export default function TierBuilder() {
     Animated.timing(buttonAnimation, {
       toValue: selectedImages.size > 0 ? 1 : 0,
       duration: 300,
-      useNativeDriver: true
+      useNativeDriver: true,
     }).start();
   }, [selectedImages.size]);
 
@@ -90,26 +90,28 @@ export default function TierBuilder() {
     return [
       styles.actionButtonContainer,
       {
-        transform: [{
-          translateY: buttonAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [100, 0]
-          })
-        }],
+        transform: [
+          {
+            translateY: buttonAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [100, 0],
+            }),
+          },
+        ],
         opacity: buttonAnimation.interpolate({
           inputRange: [0, 0.3, 1],
-          outputRange: [0, 0.5, 1]
+          outputRange: [0, 0.5, 1],
         }),
-        pointerEvents: selectedImages.size > 0 ? 'auto' as const : 'none' as const
-      }
+        pointerEvents: selectedImages.size > 0 ? ('auto' as const) : ('none' as const),
+      },
     ];
   }, [buttonAnimation, selectedImages.size]);
 
   // Update imageIds whenever selected images change
   useEffect(() => {
-    setTemplate(prev => ({
+    setTemplate((prev) => ({
       ...prev,
-      imageIds: Array.from(selectedImages)
+      imageIds: Array.from(selectedImages),
     }));
   }, [selectedImages]);
 
@@ -125,10 +127,10 @@ export default function TierBuilder() {
 
       const response = await axios.get(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+          Accept: 'application/json',
+        },
       });
 
       console.log(`Fetched ${response.data.length} images successfully`);
@@ -159,10 +161,10 @@ export default function TierBuilder() {
 
       const response = await axios.get<TagFrequencies>(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+          Accept: 'application/json',
+        },
       });
 
       console.log(`Fetched ${response.data.count} tag frequencies`);
@@ -182,10 +184,10 @@ export default function TierBuilder() {
     console.log('Calculating tag frequencies locally');
     const frequencies: Record<string, number> = {};
 
-    images.forEach(image => {
+    images.forEach((image) => {
       if (image.fileName) {
         const parts = splitFileName(image.fileName);
-        parts.forEach(part => {
+        parts.forEach((part) => {
           if (part.trim() !== '' && !part.endsWith('.webp') && !part.endsWith('.jpg')) {
             frequencies[part] = (frequencies[part] || 0) + 1;
           }
@@ -208,7 +210,7 @@ export default function TierBuilder() {
 
   // Toggle button selection
   const handleButtonPress = (part: string) => {
-    setSelectedParts(prev => {
+    setSelectedParts((prev) => {
       const newSelectedParts = new Set(prev);
       if (newSelectedParts.has(part)) {
         newSelectedParts.delete(part);
@@ -221,7 +223,7 @@ export default function TierBuilder() {
 
   // Toggle image selection
   const handleImagePress = (imageId: string) => {
-    setSelectedImages(prev => {
+    setSelectedImages((prev) => {
       const newSelectedImages = new Set(prev);
       if (newSelectedImages.has(imageId)) {
         newSelectedImages.delete(imageId);
@@ -238,10 +240,10 @@ export default function TierBuilder() {
       return [];
     }
 
-    return images.filter(image => {
+    return images.filter((image) => {
       const parts = splitFileName(image.fileName);
-      return Array.from(selectedParts).some(selectedPart =>
-        parts.some(part => part.includes(selectedPart))
+      return Array.from(selectedParts).some((selectedPart) =>
+        parts.some((part) => part.includes(selectedPart)),
       );
     });
   }, [images, selectedParts]);
@@ -249,18 +251,24 @@ export default function TierBuilder() {
   // Handle action button press
   const handleActionButtonPress = () => {
     if (selectedImages.size === 0) {
-      Alert.alert("No Images Selected", "Please select at least one image to create a tier list.");
+      Alert.alert('No Images Selected', 'Please select at least one image to create a tier list.');
       return;
     }
 
     // Extract tags from filenames of selected images
     const systemTags = new Set<string>();
-    selectedImages.forEach(imageId => {
+    selectedImages.forEach((imageId) => {
       const image = findImageById(imageId);
       if (image && image.fileName) {
         const parts = splitFileName(image.fileName);
-        parts.forEach(part => {
-          if (part.trim() !== '' && !part.endsWith('.webp') && !part.endsWith('.jpg') && !part.endsWith('.jpeg') && !part.endsWith('.png')) {
+        parts.forEach((part) => {
+          if (
+            part.trim() !== '' &&
+            !part.endsWith('.webp') &&
+            !part.endsWith('.jpg') &&
+            !part.endsWith('.jpeg') &&
+            !part.endsWith('.png')
+          ) {
             systemTags.add(part);
           }
         });
@@ -268,10 +276,10 @@ export default function TierBuilder() {
     });
 
     // Update template with system tags and image IDs
-    setTemplate(prev => ({
+    setTemplate((prev) => ({
       ...prev,
       systemTags: Array.from(systemTags),
-      imageIds: Array.from(selectedImages)
+      imageIds: Array.from(selectedImages),
     }));
 
     setModalVisible(true);
@@ -283,22 +291,22 @@ export default function TierBuilder() {
       // Split by comma, trim each tag, and filter out empty strings
       const newTags = tagsInput
         .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag !== '');
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== '');
 
       // Only add non-empty tags to the template
       if (newTags.length > 0) {
-        setTemplate(prev => {
+        setTemplate((prev) => {
           // Make sure prev.tags is an array
           const currentTags = Array.isArray(prev.tags) ? [...prev.tags] : [];
           // Filter out any null or empty values from existing tags
           const cleanedCurrentTags = currentTags
-            .filter(tag => tag !== null && tag !== undefined && tag !== '')
-            .map(tag => String(tag)); // Convert any non-string values to strings
+            .filter((tag) => tag !== null && tag !== undefined && tag !== '')
+            .map((tag) => String(tag)); // Convert any non-string values to strings
 
           return {
             ...prev,
-            tags: [...cleanedCurrentTags, ...newTags]
+            tags: [...cleanedCurrentTags, ...newTags],
           };
         });
       }
@@ -308,9 +316,9 @@ export default function TierBuilder() {
 
   // Handle removing a tag
   const handleRemoveTag = (tagToRemove: string) => {
-    setTemplate(prev => ({
+    setTemplate((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
   };
 
@@ -322,7 +330,7 @@ export default function TierBuilder() {
 
   // Find image object by ID
   const findImageById = (imageId: string): ImageMetadata | undefined => {
-    return images.find(img => img.id === imageId);
+    return images.find((img) => img.id === imageId);
   };
 
   // Handle thumbnail selection
@@ -330,9 +338,9 @@ export default function TierBuilder() {
     const image = findImageById(imageId);
     if (image) {
       setSelectedThumbnail(imageId);
-      setTemplate(prev => ({
+      setTemplate((prev) => ({
         ...prev,
-        thumbnailUrl: image.s3Url
+        thumbnailUrl: image.s3Url,
       }));
     }
   };
@@ -341,25 +349,25 @@ export default function TierBuilder() {
   const handleSubmitTemplate = async () => {
     // Validate form
     if (!template.title.trim()) {
-      Alert.alert("Error", "Please provide a title for your tier list");
+      Alert.alert('Error', 'Please provide a title for your tier list');
       return;
     }
 
     if (template.imageIds.length === 0) {
-      Alert.alert("Error", "Please select at least one image");
+      Alert.alert('Error', 'Please select at least one image');
       return;
     }
 
-    // If no thumbnail was explicitly selected but images are present, 
+    // If no thumbnail was explicitly selected but images are present,
     // use the first selected image as the thumbnail
     let thumbnailUrl = template.thumbnailUrl;
     if (!thumbnailUrl && template.imageIds.length > 0) {
       const firstImage = findImageById(template.imageIds[0]);
       if (firstImage) {
         thumbnailUrl = firstImage.s3Url;
-        setTemplate(prev => ({
+        setTemplate((prev) => ({
           ...prev,
-          thumbnailUrl: firstImage.s3Url
+          thumbnailUrl: firstImage.s3Url,
         }));
       }
     }
@@ -379,19 +387,19 @@ export default function TierBuilder() {
 
       // Ensure each tag is a string and not null/undefined/empty
       const cleanedTags = allTags
-        .filter(tag => tag !== null && tag !== undefined && tag !== '')
-        .map(tag => String(tag)); // Explicitly convert each tag to a string
+        .filter((tag) => tag !== null && tag !== undefined && tag !== '')
+        .map((tag) => String(tag)); // Explicitly convert each tag to a string
 
       console.log('Cleaned tags:', cleanedTags);
       console.log('Cleaned tags JSON.stringify:', JSON.stringify(cleanedTags));
 
       // Create the template object to submit
       const templateToSubmit = {
-        title: template.title || "", // Never null
-        description: template.description || "", // Never null
+        title: template.title || '', // Never null
+        description: template.description || '', // Never null
         tags: cleanedTags.length > 0 ? cleanedTags : [], // Always an array, never null
         imageIds: Array.isArray(template.imageIds) ? template.imageIds : [], // Always an array
-        thumbnailUrl: thumbnailUrl || "" // Never null
+        thumbnailUrl: thumbnailUrl || '', // Never null
       };
 
       console.log('Template to submit:', JSON.stringify(templateToSubmit, null, 2));
@@ -402,12 +410,12 @@ export default function TierBuilder() {
 
       const response = await axios.post(apiUrl, templateToSubmit, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           'X-User-ID': user?.id || 'anonymous',
-          'Accept': 'application/json'
+          Accept: 'application/json',
         },
-        timeout: 10000
+        timeout: 10000,
       });
 
       console.log('Template submitted successfully:', JSON.stringify(response.data, null, 2));
@@ -416,11 +424,9 @@ export default function TierBuilder() {
       setModalVisible(false);
 
       // Then show success message
-      Alert.alert(
-        "Success",
-        "Your tier list template has been created!",
-        [{
-          text: "OK",
+      Alert.alert('Success', 'Your tier list template has been created!', [
+        {
+          text: 'OK',
           onPress: () => {
             // Reset states after alert is dismissed
             setTemplate({
@@ -428,15 +434,14 @@ export default function TierBuilder() {
               description: '',
               tags: [],
               systemTags: [],
-              imageIds: []
+              imageIds: [],
             });
             setSelectedThumbnail(null);
             setSelectedImages(new Set());
             setSelectedParts(new Set());
-          }
-        }]
-      );
-
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error submitting template:', error);
       let errorMessage = 'Failed to create tier list template';
@@ -448,7 +453,7 @@ export default function TierBuilder() {
         errorMessage = `${errorMessage}: ${error.message}`;
       }
 
-      Alert.alert("Error", errorMessage);
+      Alert.alert('Error', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -457,10 +462,7 @@ export default function TierBuilder() {
   // Render image item
   const renderImageItem = ({ item }: { item: ImageMetadata }) => (
     <TouchableOpacity
-      style={[
-        styles.imageContainer,
-        selectedImages.has(item.id) && styles.selectedImageContainer
-      ]}
+      style={[styles.imageContainer, selectedImages.has(item.id) && styles.selectedImageContainer]}
       onPress={() => handleImagePress(item.id)}
       activeOpacity={0.8}
       accessibilityLabel={`Image ${item.fileName.split('/').pop()}`}
@@ -487,10 +489,7 @@ export default function TierBuilder() {
   const renderTag = (tag: string, index: number, isSystemTag: boolean) => (
     <View
       key={`${isSystemTag ? 'system' : 'user'}-${index}`}
-      style={[
-        styles.tag,
-        isSystemTag && styles.systemTag
-      ]}
+      style={[styles.tag, isSystemTag && styles.systemTag]}
     >
       <Text style={[styles.tagText, isSystemTag && styles.systemTagText]}>{tag}</Text>
       {!isSystemTag && (
@@ -543,7 +542,7 @@ export default function TierBuilder() {
     );
   }
 
-  // If there was an error loading tag frequencies but images loaded, 
+  // If there was an error loading tag frequencies but images loaded,
   // show a warning but continue with local calculations
   const shouldShowTagWarning = tagError && !loadingTags;
 
@@ -582,10 +581,7 @@ export default function TierBuilder() {
               return (
                 <TouchableOpacity
                   key={part}
-                  style={[
-                    styles.partButton,
-                    selectedParts.has(part) && styles.selectedPartButton
-                  ]}
+                  style={[styles.partButton, selectedParts.has(part) && styles.selectedPartButton]}
                   onPress={() => handleButtonPress(part)}
                   accessibilityLabel={`${selectedParts.has(part) ? 'Selected ' : ''}Category ${part} (${count} images)`}
                   accessibilityRole="button"
@@ -593,7 +589,7 @@ export default function TierBuilder() {
                   <Text
                     style={[
                       styles.partButtonText,
-                      selectedParts.has(part) && styles.selectedPartButtonText
+                      selectedParts.has(part) && styles.selectedPartButtonText,
                     ]}
                   >
                     {part} <Text style={styles.countText}>({count})</Text>
@@ -617,23 +613,27 @@ export default function TierBuilder() {
               ListEmptyComponent={
                 <Text style={styles.noImagesText}>No images match the selected criteria</Text>
               }
-              ListFooterComponent={filteredImages.length > 0 ? (
-                <Text style={styles.resultCountText}>
-                  Showing {filteredImages.length} {filteredImages.length === 1 ? 'image' : 'images'}
-                </Text>
-              ) : null}
+              ListFooterComponent={
+                filteredImages.length > 0 ? (
+                  <Text style={styles.resultCountText}>
+                    Showing {filteredImages.length}{' '}
+                    {filteredImages.length === 1 ? 'image' : 'images'}
+                  </Text>
+                ) : null
+              }
             />
           )}
         </ScrollView>
 
         {/* Action Button */}
-        <Animated.View style={actionButtonStyles} pointerEvents={selectedImages.size > 0 ? 'auto' : 'none'}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleActionButtonPress}
-          >
+        <Animated.View
+          style={actionButtonStyles}
+          pointerEvents={selectedImages.size > 0 ? 'auto' : 'none'}
+        >
+          <TouchableOpacity style={styles.actionButton} onPress={handleActionButtonPress}>
             <Text style={styles.actionButtonText}>
-              Create Tier List with {selectedImages.size} {selectedImages.size === 1 ? 'image' : 'images'}
+              Create Tier List with {selectedImages.size}{' '}
+              {selectedImages.size === 1 ? 'image' : 'images'}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -659,7 +659,7 @@ export default function TierBuilder() {
               style={styles.textInput}
               placeholder="Give your tier list a name"
               value={template.title}
-              onChangeText={(text) => setTemplate(prev => ({ ...prev, title: text }))}
+              onChangeText={(text) => setTemplate((prev) => ({ ...prev, title: text }))}
             />
 
             <Text style={styles.inputLabel}>Description</Text>
@@ -667,7 +667,7 @@ export default function TierBuilder() {
               style={[styles.textInput, styles.textArea]}
               placeholder="Describe your tier list (optional)"
               value={template.description}
-              onChangeText={(text) => setTemplate(prev => ({ ...prev, description: text }))}
+              onChangeText={(text) => setTemplate((prev) => ({ ...prev, description: text }))}
               multiline
             />
 
@@ -686,7 +686,9 @@ export default function TierBuilder() {
 
             {(template.tags.length > 0 || template.systemTags.length > 0) && (
               <View>
-                <Text style={styles.tagSectionLabel}>Tags ({template.systemTags.length} auto-generated, {template.tags.length} custom)</Text>
+                <Text style={styles.tagSectionLabel}>
+                  Tags ({template.systemTags.length} auto-generated, {template.tags.length} custom)
+                </Text>
                 <View style={styles.tagsContainer}>
                   {template.systemTags.map((tag, index) => renderTag(tag, index, true))}
                   {template.tags.map((tag, index) => renderTag(tag, index, false))}
@@ -701,7 +703,9 @@ export default function TierBuilder() {
             {template.imageIds.length > 0 && (
               <View style={styles.thumbnailSection}>
                 <Text style={styles.inputLabel}>Select Thumbnail</Text>
-                <Text style={styles.thumbnailHelp}>Choose an image to represent this tier list</Text>
+                <Text style={styles.thumbnailHelp}>
+                  Choose an image to represent this tier list
+                </Text>
 
                 <View style={styles.thumbnailNavigation}>
                   <ScrollView
@@ -710,7 +714,7 @@ export default function TierBuilder() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.thumbnailScroll}
                   >
-                    {template.imageIds.map(imageId => {
+                    {template.imageIds.map((imageId) => {
                       const image = findImageById(imageId);
                       if (!image) return null;
 
@@ -719,7 +723,7 @@ export default function TierBuilder() {
                           key={imageId}
                           style={[
                             styles.thumbnailOption,
-                            selectedThumbnail === imageId && styles.thumbnailSelected
+                            selectedThumbnail === imageId && styles.thumbnailSelected,
                           ]}
                           onPress={() => handleThumbnailSelect(imageId)}
                           activeOpacity={0.7}
@@ -759,10 +763,7 @@ export default function TierBuilder() {
             )}
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
@@ -1200,4 +1201,4 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
   },
-}); 
+});

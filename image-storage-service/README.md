@@ -223,6 +223,44 @@ JWT_SECRET=your_jwt_secret
 
 ## Running the Application
 
+### Using Startup Scripts (Recommended)
+
+The easiest way to run the application is using the provided startup scripts:
+
+#### On macOS/Linux:
+```bash
+./start.sh
+```
+
+#### On Windows:
+```cmd
+start.bat
+```
+
+These scripts automatically load environment variables from the `.env` file in the project root directory.
+
+### Manual Environment Variable Setup
+
+If you prefer to set environment variables manually:
+
+#### On macOS/Linux:
+```bash
+export AWS_ACCESS_KEY_ID=your_aws_access_key
+export AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+export AWS_S3_REGION=us-east-2
+export AWS_S3_BUCKET=your_s3_bucket_name
+./gradlew bootRun
+```
+
+#### On Windows:
+```cmd
+set AWS_ACCESS_KEY_ID=your_aws_access_key
+set AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+set AWS_S3_REGION=us-east-2
+set AWS_S3_BUCKET=your_s3_bucket_name
+gradlew.bat bootRun
+```
+
 ### Local Development
 
    ```bash

@@ -6,12 +6,12 @@ interface StyleContextProps {
 }
 
 const StyleContext = createContext<StyleContextProps>({
-  selectedStyle: "default",
+  selectedStyle: 'default',
   setSelectedStyle: () => {},
 });
 
 export function StyleProvider({ children }: { children: React.ReactNode }) {
-  const [selectedStyle, setSelectedStyle] = useState<string>("default");
+  const [selectedStyle, setSelectedStyle] = useState<string>('default');
 
   return (
     <StyleContext.Provider value={{ selectedStyle, setSelectedStyle }}>

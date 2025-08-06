@@ -16,4 +16,4 @@ jest.mock('expo-router', () => ({
   }),
   useSegments: () => [''],
   Link: 'Link',
-})); 
+}));

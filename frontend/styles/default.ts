@@ -1,18 +1,18 @@
 import { StyleSheet } from 'react-native';
 
 interface Tier {
-    label: string;
-    color: string;
-  }
-  
+  label: string;
+  color: string;
+}
+
 export const TIERS: Tier[] = [
-    { label: 'S', color: '#FFFFFF' },
-    { label: 'A', color: '#FFFFFF' },
-    { label: 'B', color: '#FFFFFF' },
-    { label: 'C', color: '#FFFFFF' },
-    { label: 'D', color: '#FFFFFF' },
-    { label: 'E', color: '#FFFFFF' },
-    { label: 'F', color: '#FFFFFF' },
+  { label: 'S', color: '#FFFFFF' },
+  { label: 'A', color: '#FFFFFF' },
+  { label: 'B', color: '#FFFFFF' },
+  { label: 'C', color: '#FFFFFF' },
+  { label: 'D', color: '#FFFFFF' },
+  { label: 'E', color: '#FFFFFF' },
+  { label: 'F', color: '#FFFFFF' },
 ];
 
 export default StyleSheet.create({
@@ -38,7 +38,7 @@ export default StyleSheet.create({
   tierLabel: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000', 
+    color: '#000',
   },
   tierContent: {
     flex: 1,

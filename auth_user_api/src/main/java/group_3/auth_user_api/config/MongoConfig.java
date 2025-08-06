@@ -28,7 +28,7 @@ import jakarta.annotation.PostConstruct;
 public class MongoConfig extends AbstractMongoClientConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
-    @Value("${spring.data.mongodb.uri}")
+    @Value("${spring.data.mongodb.uri:mongodb://root:example@localhost:27017/auth_service?authSource=admin}")
     private String mongoUri;
 
     @PostConstruct

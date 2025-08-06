@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Dimensions,
-  Animated
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
@@ -70,9 +70,9 @@ export default function Browse() {
     const imagesToPreload: string[] = [];
 
     // Collect all unique image URLs from top templates
-    templates.forEach(template => {
+    templates.forEach((template) => {
       if (template.images && template.images.length > 0) {
-        template.images.slice(0, 5).forEach(img => {
+        template.images.slice(0, 5).forEach((img) => {
           if (img.s3Url) imagesToPreload.push(img.s3Url);
         });
       } else if (template.thumbnailUrl) {
@@ -140,11 +140,11 @@ export default function Browse() {
             flatListRef.current.scrollToIndex({
               index: nextSlide,
               animated: true,
-              viewPosition: 0.5
+              viewPosition: 0.5,
             });
             setActiveSlide(nextSlide);
           } catch (error) {
-            console.error("Error rotating carousel:", error);
+            console.error('Error rotating carousel:', error);
           }
         }
       }, 4000); // 4 seconds
@@ -193,14 +193,14 @@ export default function Browse() {
         top5.map(async (template) => {
           try {
             const detailResponse = await axios.get(
-              `${TIERLIST_API_URL}/api/templates/${template.id}/with-images`
+              `${TIERLIST_API_URL}/api/templates/${template.id}/with-images`,
             );
             return detailResponse.data;
           } catch (err) {
             console.error(`Error fetching details for template ${template.id}:`, err);
             return template; // Fallback to basic template without images
           }
-        })
+        }),
       );
 
       setTopTemplates(topTemplatesWithImages);
@@ -212,14 +212,14 @@ export default function Browse() {
       const byTags: TemplatesByTag = {};
       allTemplates.forEach((template: Template) => {
         if (template.tags && template.tags.length > 0) {
-          template.tags.forEach(tag => {
+          template.tags.forEach((tag) => {
             if (!tag) return; // Skip null or empty tags
 
             if (!byTags[tag]) {
               byTags[tag] = [];
             }
             // Only add if not already in the array
-            if (!byTags[tag].some(t => t.id === template.id)) {
+            if (!byTags[tag].some((t) => t.id === template.id)) {
               byTags[tag].push(template);
             }
           });
@@ -238,14 +238,14 @@ export default function Browse() {
   // Handle template selection - increment view count and navigate
   const handleTemplatePress = async (template: Template) => {
     if (!template || !template.id) {
-      console.error("Cannot handle template press: template is undefined or missing id");
+      console.error('Cannot handle template press: template is undefined or missing id');
       return;
     }
 
     try {
       // Call the API to increment view count
       // We're using the existing getTemplateById endpoint which already increments the view
-      await axios.get(`${TIERLIST_API_URL}/api/templates/${template.id}`).catch(err => {
+      await axios.get(`${TIERLIST_API_URL}/api/templates/${template.id}`).catch((err) => {
         // Log but don't throw error - we still want to navigate
         console.warn(`Error incrementing view count for template ${template.id}:`, err);
       });
@@ -264,20 +264,22 @@ export default function Browse() {
     }
   };
 
-  const renderCarouselItem = ({ item, index }: { item: Template, index: number }) => {
+  const renderCarouselItem = ({ item, index }: { item: Template; index: number }) => {
     if (!item) {
       console.error('Carousel received undefined item');
       return null;
     }
 
     // For the main banner, use the template's thumbnail image to maintain consistency
-    const mainImageUrl = item.thumbnailUrl ||
-      (item.images && item.images.length > 0 ? item.images[0].s3Url : 'https://via.placeholder.com/400?text=No+Image');
+    const mainImageUrl =
+      item.thumbnailUrl ||
+      (item.images && item.images.length > 0
+        ? item.images[0].s3Url
+        : 'https://via.placeholder.com/400?text=No+Image');
 
     // Get small preview images from the template images
-    const previewImageUrls = item.images && item.images.length > 0
-      ? item.images.slice(0, 4).map(img => img.s3Url)
-      : [];
+    const previewImageUrls =
+      item.images && item.images.length > 0 ? item.images.slice(0, 4).map((img) => img.s3Url) : [];
 
     // Calculate precise width to ensure proper paging
     const itemWidth = screenWidth - 30; // Full width minus padding
@@ -316,8 +318,12 @@ export default function Browse() {
 
           {/* Text content */}
           <View style={styles.carouselContent}>
-            <Text style={styles.carouselTitle} numberOfLines={2}>{item.title || 'Untitled'}</Text>
-            <Text style={styles.carouselDescription} numberOfLines={3}>{item.description || 'No description'}</Text>
+            <Text style={styles.carouselTitle} numberOfLines={2}>
+              {item.title || 'Untitled'}
+            </Text>
+            <Text style={styles.carouselDescription} numberOfLines={3}>
+              {item.description || 'No description'}
+            </Text>
             <View style={styles.viewCountContainer}>
               <Text style={styles.viewCount}>{item.viewCount || 0} views</Text>
             </View>
@@ -331,18 +337,17 @@ export default function Browse() {
     if (!item) return null;
 
     return (
-      <TouchableOpacity
-        style={styles.templateCard}
-        onPress={() => handleTemplatePress(item)}
-      >
+      <TouchableOpacity style={styles.templateCard} onPress={() => handleTemplatePress(item)}>
         <Image
           source={{
-            uri: item.thumbnailUrl || 'https://via.placeholder.com/150?text=No+Image'
+            uri: item.thumbnailUrl || 'https://via.placeholder.com/150?text=No+Image',
           }}
           style={styles.thumbnail}
           resizeMode="cover"
         />
-        <Text style={styles.templateTitle} numberOfLines={2}>{item.title || 'Untitled'}</Text>
+        <Text style={styles.templateTitle} numberOfLines={2}>
+          {item.title || 'Untitled'}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -354,7 +359,7 @@ export default function Browse() {
         <FlatList
           data={data}
           renderItem={renderTemplateItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalListContent}
@@ -391,7 +396,7 @@ export default function Browse() {
 
     // Simulate a small delay for smooth loading
     setTimeout(() => {
-      setVisibleCategories(prev => prev + CATEGORIES_PER_LOAD);
+      setVisibleCategories((prev) => prev + CATEGORIES_PER_LOAD);
       setLoadingMore(false);
     }, 500);
   };
@@ -443,7 +448,12 @@ export default function Browse() {
           {topTemplates.length > 0 ? (
             <View>
               {!isCarouselReady ? (
-                <View style={[styles.carouselLoadingContainer, { width: screenWidth - 30, height: 280 }]}>
+                <View
+                  style={[
+                    styles.carouselLoadingContainer,
+                    { width: screenWidth - 30, height: 280 },
+                  ]}
+                >
                   <ActivityIndicator size="large" color="#FF4B6E" />
                   <Text style={styles.carouselLoadingText}>Loading featured tier lists...</Text>
                 </View>
@@ -452,7 +462,7 @@ export default function Browse() {
                   ref={flatListRef}
                   data={topTemplates}
                   renderItem={renderCarouselItem}
-                  keyExtractor={item => item.id}
+                  keyExtractor={(item) => item.id}
                   horizontal
                   pagingEnabled
                   showsHorizontalScrollIndicator={false}
@@ -464,12 +474,12 @@ export default function Browse() {
                   onViewableItemsChanged={onViewableItemsChanged}
                   viewabilityConfig={{
                     itemVisiblePercentThreshold: 50,
-                    minimumViewTime: 100
+                    minimumViewTime: 100,
                   }}
                   onScrollToIndexFailed={(info) => {
                     console.warn('Failed to scroll to index', info.index);
                     // Workaround for the error
-                    const wait = new Promise(resolve => setTimeout(resolve, 500));
+                    const wait = new Promise((resolve) => setTimeout(resolve, 500));
                     wait.then(() => {
                       if (flatListRef.current) {
                         flatListRef.current.scrollToIndex({ index: 0, animated: true });
@@ -488,7 +498,7 @@ export default function Browse() {
                     key={index}
                     style={[
                       styles.paginationDot,
-                      index === activeSlide ? styles.paginationDotActive : {}
+                      index === activeSlide ? styles.paginationDotActive : {},
                     ]}
                   />
                 ))}
@@ -519,10 +529,7 @@ export default function Browse() {
           .slice(0, visibleCategories)
           .map(([tag, templates]) => (
             <View key={tag}>
-              {renderSection(
-                `${tag.charAt(0).toUpperCase() + tag.slice(1)}`,
-                templates
-              )}
+              {renderSection(`${tag.charAt(0).toUpperCase() + tag.slice(1)}`, templates)}
             </View>
           ))}
 
@@ -538,10 +545,7 @@ export default function Browse() {
         <View style={styles.footer} />
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.buttonText}>Back to Home</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -783,4 +787,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-}); 
+});

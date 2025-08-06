@@ -40,31 +40,44 @@ const API_URL = (() => {
   }
 
   // For local development
-  return Platform.OS === 'web'
-    ? 'http://localhost:8080'
-    : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
+  return Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
 })();
 
 enum OnboardingStep {
   NAME = 0,
   AGE_VERIFICATION = 1,
   GENDER_SELECTION = 2,
-  DATING_PREFERENCES = 3,
-  PROFILE_PICTURE = 4,
+  RELATIONSHIP_TYPE = 3,
+  DATING_PREFERENCES = 4,
+  PROFILE_PICTURE = 5,
 }
 
-// Add a Gender type for type safety
-type Gender = 'Male' | 'Female' | 'Non-Binary' | 'Transgender Male' | 'Transgender Female' | 'Other' | 'Prefer not to say';
+// Add a Gender type for type safety - simplified to only Male and Female
+type Gender = 'Male' | 'Female';
 
-// Dating preference options
-type DatingPreference = 'Male' | 'Female' | 'Non-Binary' | 'Transgender Male' | 'Transgender Female' | 'Other';
+// Dating preference options - simplified to Male, Female, or Both
+type DatingPreference = 'Male' | 'Female' | 'Both';
+
+// Relationship type options
+type RelationshipType = 'Friendship' | 'Relationship' | 'Both';
 
 // Default profile picture URL - this should be replaced with your actual default image
 const DEFAULT_PROFILE_PICTURE = require('../assets/default-profile.jpg');
 
 export default function StartupScreen() {
   const router = useRouter();
-  const { user, updateUserName, updateUserAge, updateUserGender, updateUserPreferences, updateUserPicture, logout, deleteUserAccount, setIsNewUser } = useAuthStore();
+  const {
+    user,
+    updateUserName,
+    updateUserAge,
+    updateUserGender,
+    updateUserRelationshipType,
+    updateUserPreferences,
+    updateUserPicture,
+    logout,
+    deleteUserAccount,
+    setIsNewUser,
+  } = useAuthStore();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.NAME);
 
   // Name step state
@@ -88,6 +101,13 @@ export default function StartupScreen() {
   const [customGender, setCustomGender] = useState('');
   const [showCustomGenderInput, setShowCustomGenderInput] = useState(false);
 
+  // Add relationship type state
+  const [selectedRelationshipType, setSelectedRelationshipType] = useState<RelationshipType | null>(
+    null,
+  );
+  const [isSubmittingRelationshipType, setIsSubmittingRelationshipType] = useState(false);
+  const [relationshipTypeError, setRelationshipTypeError] = useState('');
+
   // Add dating preferences state
   const [selectedPreferences, setSelectedPreferences] = useState<DatingPreference[]>([]);
   const [isSubmittingPreferences, setIsSubmittingPreferences] = useState(false);
@@ -102,7 +122,7 @@ export default function StartupScreen() {
 
   // Log API URL on component mount
   useEffect(() => {
-    console.log("StartupScreen: Using API URL:", API_URL);
+    console.log('StartupScreen: Using API URL:', API_URL);
   }, []);
 
   const saveNameAndContinue = async () => {
@@ -164,16 +184,16 @@ export default function StartupScreen() {
     } else {
       // For mobile, use Alert component
       Alert.alert(
-        "Age Restriction",
+        'Age Restriction',
         "We're sorry, but you must be at least 18 years old to use this app.",
         [
           {
-            text: "OK",
+            text: 'OK',
             onPress: async () => {
               await handleAccountDeletion();
             },
           },
-        ]
+        ],
       );
     }
   };
@@ -181,17 +201,17 @@ export default function StartupScreen() {
   const handleAccountDeletion = async () => {
     try {
       // Delete user account
-      console.log("Deleting account for underage user");
+      console.log('Deleting account for underage user');
       const deleteSuccess = await deleteUserAccount();
       if (!deleteSuccess) {
-        console.error("Failed to delete account");
+        console.error('Failed to delete account');
       }
 
       // Log out and redirect to login
       await logout();
       router.replace('/sign-in');
     } catch (error) {
-      console.error("Error during account deletion:", error);
+      console.error('Error during account deletion:', error);
       // Force logout even if deletion fails
       await logout();
       router.replace('/sign-in');
@@ -237,10 +257,8 @@ export default function StartupScreen() {
     setGenderError('');
 
     try {
-      // Get final gender value (which might be custom)
-      const finalGender = selectedGender === 'Other' && customGender.trim()
-        ? customGender.trim()
-        : selectedGender;
+      // Get final gender value
+      const finalGender = selectedGender;
 
       // Update user's gender in the database
       const success = await updateUserGender(finalGender);
@@ -248,12 +266,40 @@ export default function StartupScreen() {
         throw new Error('Failed to update your gender information. Please try again.');
       }
 
-      // Advance to dating preferences step
-      setCurrentStep(OnboardingStep.DATING_PREFERENCES);
+      // Advance to relationship type step
+      setCurrentStep(OnboardingStep.RELATIONSHIP_TYPE);
     } catch (err) {
       setGenderError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
     } finally {
       setIsSubmittingGender(false);
+    }
+  };
+
+  // Add function to save relationship type and continue to dating preferences
+  const saveRelationshipTypeAndContinue = async () => {
+    if (!selectedRelationshipType) {
+      setRelationshipTypeError('Please select what you are looking for');
+      return;
+    }
+
+    setIsSubmittingRelationshipType(true);
+    setRelationshipTypeError('');
+
+    try {
+      // Update user's relationship type in the database
+      const success = await updateUserRelationshipType(selectedRelationshipType);
+      if (!success) {
+        throw new Error('Failed to update your relationship preferences. Please try again.');
+      }
+
+      // Advance to dating preferences step
+      setCurrentStep(OnboardingStep.DATING_PREFERENCES);
+    } catch (err) {
+      setRelationshipTypeError(
+        err instanceof Error ? err.message : 'An error occurred. Please try again.',
+      );
+    } finally {
+      setIsSubmittingRelationshipType(false);
     }
   };
 
@@ -271,11 +317,7 @@ export default function StartupScreen() {
       // Format preferences as comma-separated string
       let preferencesString = selectedPreferences.join(', ');
 
-      // Add custom preference if provided
-      if (selectedPreferences.includes('Other') && customPreference.trim()) {
-        // Replace "Other" with the actual custom value
-        preferencesString = preferencesString.replace('Other', customPreference.trim());
-      }
+      // No custom preferences needed since we only use Male, Female, Both
 
       // Update user's preferences in the database
       const success = await updateUserPreferences(preferencesString);
@@ -286,7 +328,9 @@ export default function StartupScreen() {
       // Advance to profile picture step instead of completing
       setCurrentStep(OnboardingStep.PROFILE_PICTURE);
     } catch (err) {
-      setPreferencesError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+      setPreferencesError(
+        err instanceof Error ? err.message : 'An error occurred. Please try again.',
+      );
     } finally {
       setIsSubmittingPreferences(false);
     }
@@ -297,7 +341,9 @@ export default function StartupScreen() {
     try {
       if (Platform.OS === 'web') {
         // For web, we'll just show a message that this feature is only available in the mobile app
-        setPictureError('Image upload is only available in the mobile app. Please use the default image or try again on our mobile app.');
+        setPictureError(
+          'Image upload is only available in the mobile app. Please use the default image or try again on our mobile app.',
+        );
         return;
       } else if (ImagePicker) {
         // Native implementation using expo-image-picker
@@ -336,21 +382,21 @@ export default function StartupScreen() {
     try {
       setIsSubmittingPicture(true);
 
-      console.log("Uploading profile picture and completing onboarding");
+      console.log('Uploading profile picture and completing onboarding');
 
       // Update user's profile picture in the database
       const success = await updateUserPicture(pictureUrl);
-      console.log("Profile picture update success:", success);
+      console.log('Profile picture update success:', success);
 
       // Use our new function to mark onboarding as completed
-      console.log("Marking onboarding as completed using updateOnboardingStatus");
+      console.log('Marking onboarding as completed using updateOnboardingStatus');
       const authStore = useAuthStore.getState();
       const onboardingSuccess = await authStore.updateOnboardingStatus(true);
 
       if (onboardingSuccess) {
-        console.log("Successfully marked user as having completed onboarding");
+        console.log('Successfully marked user as having completed onboarding');
       } else {
-        console.warn("Failed to mark user as having completed onboarding, but continuing anyway");
+        console.warn('Failed to mark user as having completed onboarding, but continuing anyway');
       }
 
       // Mark user as no longer new (completing onboarding)
@@ -358,24 +404,29 @@ export default function StartupScreen() {
 
       // Fetch fresh user data to ensure everything is in sync before navigating
       try {
-        console.log("Refreshing user data before navigation");
+        console.log('Refreshing user data before navigation');
         await useAuthStore.getState().checkStatus();
 
         // Verify that hasCompletedOnboarding is properly set
         const currentUserState = useAuthStore.getState().user;
-        console.log("Final user state check:", {
-          hasCompletedOnboarding: currentUserState?.hasCompletedOnboarding === true ? "true" : "false/undefined",
-          id: currentUserState?.id
+        console.log('Final user state check:', {
+          hasCompletedOnboarding:
+            currentUserState?.hasCompletedOnboarding === true ? 'true' : 'false/undefined',
+          id: currentUserState?.id,
         });
       } catch (e) {
-        console.error("Error refreshing user data:", e);
+        console.error('Error refreshing user data:', e);
       }
 
       // Navigate to home page
-      console.log("Navigating to home page after completion");
+      console.log('Navigating to home page after completion');
       router.replace('/');
     } catch (err) {
-      setPictureError(err instanceof Error ? err.message : 'An error occurred. Please try again or use the default picture.');
+      setPictureError(
+        err instanceof Error
+          ? err.message
+          : 'An error occurred. Please try again or use the default picture.',
+      );
     } finally {
       setIsSubmittingPicture(false);
     }
@@ -385,8 +436,8 @@ export default function StartupScreen() {
     <View style={styles.card}>
       <Text style={styles.title}>Getting Started</Text>
       <Text style={styles.description}>
-        LoveTiers helps you create and share tier lists for anything you love.
-        Rate, organize, and discover new content with our easy-to-use platform.
+        LoveTiers helps you create and share tier lists for anything you love. Rate, organize, and
+        discover new content with our easy-to-use platform.
       </Text>
 
       <View style={styles.inputContainer}>
@@ -531,9 +582,7 @@ export default function StartupScreen() {
               style={styles.datePickerButton}
               onPress={() => setShowDatePicker(true)}
             >
-              <Text style={styles.datePickerButtonText}>
-                {format(dateOfBirth, 'MMMM d, yyyy')}
-              </Text>
+              <Text style={styles.datePickerButtonText}>{format(dateOfBirth, 'MMMM d, yyyy')}</Text>
             </TouchableOpacity>
 
             {showDatePicker && (
@@ -569,8 +618,8 @@ export default function StartupScreen() {
       </Text>
 
       <Text style={styles.disclaimer}>
-        By continuing, you confirm that the date of birth you entered is accurate.
-        Users under 18 years old are not permitted to use this application.
+        By continuing, you confirm that the date of birth you entered is accurate. Users under 18
+        years old are not permitted to use this application.
       </Text>
 
       <TouchableOpacity
@@ -596,22 +645,18 @@ export default function StartupScreen() {
       </Text>
 
       <View style={styles.genderOptionsContainer}>
-        {['Male', 'Female', 'Non-Binary', 'Transgender Male', 'Transgender Female', 'Other', 'Prefer not to say'].map((gender) => (
+        {['Male', 'Female'].map((gender) => (
           <TouchableOpacity
             key={gender}
-            style={[
-              styles.genderOption,
-              selectedGender === gender && styles.genderOptionSelected
-            ]}
+            style={[styles.genderOption, selectedGender === gender && styles.genderOptionSelected]}
             onPress={() => {
               setSelectedGender(gender as Gender);
-              setShowCustomGenderInput(gender === 'Other');
             }}
           >
             <Text
               style={[
                 styles.genderOptionText,
-                selectedGender === gender && styles.genderOptionTextSelected
+                selectedGender === gender && styles.genderOptionTextSelected,
               ]}
             >
               {gender}
@@ -619,21 +664,6 @@ export default function StartupScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
-      {showCustomGenderInput && (
-        <View style={styles.customGenderContainer}>
-          <Text style={styles.inputLabel}>Please specify:</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your gender"
-            value={customGender}
-            onChangeText={setCustomGender}
-            autoCapitalize="words"
-            autoFocus
-            editable={!isSubmittingGender}
-          />
-        </View>
-      )}
 
       {genderError ? <Text style={styles.errorText}>{genderError}</Text> : null}
 
@@ -655,46 +685,94 @@ export default function StartupScreen() {
     </View>
   );
 
+  // Add function to render relationship type step
+  const renderRelationshipTypeStep = () => (
+    <View style={styles.card}>
+      <Text style={styles.title}>What Are You Looking For?</Text>
+      <Text style={styles.description}>
+        Select what type of relationship you're interested in finding.
+      </Text>
+
+      <View style={styles.genderOptionsContainer}>
+        {['Friendship', 'Relationship', 'Both'].map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[
+              styles.genderOption,
+              selectedRelationshipType === type && styles.genderOptionSelected,
+            ]}
+            onPress={() => {
+              setSelectedRelationshipType(type as RelationshipType);
+            }}
+          >
+            <Text
+              style={[
+                styles.genderOptionText,
+                selectedRelationshipType === type && styles.genderOptionTextSelected,
+              ]}
+            >
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {relationshipTypeError ? <Text style={styles.errorText}>{relationshipTypeError}</Text> : null}
+
+      <Text style={styles.disclaimer}>
+        This helps us match you with people who have similar relationship goals.
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.button, isSubmittingRelationshipType && styles.buttonDisabled]}
+        onPress={saveRelationshipTypeAndContinue}
+        disabled={isSubmittingRelationshipType}
+      >
+        {isSubmittingRelationshipType ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Continue</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
   // Add function to render dating preferences step
   const renderDatingPreferencesStep = () => {
     // Helper function to toggle preference selection
     const togglePreference = (preference: DatingPreference) => {
       if (selectedPreferences.includes(preference)) {
         // Remove preference if already selected
-        setSelectedPreferences(selectedPreferences.filter(p => p !== preference));
-        if (preference === 'Other') {
-          setShowCustomPreferenceInput(false);
-        }
+        setSelectedPreferences(selectedPreferences.filter((p) => p !== preference));
       } else {
         // Add preference if not already selected
         setSelectedPreferences([...selectedPreferences, preference]);
-        if (preference === 'Other') {
-          setShowCustomPreferenceInput(true);
-        }
       }
     };
 
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>Dating Preferences</Text>
+        <Text style={styles.title}>Your Preferences</Text>
         <Text style={styles.description}>
-          Select all genders you're interested in dating. Your selection helps us match you with compatible people.
+          Select who you're interested in. Your selection helps us match you with compatible people.
         </Text>
 
         <View style={styles.preferencesContainer}>
-          {['Male', 'Female', 'Non-Binary', 'Transgender Male', 'Transgender Female', 'Other'].map((preference) => (
+          {['Male', 'Female', 'Both'].map((preference) => (
             <TouchableOpacity
               key={preference}
               style={[
                 styles.preferenceOption,
-                selectedPreferences.includes(preference as DatingPreference) && styles.preferenceOptionSelected
+                selectedPreferences.includes(preference as DatingPreference) &&
+                  styles.preferenceOptionSelected,
               ]}
               onPress={() => togglePreference(preference as DatingPreference)}
             >
               <Text
                 style={[
                   styles.preferenceOptionText,
-                  selectedPreferences.includes(preference as DatingPreference) && styles.preferenceOptionTextSelected
+                  selectedPreferences.includes(preference as DatingPreference) &&
+                    styles.preferenceOptionTextSelected,
                 ]}
               >
                 {preference}
@@ -707,20 +785,6 @@ export default function StartupScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {showCustomPreferenceInput && (
-          <View style={styles.customPreferenceContainer}>
-            <Text style={styles.inputLabel}>Please specify:</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Enter other preference"
-              value={customPreference}
-              onChangeText={setCustomPreference}
-              autoCapitalize="words"
-              editable={!isSubmittingPreferences}
-            />
-          </View>
-        )}
 
         {preferencesError ? <Text style={styles.errorText}>{preferencesError}</Text> : null}
 
@@ -748,7 +812,8 @@ export default function StartupScreen() {
     <View style={styles.card}>
       <Text style={styles.title}>Add Profile Picture</Text>
       <Text style={styles.description}>
-        Upload a profile picture or use our default option. This step is optional and can be skipped.
+        Upload a profile picture or use our default option. This step is optional and can be
+        skipped.
       </Text>
 
       <View style={styles.profilePictureContainer}>
@@ -768,9 +833,7 @@ export default function StartupScreen() {
 
       {pictureError ? <Text style={styles.errorText}>{pictureError}</Text> : null}
 
-      <Text style={styles.disclaimer}>
-        Your profile picture will be visible to other users.
-      </Text>
+      <Text style={styles.disclaimer}>Your profile picture will be visible to other users.</Text>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
@@ -814,6 +877,7 @@ export default function StartupScreen() {
           {currentStep === OnboardingStep.NAME && renderNameStep()}
           {currentStep === OnboardingStep.AGE_VERIFICATION && renderAgeVerificationStep()}
           {currentStep === OnboardingStep.GENDER_SELECTION && renderGenderSelectionStep()}
+          {currentStep === OnboardingStep.RELATIONSHIP_TYPE && renderRelationshipTypeStep()}
           {currentStep === OnboardingStep.DATING_PREFERENCES && renderDatingPreferencesStep()}
           {currentStep === OnboardingStep.PROFILE_PICTURE && renderProfilePictureStep()}
         </View>
@@ -821,11 +885,7 @@ export default function StartupScreen() {
 
       {/* Custom alert modal for web */}
       {Platform.OS === 'web' && (
-        <Modal
-          visible={showAgeAlert}
-          transparent={true}
-          animationType="fade"
-        >
+        <Modal visible={showAgeAlert} transparent={true} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Age Restriction</Text>
@@ -1246,4 +1306,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+});

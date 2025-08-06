@@ -7,181 +7,181 @@ import useAuthStore, { CHAT_API_URL } from 'services/auth';
 import uuid from 'react-native-uuid';
 
 export default function ChatScreen() {
-    const { chatId } = useLocalSearchParams();
-    const { user } = useAuthStore();
-    const [message, setMessage] = useState('');
-    const [chatMessages, setChatMessages] = useState([]);
-    const stompClientRef = useRef(null);
-    const flatListRef = useRef(null);
+  const { chatId } = useLocalSearchParams();
+  const { user } = useAuthStore();
+  const [message, setMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const stompClientRef = useRef(null);
+  const flatListRef = useRef(null);
 
-    console.log('ChatScreen', chatId);
+  console.log('ChatScreen', chatId);
 
-    useEffect(() => {
-        if (!chatId) {
-            return;
-        }
+  useEffect(() => {
+    if (!chatId) {
+      return;
+    }
 
-        fetch(`${CHAT_API_URL}/api/chat/${chatId}`, {
-            headers: {
-                'X-User-Id': user?.id || '',
-            }
-        })
-            .then((response) => response.json())
-            .then((data) => {
-                const messages = data?.map((message) => ({
-                    id: message?.chatId,
-                    sender: message?.senderId === user?.id ? 'You' : 'Other',
-                    content: message?.message,
-                }));
-                console.log('Chat messages:', messages);
-                setChatMessages(messages);
-            })
-            .catch((error) => {
-                console.error('Failed to fetch chat messages:', error);
-            });
-    }, [chatId]);
+    fetch(`${CHAT_API_URL}/api/chat/${chatId}`, {
+      headers: {
+        'X-User-Id': user?.id || '',
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const messages = data?.map((message) => ({
+          id: message?.chatId,
+          sender: message?.senderId === user?.id ? 'You' : 'Other',
+          content: message?.message,
+        }));
+        console.log('Chat messages:', messages);
+        setChatMessages(messages);
+      })
+      .catch((error) => {
+        console.error('Failed to fetch chat messages:', error);
+      });
+  }, [chatId]);
 
-    useEffect(() => {
-        const socket = new SockJS(`${CHAT_API_URL}/ws`);
-        const stompClient = new Client({
-            webSocketFactory: () => socket,
-            reconnectDelay: 5000,
-            debug: (str) => {
-                // console.log(str);
-            },
-            onConnect: () => {
-                console.log('Connected to WebSocket');
-                stompClient.subscribe('/topic/public', (response) => {
-                    console.log('Received message:', response.body);
-                });
-
-                stompClient.subscribe(`/topic/${chatId}`, (response) => {
-                    console.log('Received message:', response.body);
-                    const message = JSON.parse(response.body);
-                    message.id = message.messageId;
-                    message.sender = message.sender === user?.id ? 'You' : 'Other';
-
-                    setChatMessages((prevMessages) => [message, ...prevMessages]);
-
-                    if (flatListRef.current) {
-                        flatListRef.current.scrollToEnd({ animated: true });
-                    }
-                });
-
-                stompClient.publish({
-                    destination: '/chat/addUser',
-                    body: JSON.stringify({
-                        sender: user?.id,
-                        type: "JOIN"
-                    })
-                });
-            },
-            onStompError: (frame) => {
-                console.error('Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
-            },
+  useEffect(() => {
+    const socket = new SockJS(`${CHAT_API_URL}/ws`);
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      debug: (str) => {
+        // console.log(str);
+      },
+      onConnect: () => {
+        console.log('Connected to WebSocket');
+        stompClient.subscribe('/topic/public', (response) => {
+          console.log('Received message:', response.body);
         });
 
-        stompClient.activate();
-        // @ts-ignore
-        stompClientRef.current = stompClient;
+        stompClient.subscribe(`/topic/${chatId}`, (response) => {
+          console.log('Received message:', response.body);
+          const message = JSON.parse(response.body);
+          message.id = message.messageId;
+          message.sender = message.sender === user?.id ? 'You' : 'Other';
 
-        return () => {
-            stompClient.deactivate();
-        };
-    }, [chatId]);
+          setChatMessages((prevMessages) => [message, ...prevMessages]);
 
-    const sendMessage = () => {
-        const stompClient = stompClientRef.current;
-        if (stompClient && stompClient.connected) {
-            stompClient.publish({
-                destination: '/chat/sendMessage/' + chatId,
-                body: JSON.stringify({
-                    sender: user?.id,
-                    content: message,
-                    conversationId: chatId,
-                    id: uuid.v4(),
-                    type: 'CHAT'
-                }),
-            });
-        } else {
-            console.error('Stomp client is not connected');
-        }
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        });
+
+        stompClient.publish({
+          destination: '/chat/addUser',
+          body: JSON.stringify({
+            sender: user?.id,
+            type: 'JOIN',
+          }),
+        });
+      },
+      onStompError: (frame) => {
+        console.error('Broker reported error: ' + frame.headers['message']);
+        console.error('Additional details: ' + frame.body);
+      },
+    });
+
+    stompClient.activate();
+    // @ts-ignore
+    stompClientRef.current = stompClient;
+
+    return () => {
+      stompClient.deactivate();
     };
+  }, [chatId]);
 
-    return (
-        <View style={styles.container}>
-            <FlatList
-                data={chatMessages}
-                ref={flatListRef}
-                keyExtractor={(item) => item?.id}
-                renderItem={({ item }) => (
-                    <View style={[styles.message, item?.sender === "You" ? styles.sent : styles.received]}>
-                        <Text style={styles.messageText}>{item?.content}</Text>
-                    </View>
-                )}
-                inverted
-            />
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    value={message}
-                    onChangeText={setMessage}
-                    placeholder="Type a message..."
-                />
-                <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-                    <Text style={styles.sendButtonText}>Send</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+  const sendMessage = () => {
+    const stompClient = stompClientRef.current;
+    if (stompClient && stompClient.connected) {
+      stompClient.publish({
+        destination: '/chat/sendMessage/' + chatId,
+        body: JSON.stringify({
+          sender: user?.id,
+          content: message,
+          conversationId: chatId,
+          id: uuid.v4(),
+          type: 'CHAT',
+        }),
+      });
+    } else {
+      console.error('Stomp client is not connected');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={chatMessages}
+        ref={flatListRef}
+        keyExtractor={(item) => item?.id}
+        renderItem={({ item }) => (
+          <View style={[styles.message, item?.sender === 'You' ? styles.sent : styles.received]}>
+            <Text style={styles.messageText}>{item?.content}</Text>
+          </View>
+        )}
+        inverted
+      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="Type a message..."
+        />
+        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+          <Text style={styles.sendButtonText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 10,
-        backgroundColor: '#FFF5F5',
-    },
-    message: {
-        padding: 10,
-        borderRadius: 10,
-        marginVertical: 5,
-        maxWidth: '80%',
-    },
-    sent: {
-        alignSelf: 'flex-end',
-        backgroundColor: '#FF4B6E',
-    },
-    received: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#E0E0E0',
-    },
-    messageText: {
-        color: '#FFF',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderColor: '#DDD',
-        padding: 10,
-    },
-    input: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#CCC',
-        borderRadius: 5,
-        paddingHorizontal: 10,
-    },
-    sendButton: {
-        marginLeft: 10,
-        backgroundColor: '#FF4B6E',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 5,
-    },
-    sendButtonText: {
-        color: '#FFF',
-        fontWeight: 'bold',
-    },
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#FFF5F5',
+  },
+  message: {
+    padding: 10,
+    borderRadius: 10,
+    marginVertical: 5,
+    maxWidth: '80%',
+  },
+  sent: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#FF4B6E',
+  },
+  received: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E0E0E0',
+  },
+  messageText: {
+    color: '#FFF',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderColor: '#DDD',
+    padding: 10,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+  },
+  sendButton: {
+    marginLeft: 10,
+    backgroundColor: '#FF4B6E',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+  },
+  sendButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
 });

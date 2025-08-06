@@ -1,25 +1,26 @@
-package com.cst438.image.config;
+package group_3.tierlistservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
-@Configuration // Marks this class as a configuration class.
-@EnableWebSecurity // Enables Spring Security for the application.
+@Configuration
+@EnableWebSecurity
 public class SecurityConfig {
+
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Bean // Defines a bean for CORS configuration.
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
@@ -35,9 +36,8 @@ public class SecurityConfig {
             allowedOrigins = List.of(
                     "http://localhost:19006",
                     "http://localhost:19000",
-                    "http://localhost:8083",
-                    "https://imageapi-production-af11.up.railway.app",
-                    "https://tier-list-service-production.up.railway.app",
+                    "http://localhost:3000",
+                    "http://localhost:8083", // Frontend development port
                     "https://frontend-production-c2bc.up.railway.app");
             logger.info("Using default CORS allowed origins: {}", allowedOrigins);
         }
@@ -54,21 +54,16 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean // Defines a bean for the security filter chain.
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        logger.info("SecurityConfig is being loaded!");
+        logger.info("SecurityConfig is being loaded for tier list service!");
 
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/").permitAll()
-                        .requestMatchers("/api/images/**").permitAll()
-                        .requestMatchers("/api/tags/**").permitAll()
-                        .requestMatchers("/api/info").permitAll()
-                        .requestMatchers("/service-info").permitAll()
-                        .requestMatchers("/service-info/**").permitAll()
-                        // Add actuator endpoints - explicitly allow all for health checks
+                        .requestMatchers("/api/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/health").permitAll()
@@ -81,4 +76,4 @@ public class SecurityConfig {
                 })
                 .build();
     }
-}
+} 

@@ -83,6 +83,7 @@ public class AuthController {
         // Ensure consistent field names for frontend
         userResponse.put("gender", user.getGender()); // Use getGender explicitly
         userResponse.put("lookingFor", user.getLookingFor()); // Use getLookingFor explicitly
+        userResponse.put("relationshipType", user.getRelationshipType()); // Use getRelationshipType explicitly
         userResponse.put("age", user.getAge());
         userResponse.put("picture", user.getPicture());
         userResponse.put("hasCompletedOnboarding", user.getHasCompletedOnboarding());
@@ -742,6 +743,15 @@ public class AuthController {
                 }
             }
             
+            // Update relationshipType if provided
+            if (updateRequest.containsKey("relationshipType")) {
+                String newRelationshipType = (String) updateRequest.get("relationshipType");
+                if (newRelationshipType != null && !newRelationshipType.trim().isEmpty()) {
+                    logger.info("Updating relationship type for user {}: {} -> {}", user.getId(), user.getRelationshipType(), newRelationshipType);
+                    user.setRelationshipType(newRelationshipType);
+                }
+            }
+            
             // Update hasCompletedOnboarding if provided
             if (updateRequest.containsKey("hasCompletedOnboarding")) {
                 Object onboardingValue = updateRequest.get("hasCompletedOnboarding");
@@ -802,6 +812,7 @@ public class AuthController {
             userResponse.put("age", user.getAge());
             userResponse.put("gender", user.getGender());
             userResponse.put("lookingFor", user.getLookingFor());
+            userResponse.put("relationshipType", user.getRelationshipType());
             userResponse.put("picture", user.getPicture());
             userResponse.put("hasCompletedOnboarding", user.getHasCompletedOnboarding());
             

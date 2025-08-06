@@ -10,7 +10,7 @@ import {
   Alert,
   Animated,
   Image,
-  Platform
+  Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
@@ -30,9 +30,7 @@ const API_URL = (() => {
   }
 
   // For local development
-  return Platform.OS === 'web'
-    ? 'http://localhost:8080'
-    : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
+  return Platform.OS === 'web' ? 'http://localhost:8080' : 'http://10.0.2.2:8080'; // Use 10.0.2.2 for Android emulator
 })();
 
 // Define a styled component for the home page
@@ -52,7 +50,14 @@ interface ExtendedStyles extends Record<string, any> {
 
 export default function Home() {
   const router = useRouter();
-  const { user, logout, token, updateUserGender, updateUserPreferences } = useAuthStore();
+  const {
+    user,
+    logout,
+    token,
+    updateUserGender,
+    updateUserRelationshipType,
+    updateUserPreferences,
+  } = useAuthStore();
   const { selectedStyle, setSelectedStyle } = useStyle();
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +65,7 @@ export default function Home() {
   // Local state for dropdowns
   const [pickerValue, setPickerValue] = useState(selectedStyle);
   const [gender, setGender] = useState('');
+  const [relationshipType, setRelationshipType] = useState('');
   const [lookingFor, setLookingFor] = useState('');
 
   // Add state for complete user data from API
@@ -83,12 +89,15 @@ export default function Home() {
   // Check for changes and animate save button accordingly
   useEffect(() => {
     const userGender = user?.gender || '';
+    const userRelationshipType = user?.relationshipType || '';
     const userLookingFor = user?.lookingFor || '';
 
     const hasGenderChanged = gender !== userGender && gender !== '';
+    const hasRelationshipTypeChanged =
+      relationshipType !== userRelationshipType && relationshipType !== '';
     const hasPreferencesChanged = lookingFor !== userLookingFor && lookingFor !== '';
 
-    const newHasChanges = hasGenderChanged || hasPreferencesChanged;
+    const newHasChanges = hasGenderChanged || hasRelationshipTypeChanged || hasPreferencesChanged;
     setHasChanges(newHasChanges);
 
     // Animate the save button
@@ -97,12 +106,11 @@ export default function Home() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-
-  }, [gender, lookingFor, user]);
+  }, [gender, relationshipType, lookingFor, user]);
 
   const handleSelection = (itemValue: string) => {
     if (itemValue) {
-      console.log("Selected Style:", itemValue);
+      console.log('Selected Style:', itemValue);
       setSelectedStyle(itemValue);
       setPickerValue(itemValue);
     }
@@ -120,11 +128,17 @@ export default function Home() {
 
     try {
       const userGender = user?.gender || '';
+      const userRelationshipType = user?.relationshipType || '';
       const userLookingFor = user?.lookingFor || '';
 
       // Save gender if changed
       if (gender !== userGender && gender !== '') {
         await updateUserGender(gender);
+      }
+
+      // Save relationship type if changed
+      if (relationshipType !== userRelationshipType && relationshipType !== '') {
+        await updateUserRelationshipType(relationshipType);
       }
 
       // Save preferences if changed
@@ -138,16 +152,10 @@ export default function Home() {
       // Force a refresh of user data
       await useAuthStore.getState().checkStatus();
 
-      Alert.alert(
-        "Changes Saved",
-        "Your profile has been updated successfully."
-      );
+      Alert.alert('Changes Saved', 'Your profile has been updated successfully.');
     } catch (error) {
       console.error('Error saving changes:', error);
-      Alert.alert(
-        "Error",
-        "Failed to save changes. Please try again."
-      );
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -176,12 +184,12 @@ export default function Home() {
     // Fall back to store data
     if (user) {
       // Attempt to log the object in a way that won't be truncated
-      console.log("Gender debug - user object stringified:", JSON.stringify(user));
-      console.log("Gender debug:", {
+      console.log('Gender debug - user object stringified:', JSON.stringify(user));
+      console.log('Gender debug:', {
         gender: user.gender,
         genderType: typeof user.gender,
         hasGender: !!user.gender,
-        allUserKeys: Object.keys(user)
+        allUserKeys: Object.keys(user),
       });
 
       // Check for all possible field names and cases
@@ -195,17 +203,31 @@ export default function Home() {
       // Additional logging if not found
       if (!genderValue) {
         // Instead of just warning, refresh API data as a last resort
-        apiDataFetcher().then(freshData => {
+        apiDataFetcher().then((freshData) => {
           if (freshData && freshData.gender) {
-            console.log("Gender found in fresh API data:", freshData.gender);
+            console.log('Gender found in fresh API data:', freshData.gender);
             setApiUserData(freshData);
           } else {
-            console.warn("Gender not found in user object or fresh API data");
+            console.warn('Gender not found in user object or fresh API data');
           }
         });
       }
 
       return genderValue || 'Not set';
+    }
+    return 'Not set';
+  };
+
+  // Helper function to get relationship type value with fallbacks
+  const getUserRelationshipType = () => {
+    // First try to get data from direct API call (most accurate)
+    if (apiUserData && apiUserData.relationshipType) {
+      return apiUserData.relationshipType;
+    }
+
+    // Fall back to store data
+    if (user && user.relationshipType) {
+      return user.relationshipType;
     }
     return 'Not set';
   };
@@ -220,12 +242,12 @@ export default function Home() {
     // Fall back to store data
     if (user) {
       // Attempt to log the object in a way that won't be truncated
-      console.log("LookingFor debug - user object stringified:", JSON.stringify(user));
-      console.log("LookingFor debug:", {
+      console.log('LookingFor debug - user object stringified:', JSON.stringify(user));
+      console.log('LookingFor debug:', {
         lookingFor: user.lookingFor,
         lookingForType: typeof user.lookingFor,
         hasLookingFor: !!user.lookingFor,
-        allUserKeys: Object.keys(user)
+        allUserKeys: Object.keys(user),
       });
 
       // Check for all possible field names and cases
@@ -242,12 +264,12 @@ export default function Home() {
       // Additional logging if not found
       if (!lookingForValue) {
         // Instead of just warning, refresh API data as a last resort
-        apiDataFetcher().then(freshData => {
+        apiDataFetcher().then((freshData) => {
           if (freshData && freshData.lookingFor) {
-            console.log("LookingFor found in fresh API data:", freshData.lookingFor);
+            console.log('LookingFor found in fresh API data:', freshData.lookingFor);
             setApiUserData(freshData);
           } else {
-            console.warn("LookingFor not found in user object or fresh API data");
+            console.warn('LookingFor not found in user object or fresh API data');
           }
         });
       }
@@ -262,10 +284,7 @@ export default function Home() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
-            <Image
-              source={getProfilePicture()}
-              style={styles.profileImage}
-            />
+            <Image source={getProfilePicture()} style={styles.profileImage} />
           </View>
           <Text style={styles.title}>Welcome, {user?.name || user?.username || 'User'}!</Text>
           <Text style={styles.subtitle}>What would you like to do today?</Text>
@@ -292,22 +311,22 @@ export default function Home() {
 
           <View style={styles.userInfo}>
             <Text style={styles.label}>Gender:</Text>
-            <Text style={styles.value}>
-              {getUserGender()}
-            </Text>
+            <Text style={styles.value}>{getUserGender()}</Text>
           </View>
 
           <View style={styles.userInfo}>
             <Text style={styles.label}>Looking For:</Text>
-            <Text style={styles.value}>
-              {getUserLookingFor()}
-            </Text>
+            <Text style={styles.value}>{getUserLookingFor()}</Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.label}>Relationship Type:</Text>
+            <Text style={styles.value}>{getUserRelationshipType()}</Text>
           </View>
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Dating Preferences</Text>
+            <Text style={styles.cardTitle}>Your Preferences</Text>
             <View style={styles.cardIcon}>
               <Text style={styles.cardIconText}>❤️</Text>
             </View>
@@ -324,11 +343,6 @@ export default function Home() {
               <Picker.Item label="Select your gender" value="" />
               <Picker.Item label="Male" value="Male" />
               <Picker.Item label="Female" value="Female" />
-              <Picker.Item label="Non-Binary" value="Non-Binary" />
-              <Picker.Item label="Transgender Male" value="Transgender Male" />
-              <Picker.Item label="Transgender Female" value="Transgender Female" />
-              <Picker.Item label="Other" value="Other" />
-              <Picker.Item label="Prefer not to say" value="Prefer not to say" />
             </Picker>
           </View>
 
@@ -343,11 +357,22 @@ export default function Home() {
               <Picker.Item label="Who are you interested in?" value="" />
               <Picker.Item label="Male" value="Male" />
               <Picker.Item label="Female" value="Female" />
-              <Picker.Item label="Non-Binary" value="Non-Binary" />
-              <Picker.Item label="Transgender Male" value="Transgender Male" />
-              <Picker.Item label="Transgender Female" value="Transgender Female" />
-              <Picker.Item label="Multiple (see bio)" value="Multiple" />
-              <Picker.Item label="Everyone" value="Everyone" />
+              <Picker.Item label="Both" value="Both" />
+            </Picker>
+          </View>
+
+          <Text style={styles.sectionLabel}>Relationship Type</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={relationshipType}
+              onValueChange={setRelationshipType}
+              style={styles.picker}
+              dropdownIconColor="#FF4B6E"
+            >
+              <Picker.Item label="What are you looking for?" value="" />
+              <Picker.Item label="Friendship" value="Friendship" />
+              <Picker.Item label="Relationship" value="Relationship" />
+              <Picker.Item label="Both" value="Both" />
             </Picker>
           </View>
         </View>
@@ -378,13 +403,19 @@ export default function Home() {
           {selectedStyle && (
             <View style={styles.selectedStyleContainer}>
               <Text style={styles.selectedStyleLabel}>Current Theme:</Text>
-              <View style={[
-                styles.stylePreview,
-                // Use a conditional to avoid type issues
-                selectedStyle === 'default' ? styles.defaultPreview :
-                  selectedStyle === 'vibrant' ? styles.vibrantPreview :
-                    selectedStyle === 'pinklove' ? styles.pinklovePreview : null
-              ]}>
+              <View
+                style={[
+                  styles.stylePreview,
+                  // Use a conditional to avoid type issues
+                  selectedStyle === 'default'
+                    ? styles.defaultPreview
+                    : selectedStyle === 'vibrant'
+                      ? styles.vibrantPreview
+                      : selectedStyle === 'pinklove'
+                        ? styles.pinklovePreview
+                        : null,
+                ]}
+              >
                 <Text style={styles.stylePreviewText}>{selectedStyle}</Text>
               </View>
             </View>
@@ -395,11 +426,18 @@ export default function Home() {
           <Text style={styles.buttonText}>Create New Tier List</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => router.push('/browse')}>
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={() => router.push('/browse')}
+        >
           <Text style={styles.secondaryButtonText}>Browse Tier Lists</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout} disabled={loading}>
+        <TouchableOpacity
+          style={[styles.button, styles.logoutButton]}
+          onPress={handleLogout}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
@@ -411,10 +449,7 @@ export default function Home() {
       {/* Slide-up save button - only render when there are changes */}
       {hasChanges && (
         <Animated.View
-          style={[
-            styles.saveButtonContainer,
-            { transform: [{ translateY: slideAnim }] }
-          ]}
+          style={[styles.saveButtonContainer, { transform: [{ translateY: slideAnim }] }]}
         >
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}

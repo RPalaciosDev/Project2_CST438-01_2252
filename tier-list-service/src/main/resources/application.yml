@@ -3,25 +3,25 @@ spring:
     name: tier-list-service
   data:
     mongodb:
-      host: ${MONGODB_HOST:localhost}
-      port: ${MONGODB_PORT:27017}
-      database: ${MONGODB_DATABASE:tierlist_db}
-      authentication-database: admin
-      username: ${MONGODB_USERNAME:root}
-      password: ${MONGODB_PASSWORD:example}
+      uri: mongodb://${MONGO_INITDB_ROOT_USERNAME:root}:${MONGO_INITDB_ROOT_PASSWORD:example}@${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DB:tier_list_db}?authSource=admin
   main:
     allow-bean-definition-overriding: true
     
 server:
   port: ${SERVER_PORT:8082}
 
+image-storage:
+  url: ${IMAGE_STORAGE_URL:http://localhost:8084}
+
+services:
+  image-storage:
+    url: ${IMAGE_STORAGE_URL:http://localhost:8084}
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
-
-# External Services
-services:
-  image-storage:
-    url: ${IMAGE_SERVICE_URL:https://imageapi-production-af11.up.railway.app} 
+        include: health,info
+  endpoint:
+    health:
+      show-details: always 
