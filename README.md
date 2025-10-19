@@ -7,6 +7,8 @@ A modern, mobile-first application for creating and sharing tier lists. Built wi
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
 - [Repository Structure](#repository-structure)
+  - [Detailed Service Documentation](#detailed-service-documentation)
+  - [Data Repositories](#data-repositories-mongodbpostgresqlcassandra)
 - [Project Structure](#project-structure)
 - [Services Overview](#services-overview)
   - [Frontend Service](#frontend-service)
@@ -64,6 +66,39 @@ The current repository structure emphasizes:
 - Service-specific configurations
 - Railway-first deployment approach
 
+### Detailed Service Documentation
+
+Each service has its own README file with detailed documentation:
+
+- **[Frontend](./frontend/README.md)** - React Native/Expo mobile application
+- **[Authentication Service](./auth_user_api/README.md)** - User authentication and OAuth2
+- **[Tier List Service](./tier-list-service/README.md)** - Tier list management and daily challenges
+- **Chat Service** (`chat_api/`) - Real-time messaging functionality *(README coming soon)*
+- **[Image Storage Service](./image-storage-service/README.md)** - Image storage and metadata management
+- **ML Service** (`ml-service/`) - Machine learning for user matching *(README coming soon)*
+
+### Data Repositories (MongoDB/PostgreSQL/Cassandra)
+
+Each backend service includes data access repositories for database operations:
+
+**Authentication Service (`auth_user_api/`)**:
+- `UserRepository` - User account data and authentication
+- `UserTagStatsRepository` - User tag preferences and statistics
+
+**Tier List Service (`tier-list-service/`)**:
+- `TierlistTemplateRepository` - Tier list templates and metadata
+- `TierlistCompletionRepository` - User completion tracking for daily challenges
+
+**Image Storage Service (`image-storage-service/`)**:
+- `ImageMetadataRepository` - Image metadata and S3 references
+- `TagFrequencyRepository` - Tag usage statistics
+
+**Chat Service (`chat_api/`)**:
+- `ConversationRepository` - Chat conversations
+- `ConversationManagerRepository` - Conversation management
+- `ChatRepository` - Individual chat messages
+
+> **Note**: For detailed API documentation and repository methods, refer to each service's README file linked above.
 
 ## Project Structure
 
